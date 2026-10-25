@@ -145,7 +145,24 @@ isOneToOne: false
 { Args: { "p_limit"?: number,"p_query": string,"p_rulebook_id": string }; Returns: {
               "id": string,"number": string,"pdf_page_end": number,"pdf_page_start": number,"printed_pages": string,"rank": number,"snippet": string,"title": string
             }[]
-                           }
+                           },
+"start_campaign":
+{ Args: { "p_game_id": string,"p_state": Json,"p_state_version": number }; Returns: {
+              "archived": boolean,
+"created_at": string,
+"game_id": string,
+"id": string,
+"state": NonNullable<Json>,
+"state_version": number,
+"updated_at": string,
+"user_id": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "campaigns"
+        isOneToOne: false
+        isSetofReturn: true
+      } }
           }
           Enums: {
             [_ in never]: never

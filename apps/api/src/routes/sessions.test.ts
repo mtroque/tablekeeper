@@ -281,6 +281,61 @@ describe('/v1/campaigns/:gameId', () => {
     expect(CampaignResponseSchema.parse(read.body).campaign?.state).toEqual({ gamesPlayed: 2 });
   });
 
+  it('archives the active campaign and starts a new one, keeping its sessions linked', async () => {
+    const start = (user: TestUser, body: object) =>
+      request(app).post('/v1/campaigns/_example/new').set('authorization', bearer(user)).send(body);
+    const old = CampaignSchema.parse(
+      (
+        await request(app)
+          .put('/v1/campaigns/_example')
+          .set('authorization', bearer(bob))
+          .send({ state: { gamesPlayed: 5 }, stateVersion: 1 })
+      ).body,
+    );
+    const linked = SessionSchema.parse(
+      (
+        await save(bob, {
+          gameId: '_example',
+          status: 'completed',
+          state: board(2),
+          stateVersion: 1,
+          campaignId: old.id,
+        })
+      ).body,
+    );
+
+    expect((await start(bob, { state: { gamesPlayed: -1 }, stateVersion: 1 })).status).toBe(400);
+    const res = await start(bob, { state: { gamesPlayed: 0 }, stateVersion: 1 });
+    expect(res.status).toBe(201);
+    const fresh = CampaignSchema.parse(res.body);
+    expect(fresh.id).not.toBe(old.id);
+    expect(fresh).toMatchObject({ archived: false, state: { gamesPlayed: 0 } });
+
+    const active = await request(app)
+      .get('/v1/campaigns/_example')
+      .set('authorization', bearer(bob));
+    expect(CampaignResponseSchema.parse(active.body).campaign?.id).toBe(fresh.id);
+    const rows = await admin
+      .from('campaigns')
+      .select('id, archived')
+      .eq('user_id', bob.id)
+      .order('created_at');
+    expect(rows.data).toEqual([
+      { id: old.id, archived: true },
+      { id: fresh.id, archived: false },
+    ]);
+    const session = await request(app)
+      .get(`/v1/sessions/${linked.id}`)
+      .set('authorization', bearer(bob));
+    expect(SessionSchema.parse(session.body).campaignId).toBe(old.id);
+
+    // Alice's campaign is untouched by Bob starting a new one.
+    const alices = await request(app)
+      .get('/v1/campaigns/_example')
+      .set('authorization', bearer(alice));
+    expect(CampaignResponseSchema.parse(alices.body).campaign?.archived).toBe(false);
+  });
+
   it('answers 422 for a game without a campaign and 404 for an unknown one', async () => {
     const none = await request(app)
       .get('/v1/campaigns/patchwork')

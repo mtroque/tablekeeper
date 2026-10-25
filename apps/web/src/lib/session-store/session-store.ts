@@ -18,4 +18,6 @@ export interface SessionStore {
   save(input: SessionInput, id?: string): Promise<Session>;
   getCampaign(gameId: GameId): Promise<Campaign | null>;
   saveCampaign(gameId: GameId, state: unknown, stateVersion: number): Promise<Campaign>;
+  /** Archives the active campaign and starts a new one with this state. */
+  startCampaign(gameId: GameId, state: unknown, stateVersion: number): Promise<Campaign>;
 }

@@ -67,4 +67,12 @@ export class ApiStore implements SessionStore {
       schema: CampaignSchema,
     });
   }
+
+  startCampaign(gameId: GameId, state: unknown, stateVersion: number): Promise<Campaign> {
+    return this.client.request(`/v1/campaigns/${encodeURIComponent(gameId)}/new`, {
+      method: 'POST',
+      body: { state, stateVersion },
+      schema: CampaignSchema,
+    });
+  }
 }

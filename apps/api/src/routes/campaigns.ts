@@ -1,11 +1,15 @@
-import { CampaignParamsSchema, PutCampaignRequestSchema } from '@tablekeeper/core';
+import {
+  CampaignParamsSchema,
+  PutCampaignRequestSchema,
+  StartCampaignRequestSchema,
+} from '@tablekeeper/core';
 import { Router } from 'express';
 
 import type { SupabaseClients } from '../db/client';
 import { unauthenticated } from '../errors';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { getCampaign, putCampaign } from '../services/campaigns';
+import { getCampaign, putCampaign, startCampaign } from '../services/campaigns';
 
 export function campaignsRouter(clients: SupabaseClients): Router {
   const router = Router();
@@ -28,6 +32,16 @@ export function campaignsRouter(clients: SupabaseClients): Router {
     async (req, res) => {
       if (!req.auth) throw unauthenticated();
       res.json(await putCampaign(req.auth, req.params.gameId, req.body));
+    },
+  );
+
+  router.post(
+    '/campaigns/:gameId/new',
+    auth,
+    validate({ params: CampaignParamsSchema, body: StartCampaignRequestSchema }),
+    async (req, res) => {
+      if (!req.auth) throw unauthenticated();
+      res.status(201).json(await startCampaign(req.auth, req.params.gameId, req.body));
     },
   );
 

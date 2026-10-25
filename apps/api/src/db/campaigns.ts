@@ -87,3 +87,23 @@ export async function updateCampaignState(
   if (error) throw error;
   return toRow(data);
 }
+
+/** Archives the caller's active campaign for the game and inserts this one, in one transaction. */
+export async function startCampaign(
+  db: Db,
+  gameId: string,
+  state: unknown,
+  stateVersion: number,
+): Promise<CampaignRow> {
+  const { data, error } = await db
+    .rpc('start_campaign', {
+      p_game_id: gameId,
+      // Validated by the game's campaign schema, and it arrived as JSON.
+      p_state: state as NonNullable<Json>,
+      p_state_version: stateVersion,
+    })
+    .select(COLUMNS)
+    .single();
+  if (error) throw error;
+  return toRow(data);
+}

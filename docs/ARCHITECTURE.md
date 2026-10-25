@@ -152,6 +152,7 @@ REST under `/v1`, JSON. Every request and response is a Zod schema in `packages/
 | `POST /v1/sessions` | required | Save; the server validates state and recomputes the score |
 | `GET` / `PATCH /v1/sessions/:id` | required | Read; update status/state (recomputed) |
 | `GET` / `PUT /v1/campaigns/:gameId` | required | Active campaign |
+| `POST /v1/campaigns/:gameId/new` | required | Archive the active campaign and start a new one, in one transaction |
 
 - **Errors:** `{ "error": { "code", "message", "details"? } }` with a matching status. Codes: `VALIDATION`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `QUOTA_EXCEEDED`, `LLM_DISABLED`, `RATE_LIMITED`, `INTERNAL`.
 - **Auth:** `Authorization: Bearer <Supabase access token>`, verified by middleware. Database calls use a per-request client carrying that token, so RLS applies.
@@ -159,7 +160,7 @@ REST under `/v1`, JSON. Every request and response is a Zod schema in `packages/
 
 ## Client state and storage
 
-- The UI persists only through `SessionStore` (`list`, `get`, `save`, `getCampaign`, `saveCampaign`): `LocalStore` (localStorage, keys `tk:v1:*`) for guests, `ApiStore` when signed in. Components never know which.
+- The UI persists only through `SessionStore` (`list`, `get`, `save`, `getCampaign`, `saveCampaign`, `startCampaign`): `LocalStore` (localStorage, keys `tk:v1:*`) for guests, `ApiStore` when signed in. Components never know which.
 - Guest data stays on the device; it is not imported on sign-in. The one exception: a result being saved when a guest signs in is kept in `sessionStorage` through the OAuth redirect and saved to the account.
 - The in-progress score flow (photo, corners, draft, edits) is kept in `sessionStorage`, so refreshes and the sign-in redirect don't lose it.
 

@@ -55,6 +55,16 @@ describe('LocalStore', () => {
     expect(second.id).toBe(first.id);
     await expect(store.saveCampaign(EXAMPLE, { gamesPlayed: -1 }, 1)).rejects.toThrow();
   });
+
+  it('replaces the campaign with a new one when a new campaign starts', async () => {
+    const store = new LocalStore(memory(), ids);
+    const old = await store.saveCampaign(EXAMPLE, { gamesPlayed: 3 }, 1);
+    const fresh = await store.startCampaign(EXAMPLE, { gamesPlayed: 0 }, 1);
+    expect(fresh.id).not.toBe(old.id);
+    expect(await store.getCampaign(EXAMPLE)).toEqual(fresh);
+    await expect(store.startCampaign(EXAMPLE, { gamesPlayed: -1 }, 1)).rejects.toThrow();
+    expect(await store.getCampaign(EXAMPLE)).toEqual(fresh);
+  });
 });
 
 describe('flow state', () => {

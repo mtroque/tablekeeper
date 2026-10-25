@@ -84,11 +84,26 @@ export class LocalStore implements SessionStore {
   }
 
   saveCampaign(gameId: GameId, state: unknown, stateVersion: number): Promise<Campaign> {
+    const id = this.read(campaignKey(gameId), CampaignSchema)?.id ?? this.newId();
+    return this.writeCampaign(id, gameId, state, stateVersion);
+  }
+
+  /** Guests keep no archive, like no history (D-041): the new campaign replaces the old one. */
+  startCampaign(gameId: GameId, state: unknown, stateVersion: number): Promise<Campaign> {
+    return this.writeCampaign(this.newId(), gameId, state, stateVersion);
+  }
+
+  private writeCampaign(
+    id: string,
+    gameId: GameId,
+    state: unknown,
+    stateVersion: number,
+  ): Promise<Campaign> {
     const game = getGame(gameId);
     const parsed = game?.campaign?.schema.safeParse(state);
     if (!parsed?.success) return Promise.reject(new Error('The campaign is invalid.'));
     const campaign: Campaign = {
-      id: this.read(campaignKey(gameId), CampaignSchema)?.id ?? this.newId(),
+      id,
       gameId,
       state: parsed.data,
       stateVersion,

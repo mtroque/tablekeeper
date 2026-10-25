@@ -25,3 +25,10 @@ export const PutCampaignRequestSchema = z.object({
   stateVersion: z.int().min(0),
 });
 export type PutCampaignRequest = z.infer<typeof PutCampaignRequestSchema>;
+
+/**
+ * `POST /v1/campaigns/:gameId/new`: archives the active campaign and starts this one
+ * (validated by the game).
+ */
+export const StartCampaignRequestSchema = PutCampaignRequestSchema;
+export type StartCampaignRequest = z.infer<typeof StartCampaignRequestSchema>;

@@ -3,11 +3,13 @@ import type {
   CampaignResponse,
   GameDefinition,
   PutCampaignRequest,
+  StartCampaignRequest,
 } from '@tablekeeper/core';
 
 import {
   findActiveCampaign,
   insertCampaign,
+  startCampaign as startCampaignRow,
   updateCampaignState,
   type CampaignRow,
 } from '../db/campaigns';
@@ -36,6 +38,19 @@ function toCampaign(game: GameDefinition, row: CampaignRow): Campaign {
   };
 }
 
+function parseCampaignState(game: CampaignGame, state: unknown): unknown {
+  const parsed = game.campaign.schema.safeParse(state);
+  if (!parsed.success) {
+    throw new AppError('VALIDATION', 400, 'The campaign is invalid.', {
+      issues: parsed.error.issues.map((issue) => ({
+        path: issue.path.join('.'),
+        message: issue.message,
+      })),
+    });
+  }
+  return parsed.data;
+}
+
 export async function getCampaign(auth: AuthContext, gameId: string): Promise<CampaignResponse> {
   const game = requireCampaignGame(gameId);
   const row = await findActiveCampaign(auth.db, auth.userId, game.id);
@@ -49,18 +64,21 @@ export async function putCampaign(
   body: PutCampaignRequest,
 ): Promise<Campaign> {
   const game = requireCampaignGame(gameId);
-  const parsed = game.campaign.schema.safeParse(body.state);
-  if (!parsed.success) {
-    throw new AppError('VALIDATION', 400, 'The campaign is invalid.', {
-      issues: parsed.error.issues.map((issue) => ({
-        path: issue.path.join('.'),
-        message: issue.message,
-      })),
-    });
-  }
+  const state = parseCampaignState(game, body.state);
   const existing = await findActiveCampaign(auth.db, auth.userId, game.id);
   const row = existing
-    ? await updateCampaignState(auth.db, existing.id, parsed.data, body.stateVersion)
-    : await insertCampaign(auth.db, game.id, parsed.data, body.stateVersion);
+    ? await updateCampaignState(auth.db, existing.id, state, body.stateVersion)
+    : await insertCampaign(auth.db, game.id, state, body.stateVersion);
   return toCampaign(game, row);
+}
+
+/** Archives the active campaign (its sessions stay linked to it) and starts a new one. */
+export async function startCampaign(
+  auth: AuthContext,
+  gameId: string,
+  body: StartCampaignRequest,
+): Promise<Campaign> {
+  const game = requireCampaignGame(gameId);
+  const state = parseCampaignState(game, body.state);
+  return toCampaign(game, await startCampaignRow(auth.db, game.id, state, body.stateVersion));
 }
