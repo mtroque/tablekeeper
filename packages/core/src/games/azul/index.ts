@@ -1,9 +1,15 @@
-import { z } from 'zod';
-
+import { defineGame } from '../../kit/define';
 import type { GameDefinition } from '../../kit/types';
 
+import { scoreAzul } from './scoring';
+import { AzulStateSchema, type AzulState } from './state';
+
+export * from './wall';
+export * from './state';
+export * from './scoring';
+
 /** Rules, board and state: docs/games/azul.md. */
-export const azul: GameDefinition = {
+export const azul: GameDefinition = defineGame<AzulState>({
   id: 'azul',
   name: 'Azul',
   edition: 'Master Chocolatier',
@@ -18,8 +24,9 @@ export const azul: GameDefinition = {
     'How does box confection score?',
     'When does the game end?',
   ],
-  // Placeholder until the game's scorer slice defines the real state.
-  stateSchema: z.unknown(),
+  stateSchema: AzulStateSchema,
+  // The first real shape; the S0 placeholder could never be saved, so nothing to upgrade.
   stateVersion: 0,
-  initialState: () => null,
-};
+  initialState: (): AzulState => ({ rounds: [], finished: false }),
+  score: scoreAzul,
+});
