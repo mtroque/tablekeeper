@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { PhotoCapture } from '@/components/photo-capture';
 import { Button } from '@/components/ui/button';
 import type { GameUiModule } from '@/games/types';
+import { publicEnv } from '@/lib/env';
 
 import { loadPhoto } from './photo';
 import { manualFlow, type useFlow } from './use-flow';
@@ -26,6 +27,7 @@ export function ScoreHome({
   const router = useRouter();
   const base = `/games/${game.id}/score`;
   const [photoError, setPhotoError] = useState(false);
+  const photoEnabled = publicEnv().NEXT_PUBLIC_ENABLE_PHOTO_SCORING === 'true';
 
   const startPhoto = async (source: Blob | string) => {
     setPhotoError(false);
@@ -51,14 +53,22 @@ export function ScoreHome({
       {game.features.photo && (
         <div className="flex flex-col gap-2">
           <h2 className="text-lg">Score from a Photo</h2>
-          <PhotoCapture onPhoto={(file) => void startPhoto(file)} />
+          {!photoEnabled && (
+            <p className="text-sm text-muted">
+              Photo scoring isn&apos;t available yet. Enter the board by hand below.
+            </p>
+          )}
+          <PhotoCapture disabled={!photoEnabled} onPhoto={(file) => void startPhoto(file)} />
           {ui.samples && ui.samples.length > 0 && (
             <div className="flex flex-col gap-2 pt-2">
-              <p className="text-sm text-muted">No board handy? Try one of ours.</p>
+              {photoEnabled && (
+                <p className="text-sm text-muted">No board handy? Try one of ours.</p>
+              )}
               {ui.samples.map((sample, i) => (
                 <Button
                   key={sample}
                   variant="quiet"
+                  disabled={!photoEnabled}
                   onClick={() => void startPhoto(`/samples/${game.id}/${sample}`)}
                 >
                   {ui.samples && ui.samples.length > 1
