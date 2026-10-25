@@ -1,5 +1,7 @@
 # Tablekeeper
 
+> **Take-home exam.** This iteration of the repo was created within 2 hours. The planning, documentation and fixtures were prepared before those 2 hours, and the deployment was done after them.
+
 **Your games stay physical. Tablekeeper takes away the friction around them.**
 
 A phone companion for game night: rules answers cited from the official rulebook, scoring for every game (read from a photo of your board for Patchwork and Harmonies, which you confirm), and a history of your games and campaigns. For **Patchwork**, **Azul**, **Harmonies** and **Dorfromantik: The Board Game**; details in [`docs/PRODUCT.md`](docs/PRODUCT.md), progress in [`docs/ROADMAP.md`](docs/ROADMAP.md).
