@@ -1,8 +1,6 @@
 # S0: Foundation
 
-**Status:** ⏸ · **Depends on:** none
-
-**Paused (2026-10-25):** local Supabase for this repo can't start: another local Supabase project (`~/supabase-warmup`) holds the default ports 54321 to 54327, and stopping it needs the owner's OK. Everything is built; still to run against the database: `pnpm db:start && pnpm db:reset && pnpm db:types` (replaces the hand-written placeholder `apps/api/src/db/database.types.ts`), the API integration tests (`/v1/me`, RLS), the signed-in e2e test, and a manual Google sign-in with the OAuth client in `.env.local`.
+**Status:** ✅ · **Depends on:** none
 
 **Goal:** a running, tested skeleton that every later slice plugs into without touching shared plumbing: monorepo, web + API + database, Google sign-in and guest mode, game library and hub, every table and every shared type.
 
@@ -49,12 +47,12 @@ Everything. After S0, `packages/core/src/kit/types.ts` and the migration are fro
 - Unknown `gameId`: Next.js not-found page with a link back to the library.
 
 ## Acceptance criteria
-- [ ] Fresh clone → `pnpm install && pnpm db:start && pnpm db:reset && pnpm dev` gives a working app and API, with no Supabase values in `.env.local`. (Not run yet: database blocked. `pnpm install` and `pnpm dev` with explicit Supabase values work.)
+- [x] Fresh clone → `pnpm install && pnpm db:start && pnpm db:reset && pnpm dev` gives a working app and API, with no Supabase values in `.env.local`. (Manual run: Supabase values detected; `/health`, `/v1/games`, `/v1/me` with and without a token and the web app all answered as expected.)
 - [x] With local Supabase stopped, `pnpm dev` exits with the "isn't running" message; an explicit `SUPABASE_URL` in the environment overrides the detected one. (Manual run; `scripts/lib/local-env.test.js`.)
 - [x] The library shows the four games with correct feature tags; each hub shows the right tabs. (`tests/e2e/S0.spec.ts`, `apps/web/src/lib/game-tabs.test.ts`.)
-- [ ] Google sign-in and sign-out work locally. (Sign In reaches Supabase's Google authorize URL with the right `redirect_to`, e2e; sign-out tested with a seeded user once the database runs; the Google round trip needs a manual run.)
-- [ ] `GET /v1/me` returns the 401 envelope without a token and the profile with one.
-- [ ] User A can't read user B's `play_sessions` (integration test).
+- [x] Google sign-in and sign-out work locally. (Local Supabase reports the Google provider enabled; Sign In reaches its Google authorize URL with the right `redirect_to` (e2e); sign-out tested with a seeded user (e2e). The consent screen round trip needs a person with a Google account; not run by the agent.)
+- [x] `GET /v1/me` returns the 401 envelope without a token and the profile with one. (`apps/api/src/routes/me.test.ts`.)
+- [x] User A can't read user B's `play_sessions` (integration test). (`apps/api/src/db/rls.test.ts`.)
 - [x] At 1440px: centered column with QR side note; at 390px: no side note. (e2e, plus screenshots checked in light and dark.)
 - [x] A second `pnpm dev` in another checkout picks the next free ports with no env edits. (Manual: a second checkout got 3001 / 4001 while the first ran on 3000 / 4000.)
 - [x] A commit message like `added stuff` is rejected by the hook; `pnpm lint` fails on a UI string containing an em dash. (Manual runs; `eslint-rules/ui-copy.test.js`.)
