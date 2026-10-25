@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseState } from '../../kit/state';
+import { GAMES, getGame, isGameId } from '../registry';
 
 import { exampleGame, isExampleGameEnabled, scoreExample } from '.';
 
@@ -21,7 +22,10 @@ describe('example game', () => {
     expect(parseState(exampleGame, { cells: [true] }, 1).ok).toBe(false);
   });
 
-  it('is enabled under test', () => {
+  it('is enabled under test and found by the registry, but not listed in the library', () => {
     expect(isExampleGameEnabled()).toBe(true);
+    expect(getGame('_example')).toBe(exampleGame);
+    expect(isGameId('_example')).toBe(true);
+    expect(GAMES).not.toContain(exampleGame);
   });
 });

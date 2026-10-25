@@ -45,8 +45,7 @@ export function isExampleGameEnabled(): boolean {
 }
 
 export const exampleGame: GameDefinition = defineGame<ExampleState>({
-  // The cast goes away once shared change request 2 in docs/slices/S1-score-flow.md adds
-  // '_example' to GameId.
+  // GameId (kit/types.ts, frozen) lists only real games; the test game is cast in.
   id: '_example' as GameId,
   name: 'Example Game',
   edition: 'Test Board',
