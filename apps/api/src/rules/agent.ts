@@ -37,8 +37,6 @@ export const NO_ANSWER =
   "Couldn't find an answer in the rulebook. Try asking another way, or check the rulebook.";
 const REFUSED = "That question isn't one the rules assistant can answer.";
 
-const ANSWER_ONLY = RULES_TOOLS.filter((tool) => tool.name === 'answer');
-
 type ToolOutcome = { content: string; isError?: boolean };
 
 function argsError(error: z.ZodError): ToolOutcome {
@@ -105,11 +103,12 @@ export async function runRulesAgent(input: AgentInput): Promise<AgentResult> {
   let reminded = false;
   // Each round is one model call; the bound covers the tool calls plus the reminders.
   for (let round = 0; round < input.maxToolCalls + 3; round++) {
-    const atLimit = toolCalls >= input.maxToolCalls;
+    // The tool list never changes within a run: the model's thinking blocks are bound to it.
+    // Past the limit, tool calls are refused with a tool error instead.
     const response = await model.complete({
       system,
       messages,
-      tools: atLimit ? ANSWER_ONLY : RULES_TOOLS,
+      tools: RULES_TOOLS,
       maxOutputTokens: input.maxOutputTokens,
     });
     messages.push({ role: 'assistant', content: response.content });

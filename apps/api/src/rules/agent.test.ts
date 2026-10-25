@@ -124,7 +124,7 @@ describe('runRulesAgent', () => {
     expect(lastResults(provider, 2)[0]?.content).toMatch(/answer:/);
   });
 
-  it('stops offering tools at the tool call limit', async () => {
+  it('refuses tool calls past the limit, keeping the same tool list', async () => {
     const { provider, run } = ask(
       [
         () => [fakeToolUse('list_sections', {}), fakeToolUse('list_sections', {})],
@@ -134,8 +134,7 @@ describe('runRulesAgent', () => {
       1,
     );
     expect(await run).toEqual({ answer: NO_ANSWER, notCovered: true, cited: [] });
-    expect(provider.requests[0]?.tools.map((t) => t.name)).toHaveLength(4);
-    expect(provider.requests[1]?.tools.map((t) => t.name)).toEqual(['answer']);
+    expect(new Set(provider.requests.map((r) => r.tools)).size).toBe(1);
     expect(lastResults(provider, 1).map((r) => r.isError ?? false)).toEqual([false, true]);
     // 1 tool call + 3 rounds of slack, never more.
     expect(provider.requests.length).toBeLessThanOrEqual(4);
