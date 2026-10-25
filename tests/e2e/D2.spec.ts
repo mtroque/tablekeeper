@@ -142,4 +142,20 @@ test('finish, rank and unlocks; hearts stop at 3; undo changes future sheets onl
 
   await page.goto(`${GAME}/history`);
   await expect(page.getByRole('link', { name: /142/ })).toBeVisible();
+
+  // A new campaign archives this one: the next sheet is game 1 with nothing unlocked.
+  await page.goto(`${GAME}/campaign`);
+  await page.getByRole('button', { name: 'Start New Campaign' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Start New Campaign' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Score a Game' })).toBeVisible();
+
+  await page.goto(`${GAME}/score`);
+  await expect(page.getByRole('heading', { name: 'Game 1' })).toBeVisible();
+  await expect(page.getByTestId('row-DOR-E-REDHEARTS')).toHaveCount(0);
+  await expect(page.getByTestId('locked-count')).toHaveText('15 rows still locked.');
+
+  // The archived campaign's games stay in history.
+  await page.goto(`${GAME}/history`);
+  await expect(page.getByRole('link', { name: /142/ })).toBeVisible();
 });

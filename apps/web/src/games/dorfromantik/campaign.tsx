@@ -26,6 +26,7 @@ import {
 
 import { LoadError, SheetSkeleton } from './states';
 import { useCampaign } from './use-campaign';
+import { useSheetFlow } from './use-sheet';
 
 const GAME = `/games/${dorfromantik.id}`;
 
@@ -55,8 +56,10 @@ function Stat({ label, value, testId }: { label: string; value: string; testId: 
 /** Games played, high score and rank, and the unlocks with the game each came in. */
 export function Campaign() {
   const auth = useAuth();
-  const { query, save } = useCampaign();
+  const { query, save, start } = useCampaign();
+  const { update: updateFlow } = useSheetFlow();
   const [undoing, setUndoing] = useState<number | null>(null);
+  const [starting, setStarting] = useState(false);
 
   if (query.isPending) return <SheetSkeleton />;
   if (query.isError) {
@@ -146,6 +149,55 @@ export function Campaign() {
           </ul>
         )}
       </section>
+
+      <section className="flex flex-col gap-3 border-t border-line px-4 py-5">
+        <Button
+          variant="secondary"
+          onClick={() => {
+            start.reset();
+            setStarting(true);
+          }}
+        >
+          Start New Campaign
+        </Button>
+      </section>
+
+      <Dialog open={starting} onOpenChange={setStarting}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start a new campaign?</DialogTitle>
+            <DialogDescription>
+              {auth.status === 'guest'
+                ? 'This campaign and its unlocks are cleared from this device. The next game is game 1 with nothing unlocked.'
+                : 'This campaign is archived with its games. The next game is game 1 with nothing unlocked.'}
+            </DialogDescription>
+          </DialogHeader>
+          {start.isError && (
+            <p className="text-danger" role="alert">
+              Couldn&apos;t start a new campaign. Try again.
+            </p>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="secondary">Keep Playing</Button>
+            </DialogClose>
+            <Button
+              variant="danger"
+              disabled={start.isPending}
+              onClick={() => {
+                start.mutate(undefined, {
+                  onSuccess: () => {
+                    updateFlow({ sheet: null, finished: null });
+                    setStarting(false);
+                  },
+                });
+              }}
+            >
+              Start New Campaign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={pending !== undefined}
