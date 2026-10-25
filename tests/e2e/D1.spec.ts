@@ -108,6 +108,7 @@ test('signed in: fill the sheet, finish, see it in history, and the campaign mov
   await page.getByRole('button', { name: 'Finish Game' }).click();
   await expect(page).toHaveURL(`${SCORE}/finish`);
   await expect(page.getByTestId('finish-total')).toHaveText('60 Points');
+  await page.getByRole('button', { name: 'No Unlocks' }).click();
 
   await page.getByRole('link', { name: 'See Saved Game' }).click();
   await expect(page).toHaveURL(/\/games\/dorfromantik\/history\/[0-9a-f-]{36}$/);
@@ -145,6 +146,8 @@ test('guest: the campaign is kept on this device', async ({ page }) => {
   await setCount(page, 'Forest', 4);
   await page.getByRole('button', { name: 'Finish Game' }).click();
   await expect(page.getByTestId('finish-total')).toHaveText('4 Points');
+  // Unlocks are D2's; this game has none.
+  await page.getByRole('button', { name: 'No Unlocks' }).click();
   await expect(page.getByText('Saved to the campaign on this device.')).toBeVisible();
   await page.getByRole('link', { name: 'Score Next Game' }).click();
   await expect(page.getByRole('heading', { name: 'Game 2' })).toBeVisible();
