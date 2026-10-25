@@ -1,6 +1,6 @@
 # S0: Foundation
 
-**Status:** ⬜ · **Depends on:** none
+**Status:** 🟨 · **Depends on:** none
 
 **Goal:** a running, tested skeleton that every later slice plugs into without touching shared plumbing: monorepo, web + API + database, Google sign-in and guest mode, game library and hub, every table and every shared type.
 
@@ -11,20 +11,23 @@ Everything. After S0, `packages/core/src/kit/types.ts` and the migration are fro
 
 **Repo and tooling**
 - The workspace and folders in `docs/ARCHITECTURE.md` → Monorepo; `packages/cv` gets build/test wiring only. Tooling per `docs/CONVENTIONS.md`.
-- Root scripts for every command in `README.md` (`ingest` and `eval:cv` may print "not implemented yet").
+- Root scripts for every command in `README.md` (`ingest`, `eval:cv` and `rules:smoke` may print "not implemented yet").
 - Commit rules per `docs/CONVENTIONS.md` → Git: commitlint config with the scope list, a commit-msg hook (`simple-git-hooks`, installed on `pnpm install`), and `pnpm lint:commits` (commits since `main` on a branch; since `origin/main`, or the last commit, on `main`).
 - The copy lint rule from `docs/CONVENTIONS.md` → Web, with tests for dashes, emoji and banned phrases.
 - `scripts/lib/local-env.mjs`, used by `scripts/dev.mjs` (`pnpm dev`), the Vitest and Playwright configs, and every script that talks to the database:
   - **Supabase:** for each of `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` that isn't already set, fill it from `supabase status -o env` (`API_URL`; `ANON_KEY` or `PUBLISHABLE_KEY`; `SERVICE_ROLE_KEY` or `SECRET_KEY`). Explicit values always win. If local Supabase isn't running and a value is missing, exit with "Local Supabase isn't running. Run pnpm db:start." Never print the keys.
   - **Ports:** `WEB_PORT` / `API_PORT` if set, else the first free ports from 3000 / 4000; set `NEXT_PUBLIC_API_URL` and `WEB_ORIGINS` to match.
   - `pnpm dev` then starts web and API and prints the URLs.
+- `.env.local` at the repo root is loaded by `local-env.mjs` (values already in the environment win) and by `pnpm db:start`, so the Google OAuth variables reach `supabase start`.
+- `pnpm db:start` and `pnpm db:reset` refuse to run inside a worktree (AGENTS.md → Parallel sessions).
 
-**Database:** one migration with every table, trigger and RLS policy in `docs/ARCHITECTURE.md` → Data model. `seed.sql` adds local email/password test users: `e2e@local` plus one per game (`e2e-<gameId>@local`). Supabase config enables Google via env (`SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`, `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`) and allows `/auth/callback` on `http://localhost` ports 3000 to 3009.
+**Database:** one migration with every table, trigger and RLS policy in `docs/ARCHITECTURE.md` → Data model. `seed.sql` adds local email/password test users: `e2e@local` plus one per game (`e2e-<gameId>@local`). Supabase config enables Google via env (`SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`, `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`) and allows `/auth/callback` on `http://localhost` ports 3000 to 3009. Generated types go to `apps/api/src/db/database.types.ts` (`pnpm db:types`).
 
 **core**
-- `kit/types.ts`: every type in ARCHITECTURE → Game modules, plus `Point`, `Quad`, `ConfidenceMap`, `ImageInput`, `DetectOptions`, `Session`, `SessionSummary`, `SessionInput`, `Campaign`, `Result`.
+- `kit/types.ts`: every core-side type in ARCHITECTURE → Game modules (`GameDefinition`, `ScoreBreakdown`, `CellRef`, `Detector`, `Draft`), plus `GameId`, `Point`, `Quad`, `ConfidenceMap`, `ImageInput`, `DetectOptions`, `Session`, `SessionSummary`, `SessionInput`, `Campaign`, `Result`. `GameUiModule` and its props types are React types, so they live in `apps/web/src/games/types.ts`.
 - `games/<gameId>/index.ts` for all four games: name, edition, official rulebook URL (from `docs/games/<gameId>.md`), `features`, three `rulesStarters`, placeholder `stateSchema` (`z.unknown()`), `stateVersion: 0`. `games/registry.ts` imports them.
-- Contracts: errors, health, games.
+- Features follow `docs/PRODUCT.md` → Games and features: every game has rules and a scorer; Patchwork and Harmonies have photo scoring; only Dorfromantik has a campaign.
+- Contracts: errors, health, games, me.
 
 **api:** `config.ts`, `app.ts` / `server.ts`, all middleware in ARCHITECTURE → Monorepo, a per-request Supabase client plus a service-role client, and the routes `GET /health`, `GET /v1/games`, `GET /v1/me`.
 
@@ -32,9 +35,16 @@ Everything. After S0, `packages/core/src/kit/types.ts` and the migration are fro
 - Tailwind with the UX tokens and fonts; shadcn initialized (Button, Sheet, Dialog, Tabs, Toast, Skeleton) and restyled per `docs/UX.md` → Look and voice.
 - `AppShell` per `docs/UX.md` → Desktop, with sign-in / avatar menu (Google via Supabase, `/auth/callback`).
 - `/` game library from the local registry (works with the API down); `/games/[gameId]/*` hub with `GameTabs` and "Coming Soon" tabs.
-- `games/<gameId>/index.ts` per game with a `GameUiModule` holding only its `Motif` (per `docs/UX.md` → Visuals), imported by `games/registry.ts`.
+- `games/<gameId>/index.ts` per game with a `GameUiModule` holding only its `Motif` (per `docs/UX.md` → Visuals), imported by `games/registry.ts`. Every `GameUiModule` member except `Motif` is optional, since game slices add them.
 - `lib/api-client.ts` (bearer token, error envelope, one retry for cold starts); `SessionStore` interface only; `lib/cv-client.ts` with its final signature that returns `{ ok: false, error: 'unavailable' }` until S2 replaces it.
 - Fire-and-forget `GET /health` on load.
+
+## UI states
+- Header while the auth session loads: a skeleton in place of the sign-in button.
+- Server status line (all screens): "Waking up the server." with a hint while `/health` is slow; "Couldn't reach the server." with Retry if it fails; "You're offline." when the browser is offline. The library always renders.
+- Account sheet: display name from `/v1/me` (skeleton while loading, email if it fails) and "Sign Out".
+- Sign-in callback: "Signing you in." while exchanging the code; on failure "Couldn't finish signing in." with "Try Again".
+- Unknown `gameId`: Next.js not-found page with a link back to the library.
 
 ## Acceptance criteria
 - [ ] Fresh clone → `pnpm install && pnpm db:start && pnpm db:reset && pnpm dev` gives a working app and API, with no Supabase values in `.env.local`.
@@ -52,3 +62,14 @@ core registry and contracts; API health, games, auth paths, error envelope, RLS;
 
 ## Out of scope
 Sessions API, CV, LLM, game logic.
+
+## Open questions
+None open. Resolved from the docs:
+- Feature flags per game: `docs/PRODUCT.md` → Games and features (Azul has no photo scoring, D-017).
+- `/v1/me` contract: `{ id, displayName, email }`, from `profiles` plus the auth user.
+- Example game (`NEXT_PUBLIC_ENABLE_EXAMPLE_GAME`): S1 owns it; S0 only parses the variable.
+
+## Decisions
+
+## Shared change requests
+None.
