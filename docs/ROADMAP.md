@@ -10,7 +10,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | S1 | Score flow: sessions API, SessionStore, capture → review → result → history, grid editors, breakdown | S0 | ✅ |
 | S2 | CV toolkit: worker, pipeline stages, calibration, eval harness | S0 | ✅ |
 | S3 | Rules assistant: ingestion, LLM gateway and quotas, agent, chat UI | S0 | ✅ |
-| D1 | Dorfromantik scoresheet | S1 | ⬜ |
+| D1 | Dorfromantik scoresheet | S1 | ✅ |
 | D2 | Dorfromantik campaign and unlocks | D1 | ⬜ |
 | P1 | Patchwork manual scorer | S1 | ✅ |
 | P2 | Patchwork board detection | P1, S2 | ⬜ |
