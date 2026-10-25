@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { RETURN_TO_KEY } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { resumePendingSave } from '@/lib/session-store/use-session-store';
 import { supabase } from '@/lib/supabase';
 
 /** Only same-site paths, so the return address can't send anyone elsewhere. */
@@ -30,6 +31,12 @@ export default function AuthCallbackPage() {
         sessionStorage.removeItem(RETURN_TO_KEY);
       } catch {
         // No storage: go to the library.
+      }
+      // A guest's result kept through sign-in is saved now, and that saved game opens.
+      const resumed = await resumePendingSave();
+      if (resumed) {
+        router.replace(resumed);
+        return true;
       }
       router.replace(safeReturnTo(returnTo));
       return true;

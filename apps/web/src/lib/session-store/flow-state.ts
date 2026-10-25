@@ -23,14 +23,22 @@ export const FlowStateSchema = z.object({
 });
 export type FlowState = z.infer<typeof FlowStateSchema>;
 
-const flowKey = (gameId: string) => `tk:v1:flow:${gameId}`;
+export const flowKey = (gameId: string) => `tk:v1:flow:${gameId}`;
+
+/** A stored flow, or null when missing or corrupt. */
+export function parseFlow(raw: string | null): FlowState | null {
+  if (raw === null) return null;
+  try {
+    const parsed = FlowStateSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
 
 export function readFlow(storage: KeyValue, gameId: string): FlowState | null {
   try {
-    const raw = storage.getItem(flowKey(gameId));
-    if (raw === null) return null;
-    const parsed = FlowStateSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : null;
+    return parseFlow(storage.getItem(flowKey(gameId)));
   } catch {
     return null;
   }
