@@ -5,3 +5,5 @@ export * from './contracts/errors';
 export * from './contracts/health';
 export * from './contracts/games';
 export * from './contracts/me';
+export * from './contracts/quota';
+export * from './contracts/rules';
