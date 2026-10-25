@@ -39,7 +39,7 @@ describe('_example detector', () => {
     const { image, corners } = photo(7);
     const stages: DetectStage[] = [];
     const draft = await detector.detect(image, { onProgress: (stage) => stages.push(stage) });
-    expect(draft.state).toEqual({ cells: GRID });
+    expect(draft.state).toEqual({ cells: GRID.flat() });
     expect(Object.keys(draft.confidence).sort()).toEqual(
       ['0,0', '0,1', '0,2', '1,0', '1,1', '1,2', '2,0', '2,1', '2,2'].sort(),
     );
@@ -61,7 +61,7 @@ describe('_example detector', () => {
     });
     expect(stages).toEqual(['classifying']);
     expect(draft.corners).toEqual(corners);
-    expect(draft.state).toEqual({ cells: GRID });
+    expect(draft.state).toEqual({ cells: GRID.flat() });
   });
 
   it('returns a draft with a warning and centered corners when no board is found', async () => {

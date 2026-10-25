@@ -6,8 +6,8 @@ import { ProfileSchema } from '../../pipeline/profile';
 import { exampleBoard } from './board';
 import profileJson from './profile.json';
 
-/** The S1 example game's state: 3 rows top to bottom of 3 spaces, `true` covered. */
-export type ExampleState = { cells: boolean[][] };
+/** The S1 example game's state: 9 spaces row by row from the top left, `true` covered. */
+export type ExampleState = { cells: boolean[] };
 
 /** A fixture label: rows top to bottom, `#` covered, `.` empty (like Patchwork's grid). */
 export const ExampleLabelSchema = z.object({
@@ -22,7 +22,7 @@ export const cvGame = createGridGame<ExampleState, ExampleLabel>({
   board: exampleBoard,
   profile: ProfileSchema.parse(profileJson),
   toState: (labels) => ({
-    cells: [0, 1, 2].map((row) => [0, 1, 2].map((col) => labels[`${row},${col}`] === COVERED)),
+    cells: [0, 1, 2].flatMap((row) => [0, 1, 2].map((col) => labels[`${row},${col}`] === COVERED)),
   }),
   labelSchema: ExampleLabelSchema,
   cellTruth: (label) =>
