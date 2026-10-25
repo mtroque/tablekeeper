@@ -132,7 +132,20 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "llm_consume_request":
+{ Args: { "p_global_requests": number,"p_global_tokens": number,"p_subject_key": string,"p_subject_limit": number,"p_subject_type": string }; Returns: string
+                           },
+"llm_record_tokens":
+{ Args: { "p_input": number,"p_output": number,"p_subject_key": string,"p_subject_type": string }; Returns: undefined
+                           },
+"replace_rulebook":
+{ Args: { "p_rulebook": Json,"p_sections": Json }; Returns: string
+                           },
+"search_rulebook_sections":
+{ Args: { "p_limit"?: number,"p_query": string,"p_rulebook_id": string }; Returns: {
+              "id": string,"number": string,"pdf_page_end": number,"pdf_page_start": number,"printed_pages": string,"rank": number,"snippet": string,"title": string
+            }[]
+                           }
           }
           Enums: {
             [_ in never]: never
