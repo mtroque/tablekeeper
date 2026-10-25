@@ -8,6 +8,8 @@ const { webPort, apiPort } = await loadLocalEnv({ ports: true });
 const env = Object.fromEntries(
   Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
 );
+// S1's e2e test plays the example game.
+env.NEXT_PUBLIC_ENABLE_EXAMPLE_GAME = 'true';
 
 export default defineConfig({
   testDir: 'tests/e2e',
