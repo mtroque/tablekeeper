@@ -19,9 +19,9 @@
     "db:start": "node scripts/db.mjs start",
     "db:reset": "node scripts/db.mjs reset",
     "db:types": "node scripts/db.mjs types",
-    "ingest": "node scripts/not-implemented.mjs ingest S3",
+    "ingest": "tsx scripts/ingest-rulebook.ts",
     "eval:cv": "tsx scripts/eval-vision.ts",
-    "rules:smoke": "node scripts/not-implemented.mjs rules:smoke S3"
+    "rules:smoke": "tsx scripts/rules-smoke.ts"
   },
   "simple-git-hooks": {
     "commit-msg": "pnpm exec commitlint --edit \"$1\""
@@ -40,11 +40,13 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",
     "jpeg-js": "^0.4.4",
+    "pdfjs-dist": "^6.4.299",
     "prettier": "^3.9.10",
     "simple-git-hooks": "^2.14.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "zod": "^4.6.7"
   }
 }
