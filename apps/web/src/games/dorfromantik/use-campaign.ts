@@ -56,5 +56,18 @@ export function useCampaign() {
     },
   });
 
-  return { store, key, query, save };
+  /** Archives the active campaign (the account keeps it; a device keeps none) and starts an empty one. */
+  const start = useMutation({
+    mutationFn: async () => {
+      if (!store) throw new Error('Store not ready');
+      return readCampaign(
+        await store.startCampaign(dorfromantik.id, initialCampaign(), dorfromantik.stateVersion),
+      );
+    },
+    onSuccess: (campaign) => {
+      queryClient.setQueryData(key, campaign);
+    },
+  });
+
+  return { store, key, query, save, start };
 }
