@@ -54,6 +54,8 @@ export function AzulScoreHome() {
   const signedIn = auth.status === 'signed-in';
   const games = useQuery({
     queryKey: ['azul-in-progress', auth.status],
+    // Games start, end and move between devices; always check again on the way in.
+    staleTime: 0,
     enabled: store !== null,
     queryFn: () => {
       if (!store) throw new Error('Store not ready');

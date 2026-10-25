@@ -3,7 +3,6 @@
 import { squareKey, WALL_LAYOUT, wallColor, wallIndex, type SquareCell } from '@tablekeeper/core';
 
 import { SquareGridEditor } from '@/components/square-grid-editor';
-import { cn } from '@/lib/utils';
 
 import { BOX_FILL, TILE_EDGE, TILE_FILL, TILE_NAME } from './colors';
 
@@ -52,20 +51,39 @@ export function WallEditor({
         renderCell={(cell) => {
           const space = spaceOf(previous, wall, cell);
           const error = errorCells.has(squareKey(cell.row, cell.col));
+          const placed = space === 'earlier' || space === 'new';
+          const fill = TILE_FILL[wallColor(cell.row, cell.col)];
           return (
             <span
               data-space={space}
-              className={cn(
-                'absolute inset-0 rounded-control',
-                space === 'new' && 'ring-3 ring-accent ring-inset',
-                error && 'outline-2 outline-offset-[-2px] outline-danger outline-dashed',
+              className="absolute inset-0 flex items-center justify-center rounded-control"
+            >
+              {/* The printed chocolate: faint until a tile covers it. */}
+              <span
+                aria-hidden
+                className="absolute inset-0 rounded-control"
+                style={{ backgroundColor: fill, opacity: placed ? 1 : 0.28 }}
+              />
+              {placed && (
+                <span
+                  aria-hidden
+                  className="relative size-3/5 rounded-[4px] border-2"
+                  style={{ borderColor: `${TILE_EDGE}66`, backgroundColor: fill }}
+                />
               )}
-              style={{
-                backgroundColor: TILE_FILL[wallColor(cell.row, cell.col)],
-                opacity: space === 'empty' || space === 'missing' ? 0.3 : 1,
-                boxShadow: `inset 0 0 0 1px ${TILE_EDGE}55`,
-              }}
-            />
+              {space === 'new' && (
+                <span
+                  aria-hidden
+                  className="absolute inset-0.5 rounded-[5px] border-3 border-accent"
+                />
+              )}
+              {error && (
+                <span
+                  aria-hidden
+                  className="absolute inset-0 rounded-control border-3 border-dashed border-danger"
+                />
+              )}
+            </span>
           );
         }}
         onTap={(ref) => {

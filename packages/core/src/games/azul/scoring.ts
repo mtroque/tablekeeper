@@ -122,6 +122,12 @@ export function azulEndBonuses(wall: readonly boolean[]): AzulEndBonuses {
   };
 }
 
+function listOf(items: readonly string[]): string {
+  return items.length < 2
+    ? items.join('')
+    : `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}`;
+}
+
 function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
@@ -176,18 +182,24 @@ export function scoreAzul(state: AzulState): ScoreBreakdown {
     categories.push(
       category('rows', 'Complete Rows', bonus.points.rows, {
         highlights: cellsWhere(wall, (row) => bonus.rows.includes(row)),
-        note: `${plural(bonus.rows.length, 'row', 'rows')}, 2 points each.`,
+        note:
+          bonus.rows.length > 0
+            ? `${plural(bonus.rows.length, 'row', 'rows')}, 2 points each.`
+            : 'No complete rows.',
       }),
       category('columns', 'Complete Columns', bonus.points.cols, {
         highlights: cellsWhere(wall, (_, col) => bonus.cols.includes(col)),
-        note: `${plural(bonus.cols.length, 'column', 'columns')}, 7 points each.`,
+        note:
+          bonus.cols.length > 0
+            ? `${plural(bonus.cols.length, 'column', 'columns')}, 7 points each.`
+            : 'No complete columns.',
       }),
       category('colors', 'Full Colors', bonus.points.colors, {
         highlights: cellsWhere(wall, (row, col) => bonus.colors.includes(wallColor(row, col))),
         note:
           bonus.colors.length > 0
-            ? `All 5 ${bonus.colors.join(', ')} tiles, 10 points each.`
-            : 'No color has all 5 tiles, 10 points each.',
+            ? `All 5 tiles of ${listOf(bonus.colors)}, 10 points each.`
+            : 'No color has all 5 tiles.',
       }),
     );
   }
