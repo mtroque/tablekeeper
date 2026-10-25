@@ -25,8 +25,10 @@ describe('rules contracts', () => {
       RulesAskRequestSchema.safeParse({ question: 'q', history: Array(7).fill(turn) }).success,
     ).toBe(false);
     expect(
-      RulesAskRequestSchema.safeParse({ question: 'q', history: [{ role: 'system', content: 'x' }] })
-        .success,
+      RulesAskRequestSchema.safeParse({
+        question: 'q',
+        history: [{ role: 'system', content: 'x' }],
+      }).success,
     ).toBe(false);
   });
 
