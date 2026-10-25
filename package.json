@@ -20,7 +20,7 @@
     "db:reset": "node scripts/db.mjs reset",
     "db:types": "node scripts/db.mjs types",
     "ingest": "node scripts/not-implemented.mjs ingest S3",
-    "eval:cv": "node scripts/not-implemented.mjs eval:cv S2",
+    "eval:cv": "tsx scripts/eval-vision.ts",
     "rules:smoke": "node scripts/not-implemented.mjs rules:smoke S3"
   },
   "simple-git-hooks": {
@@ -39,8 +39,10 @@
     "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",
+    "jpeg-js": "^0.4.4",
     "prettier": "^3.9.10",
     "simple-git-hooks": "^2.14.0",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.0",
     "vitest": "^5.0.5"
