@@ -72,6 +72,7 @@ None open. Resolved from the docs:
 - The history detail page draws the board through the module's optional `Breakdown` (a `BoardMiniature` for the example game) above the shared `BreakdownList`.
 - The S1 e2e test creates and deletes its own user per worker instead of the seeded `e2e@local`: S0's sign-out test signs that user out everywhere, which ended S1's sessions mid-test when files ran in parallel.
 - `'_example'` isn't added to `GameId` (`kit/types.ts` stays frozen): the example game's id is cast to `GameId`, and the web registry adds its entry through a widened view of `GAME_UI`. Both are confined to the example game.
+- Once `isGameId('_example')` is true, the S2 worker looks up `GAME_UI._example.detector`, so `exampleUi` declares the cv example detector. S2's example state was rows of rows; main now gives it this game's flat `cells` (`fix(cv): ... (requested by S1)`, made while merging).
 
 ## Shared change requests
 None.
