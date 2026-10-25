@@ -11,6 +11,10 @@ export const EXAMPLE_LAYOUT: SquareLayout = { rows: 3, cols: 3 };
 export const ExampleStateSchema = z.object({ cells: z.array(z.boolean()).length(9) });
 export type ExampleState = z.infer<typeof ExampleStateSchema>;
 
+/** A campaign only so the campaign routes and page have something to store. */
+export const ExampleCampaignSchema = z.object({ gamesPlayed: z.int().min(0) });
+export type ExampleCampaign = z.infer<typeof ExampleCampaignSchema>;
+
 export function scoreExample(state: ExampleState): ScoreBreakdown {
   const covered = squareCells(EXAMPLE_LAYOUT).filter(({ row, col }) => state.cells[row * 3 + col]);
   return buildBreakdown([
@@ -50,10 +54,14 @@ export const exampleGame: GameDefinition = defineGame<ExampleState>({
   name: 'Example Game',
   edition: 'Test Board',
   rulebook: { publisherUrl: 'https://example.com/rulebook.pdf', sourceKey: '_example' },
-  features: { rules: false, scorer: true, campaign: false, photo: false },
+  features: { rules: false, scorer: true, campaign: true, photo: false },
   rulesStarters: [],
   stateSchema: ExampleStateSchema,
   stateVersion: 1,
   initialState: () => ({ cells: Array.from({ length: 9 }, () => false) }),
   score: scoreExample,
+  campaign: {
+    schema: ExampleCampaignSchema,
+    initialState: (): ExampleCampaign => ({ gamesPlayed: 0 }),
+  },
 });
