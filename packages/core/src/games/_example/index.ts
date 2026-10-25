@@ -54,7 +54,7 @@ export const exampleGame: GameDefinition = defineGame<ExampleState>({
   name: 'Example Game',
   edition: 'Test Board',
   rulebook: { publisherUrl: 'https://example.com/rulebook.pdf', sourceKey: '_example' },
-  features: { rules: false, scorer: true, campaign: true, photo: false },
+  features: { rules: false, scorer: true, campaign: true, photo: true },
   rulesStarters: [],
   stateSchema: ExampleStateSchema,
   stateVersion: 1,
