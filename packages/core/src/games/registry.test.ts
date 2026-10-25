@@ -27,7 +27,8 @@ describe('game registry', () => {
     expect(new URL(game.rulebook.publisherUrl).protocol).toBe('https:');
     expect(game.rulebook.sourceKey).toBe(game.id);
     expect(game.rulesStarters).toHaveLength(3);
-    expect(game.stateVersion).toBe(0);
+    // The S0 placeholder state is version 0 until the game's scorer slice defines its state.
+    if (!game.score) expect(game.stateVersion).toBe(0);
   });
 
   it('looks games up by id', () => {
