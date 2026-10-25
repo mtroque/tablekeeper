@@ -33,6 +33,7 @@ Screens, routes, states and interactions.
 | `/games/[gameId]/history/[sessionId]` | Saved game, read-only board + breakdown |
 | `/games/dorfromantik/campaign` | Campaign overview |
 | `/auth/callback` | OAuth return; resumes any pending save |
+| `/privacy` | Privacy policy, linked from the game library |
 
 Games with their own flow (Azul, Dorfromantik) render their `ScoreFlow` under `/score`; see `docs/ARCHITECTURE.md` → Game modules.
 
