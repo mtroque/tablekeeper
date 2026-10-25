@@ -97,7 +97,7 @@ Labels are written with a separate local labeling tool, which computes any deriv
 
 ### References
 - `patchwork/references/empty-red-1.jpg` to `empty-red-3.jpg`, `empty-gray-1.jpg` to `empty-gray-3.jpg`: 3 photos of each box board, empty.
-- `patchwork/references/token-1-a.jpg`, `token-1-b.jpg`, `token-5-a.jpg` to `token-10-b.jpg`, `special-tile-a.jpg`, `special-tile-b.jpg`: 2 close-ups per praline chit value and of the special tile. A 20 chit reference crop is still wanted (`token-20-a.jpg`, `token-20-b.jpg`; `docs/slices/P3-patchwork-token-detection.md`).
+- `patchwork/references/token-1-a.jpg`, `token-1-b.jpg`, `token-5-a.jpg` to `token-20-b.jpg`, `special-tile-a.jpg`, `special-tile-b.jpg`: 2 close-ups per praline chit value (1, 5, 10, 20) and of the special tile.
 - `patchwork/images/`: finished boards with their praline chits in the photo, on both boards.
 - `azul/references/empty-board.jpg`: the empty board.
 - `azul/images/`: boards at different stages of a game, named `NN-<description>.jpg`.
