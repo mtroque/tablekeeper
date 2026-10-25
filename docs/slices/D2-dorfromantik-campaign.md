@@ -1,6 +1,6 @@
 # D2: Dorfromantik campaign and unlocks
 
-**Status:** 🟨 · **Depends on:** D1
+**Status:** ⏸ (waiting on the shared change below: "Start New Campaign" needs a way to archive the active campaign) · **Depends on:** D1
 
 **Goal:** After each game, record what the campaign unlocked and show its progress on a campaign page.
 
@@ -29,10 +29,10 @@ The `dorfromantik` game folders (AGENTS.md → Parallel sessions):
 - Finish screen with all items unlocked: "Everything is unlocked."
 
 ## Acceptance criteria
-- [ ] 142 points → Actress, 4 circles.
-- [ ] Red Hearts can be unlocked at most 3 times.
-- [ ] Undoing an unlock affects future games only.
-- [ ] Starting a new campaign archives the old one; the next sheet is game 1 with no rows unlocked.
+- [x] 142 points → Actress, 4 circles. (core `rankFor` and `campaignSummary` tests; e2e: the finish screen shows "142 Points", "Actress", "Cross off 4 circles on your campaign sheet.", and the campaign page shows high score 142, rank Actress.)
+- [x] Red Hearts can be unlocked at most 3 times. (core: `addUnlocks` refuses a fourth heart and the campaign schema caps `redHearts` at 3; API test: a PUT with 4 hearts is a 400; e2e: after 2 hearts the stepper stops at 1 more, the campaign shows "Red Hearts (3 of 3)", and the next picker offers no stepper.)
+- [x] Undoing an unlock affects future games only. (core: `undoUnlock` leaves `games` untouched and removes the row; e2e: undo Circus on the campaign page, the game 3 sheet has no Circus row, and history still lists the 142 game.)
+- [ ] Starting a new campaign archives the old one; the next sheet is game 1 with no rows unlocked. **Blocked:** see Shared change requests. Not built; no button is shown until the store can do it.
 
 ## Tests
 - core: `addUnlocks` (once per item, hearts 1 to 3 across games, the fourth refused), `undoUnlock` (rows go, hearts count down), `campaignSummary`.
@@ -46,5 +46,17 @@ The `dorfromantik` game folders (AGENTS.md → Parallel sessions):
 None open.
 
 ## Decisions
+- Red Hearts log one entry per heart, so each heart has its game and can be undone alone; the row goes with the last heart.
+- Saving unlocks reads the campaign fresh and applies `addUnlocks` to it, so a stale page can't overwrite another tab's change; a refused pick (already unlocked) says so and clears the picks.
+- The picker is shown once per finished game (`unlocksDone` in the sheet flow). "No Unlocks" just closes it. Adding an unlock later isn't offered (UX lists only removal on the campaign page).
+- What an item adds ("Adds the Circus row to the scoresheet.") appears only on the campaign page, after it's unlocked; the picker shows names only.
+- The campaign page's rank is the high score's rank, and before the first game it shows an empty state.
+- Guests use the campaign on this device with a note saying so; no sign-in wall.
+- No "Start New Campaign" button is shown while it can't work (no dead controls).
 
 ## Shared change requests
+- **Archive the active campaign and start a new one.** Needed for "Start New Campaign" (scope; `docs/UX.md` → Dorfromantik; one active campaign per user, older ones archived).
+  - What: `POST /v1/campaigns/:gameId/new` with `{ state, stateVersion }` (validated by the game's campaign schema) that sets `archived = true` on the active campaign and inserts the new one, in one transaction (the `campaigns_one_active` index allows only one), returning the new `Campaign`. Plus a contract in `packages/core/src/contracts/campaigns.ts` and `SessionStore.startCampaign(gameId, state, stateVersion)`: `ApiStore` calls the route; `LocalStore` replaces the device campaign with a new id (guests keep no archive, like no history, D-041).
+  - Where: `apps/api/src/{routes,services,db}/campaigns.ts`, `packages/core/src/contracts/campaigns.ts`, `apps/web/src/lib/session-store/`.
+  - Why: the current `PUT` only replaces the active campaign's state; nothing can set `archived`, so the old campaign and the sessions linked to it can't be kept apart from a new one.
+  - Once it's on main: add the button and confirm dialog to `apps/web/src/games/dorfromantik/campaign.tsx` (reset the sheet flow after), and extend `tests/e2e/D2.spec.ts` to check the next sheet is game 1 with no rows.
