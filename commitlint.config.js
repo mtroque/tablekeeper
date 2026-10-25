@@ -35,6 +35,7 @@ export default {
         'rules',
         'deps',
         'roadmap',
+        'workflow',
       ],
     ],
     'header-max-length': [2, 'always', 72],

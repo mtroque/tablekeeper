@@ -67,7 +67,7 @@ Barrel `index.ts` files only at package roots and game-module roots.
 
 - [Conventional Commits](https://www.conventionalcommits.org): `type(scope): summary`, lowercase imperative summary, no trailing period, header up to 72 characters.
   - Types: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `build`, `ci`, `chore`, `style`, `revert`. Breaking changes add `!` (`feat(api)!: …`) and a `BREAKING CHANGE:` footer.
-  - Scope: a game id or an area (`core`, `cv`, `api`, `web`, `db`, `rules`, `deps`, `roadmap`).
+  - Scope: a game id or an area (`core`, `cv`, `api`, `web`, `db`, `rules`, `deps`, `roadmap`, `workflow` for AGENTS.md, Claude Code commands and workflow scripts).
   - Examples: `feat(harmonies): score side A river`, `fix(api): reset quotas at UTC midnight`, `docs(roadmap): plan X1`.
   - Enforced by commitlint (`@commitlint/config-conventional` plus the scope list) in a commit-msg hook, and across a branch by `pnpm lint:commits`.
 - One logical change per commit; a slice's spec is committed before its code.
