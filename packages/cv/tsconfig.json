@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Runs in browsers, Node and Web Workers: web-standard globals only, no DOM, no Node built-ins.
+    "lib": ["ES2023", "WebWorker"]
+  },
+  "include": ["src"]
+}
