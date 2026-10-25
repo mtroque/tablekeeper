@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import {
   CampaignResponseSchema,
   CampaignSchema,
+  GAMES,
   SessionPageSchema,
   SessionSchema,
 } from '@tablekeeper/core';
@@ -82,10 +83,11 @@ describe('POST /v1/sessions', () => {
     expect(errorBody(res).code).toBe('NOT_FOUND');
   });
 
-  it('answers 422 for a game without a scorer yet', async () => {
-    // Real games get their scorers in their own slices; skip once this one has one.
+  // Real games get their scorers in their own slices; skipped once every game has one.
+  const unscored = GAMES.find((game) => !game.score);
+  it.skipIf(!unscored)('answers 422 for a game without a scorer yet', async () => {
     const res = await save(alice, {
-      gameId: 'patchwork',
+      gameId: unscored?.id,
       status: 'completed',
       state: null,
       stateVersion: 0,
