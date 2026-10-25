@@ -1,6 +1,8 @@
 # S1: Score flow, sessions and history
 
-**Status:** 🟨 · **Depends on:** S0
+**Status:** ⏸ · **Depends on:** S0
+
+**Paused:** the rest of S1 (API routes, `LocalStore` / `ApiStore`, grid editors, score, history and campaign pages, e2e) needs the shared change requests below; at the least request 1, since the API and web can only import `@tablekeeper/core`'s root barrel, which S1 doesn't own. Done so far: core kit, example game and contracts with tests; `Counter`, `ConfidenceOutline`, `SignInPrompt`, `BreakdownList`, `PhotoCapture` and `CornerEditor`. Resume with `/build S1` in this worktree after `scripts/worktrees.sh sync`.
 
 **Goal:** the generic "score a game" experience every game plugs into: photo or manual entry → review → breakdown → save → history, for guests and signed-in users.
 
@@ -54,6 +56,11 @@ None open. Resolved from the docs:
 - "A game without a scorer → 422": every real game has `features.scorer`, but until its slice adds `score` the API answers 422.
 
 ## Decisions
+- `DetectionMeta` keeps S0's frozen shape (`corrected` keys plus a `detected` count) rather than the stub's `CellRef[]` and field names; one key space covers cells and fields, and it gives an accuracy rate.
+- Request schemas take any id matching the database pattern, so an unknown game is `NOT_FOUND` from the registry; response schemas only accept registered ids.
+- A save request strips unknown keys, so a client-sent `scoreTotal` or `breakdown` never reaches the service.
+- `defineGame<State>()` erases a game's state type for the registry; shared code only scores state it parsed with that game's schema.
+- The example game reads `process.env` in core (declared locally, since core has no Node types), guarded so a bare worker treats it as disabled.
 
 ## Shared change requests
 S1 can't be wired up without these. Each is small and touches code no running slice owns; apply on `main`, then `scripts/worktrees.sh sync`.
