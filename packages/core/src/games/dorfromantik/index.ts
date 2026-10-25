@@ -1,9 +1,21 @@
-import { z } from 'zod';
-
+import { defineGame } from '../../kit/define';
 import type { GameDefinition } from '../../kit/types';
 
+import { blankSheet, initialCampaign } from './campaign';
+import {
+  DorfromantikCampaignSchema,
+  DorfromantikStateSchema,
+  type DorfromantikState,
+} from './schema';
+import { scoreDorfromantik } from './score';
+
+export * from './campaign';
+export * from './schema';
+export * from './score';
+export * from './sheet';
+
 /** Rules, board and state: docs/games/dorfromantik.md. */
-export const dorfromantik: GameDefinition = {
+export const dorfromantik: GameDefinition = defineGame<DorfromantikState>({
   id: 'dorfromantik',
   name: 'Dorfromantik',
   edition: 'Base Game',
@@ -18,8 +30,9 @@ export const dorfromantik: GameDefinition = {
     'When is a territory closed?',
     'How does the game end?',
   ],
-  // Placeholder until the game's scorer slice defines the real state.
-  stateSchema: z.unknown(),
+  stateSchema: DorfromantikStateSchema,
   stateVersion: 0,
-  initialState: () => null,
-};
+  initialState: () => blankSheet(initialCampaign()),
+  score: scoreDorfromantik,
+  campaign: { schema: DorfromantikCampaignSchema, initialState: initialCampaign },
+});

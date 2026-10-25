@@ -18,3 +18,4 @@ export * from './games/_example';
 export * from './games/patchwork';
 export * from './games/harmonies';
 export * from './games/azul';
+export * from './games/dorfromantik';
