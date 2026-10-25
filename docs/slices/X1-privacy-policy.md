@@ -1,6 +1,6 @@
 # X1: Privacy Policy
 
-**Status:** 🟨 · **Depends on:** S0
+**Status:** ✅ · **Depends on:** S0
 
 **Goal:** Visitors can read, in plain words, what Tablekeeper stores and who processes it. Google's OAuth consent screen needs a public privacy policy URL before it can go to production.
 
@@ -29,11 +29,11 @@ A static page at `/privacy` in the app's one-column layout, following `docs/UX.m
 
 ## Acceptance criteria
 
-- [ ] `/privacy` renders without signing in and without the API.
-- [ ] Every claim on the page matches the code it's checked against (table above).
-- [ ] The game library links to it.
-- [ ] The text passes the UI copy lint.
-- [ ] The production URL works as the consent screen's privacy policy link.
+- [x] `/privacy` renders without signing in and without the API. It's a static page (prerendered in `next build --webpack`); `tests/e2e/X1.spec.ts` opens it as a guest.
+- [x] Every claim on the page matches the code it's checked against (table above), read on 2026-10-25. Two drafts were corrected: Azul keeps a finished guest game on the device until sign-in (D-050), so the page doesn't say finished games are never kept; and the IP hash is described as salted, not irreversible.
+- [x] The game library links to it (`tests/e2e/X1.spec.ts`).
+- [x] The text passes the UI copy lint (`pnpm lint`).
+- [ ] The production URL works as the consent screen's privacy policy link. Checked once `main` is deployed to https://tablekeeper-beryl.vercel.app/privacy.
 
 ## Out of scope
 
@@ -44,5 +44,7 @@ A static page at `/privacy` in the app's one-column layout, following `docs/UX.m
 
 - Contact is the GitHub repository's issues (chosen by the owner).
 - The page doesn't describe data deletion (chosen by the owner).
+- The page lives at `apps/web/src/app/privacy/` with its `PrivacyLink`; the game library gains one import and one `<PrivacyLink />` line (additive wiring).
+- Verified: typecheck, lint, `pnpm test` (329 passed), `pnpm test:e2e` (22 passed, run from a clean clone because a `next dev` was already running in the main checkout).
 
 ## Shared change requests
