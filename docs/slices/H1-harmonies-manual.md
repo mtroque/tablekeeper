@@ -1,6 +1,6 @@
 # H1: Harmonies manual scorer
 
-**Status:** 🟨 · **Depends on:** S1
+**Status:** ✅ · **Depends on:** S1
 
 **Goal:** a Harmonies player scores a finished board by hand on either side, with full stack editing, animal cards and Nature's Spirit cards, and gets a breakdown that shows where every point came from.
 
@@ -34,11 +34,11 @@ No `packages/cv` or `apps/web/public/samples` work (H2).
 - Breakdown without Nature's Spirit cards: no Nature's Spirit row.
 
 ## Acceptance criteria
-- [ ] The worked examples in the game doc pass.
-- [ ] Switching side on a manually filled board offers only clear / cancel.
-- [ ] The stack sheet offers only valid stacks (`HAR-STACK-5`).
-- [ ] Signed in: manual entry of a board with animal and Nature's Spirit cards → result with the right categories → save → history detail with the same total.
-- [ ] The API rejects an invalid Harmonies board and recomputes a tampered total.
+- [x] The worked examples in the game doc pass. (`packages/core/src/games/harmonies/scoring.test.ts`: one test per example and per `HAR-*` rule, 40 tests.)
+- [x] Switching side on a manually filled board offers only clear / cancel. (e2e, second test: the sheet's buttons are exactly Clear Board, Cancel and the sheet's Close; Cancel keeps side B and its water, Clear Board gives an empty side A and keeps the animal card. An empty board switches with no sheet.)
+- [x] The stack sheet offers only valid stacks (`HAR-STACK-5`). (e2e: 15 options, Empty Space plus the 14 stacks; core tests reject every other stack.)
+- [x] Signed in: manual entry of a board with animal and Nature's Spirit cards → result with the right categories → save → history detail with the same total. (e2e, first test: 16 points, trees 7, mountains 4, animal cards 3, Nature's Spirit 2, two mountains highlighted, saved detail shows 16.)
+- [x] The API rejects an invalid Harmonies board and recomputes a tampered total. (`apps/api/src/routes/sessions-harmonies.test.ts`: `scoreTotal: 999` stores 34; `WR` is a 400 `VALIDATION` with the space's path.)
 
 ## Tests
 - core: every `HAR-*` rule by id, every worked example, schema rejections (unknown space, invalid stack, empty stack, bad side).
@@ -55,6 +55,19 @@ None open. Resolved from the docs:
 - Side B with every space water would have no island; `HAR-WATER-B-1` says there is always at least 1, so the scorer counts at least 1.
 
 ## Decisions
+- `stateVersion` is 1 with no `upgrade`: S0's placeholder (version 0, `null` state) could never be saved, so nothing stored needs upgrading.
+- Core names exported through the package barrel carry the game's name where another game could clash (`HarmoniesPiece`, `HARMONIES_STACKS`, `harmoniesRiverPoints`, `isHarmoniesMountain`, `isHarmoniesBuilding`); Dorfromantik has rivers too.
+- A mountain is a stack of gray tokens only; `MR` is a building, so it is neither a mountain nor a mountain neighbor (`HAR-STACK-2`, `HAR-STACK-4`).
+- Side B counts at least 1 island even if every space is water, as `HAR-WATER-B-1` says.
+- Breakdown highlights: side A water lights the longest river; side B water lights every land space (the islands). Mountains and buildings light only the ones that scored.
+- The Nature's Spirit row appears only with at least 1 card; removing the last card drops `spiritCards` from the state rather than storing an empty list.
+- Card points are whole numbers from 0 to 999. A new card starts at 0 and uses the shared `Counter` (hold the value to type a number).
+- Switching side clears the stacks but keeps the cards, which don't depend on the side. A board from a photo gets the same Clear Board / Cancel sheet until H2 adds "Reread Photo as Side X".
+- Spaces are named "Column N, Space M" (column from the left, space down that column, both from 1), in cell labels and the stack sheet title.
+- Piece colors moved to `apps/web/src/games/harmonies/pieces.tsx`; the motif now reads them from there.
+- Additive wiring: `packages/core/src/index.ts` gains `export * from './games/harmonies';`.
+- Verified visually on a 390px viewport (editor with labels, stack sheet, side switch sheet, result): flat, bordered, token colors only inside the board, no dashes or emoji.
 
 ## Shared change requests
-None.
+- **What:** in `packages/core/src/games/registry.test.ts`, the per-game test asserts `expect(game.stateVersion).toBe(0)`. Change it to `toBeGreaterThanOrEqual(0)` (or drop the line).
+- **Why:** version 0 was S0's placeholder; every game slice moves its game to version 1 when it defines the real state, so this line fails for Harmonies now (`pnpm test`: 1 failure, `harmonies has an edition, an https rulebook and three starter questions`) and will for each other game. H1 doesn't own the file.
