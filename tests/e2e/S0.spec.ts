@@ -26,7 +26,10 @@ test('library card opens the hub with the right tabs', async ({ page }) => {
   const tabs = page.getByRole('navigation', { name: 'Game sections' }).getByRole('link');
   await expect(tabs).toHaveText(['Score', 'Rules', 'History']);
   await expect(tabs.first()).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByTestId('coming-soon')).toBeVisible();
+  // Coming soon until the game's scorer slice lands, then its score home.
+  await expect(
+    page.getByTestId('coming-soon').or(page.getByRole('button', { name: 'Enter by Hand' })),
+  ).toBeVisible();
 
   await tabs.filter({ hasText: 'Rules' }).click();
   await expect(page).toHaveURL(/\/games\/patchwork\/rules$/);
