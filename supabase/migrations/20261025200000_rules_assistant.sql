@@ -47,24 +47,34 @@ begin
 end;
 $$;
 
--- Adds a model call's tokens to the subject's and the global rows for today.
+-- Adds a model call's tokens to the global and the subject's rows for today. Rows are locked
+-- in the same order as in llm_consume_request (global first), so the two can't deadlock.
 create function public.llm_record_tokens(
   p_subject_type text,
   p_subject_key text,
   p_input bigint,
   p_output bigint
 ) returns void
-language sql
+language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  today date := (now() at time zone 'utc')::date;
+begin
   insert into public.llm_usage as u (subject_type, subject_key, day, input_tokens, output_tokens)
-  values
-    (p_subject_type, p_subject_key, (now() at time zone 'utc')::date, p_input, p_output),
-    ('global', 'global', (now() at time zone 'utc')::date, p_input, p_output)
+  values ('global', 'global', today, p_input, p_output)
   on conflict (subject_type, subject_key, day) do update
     set input_tokens = u.input_tokens + excluded.input_tokens,
         output_tokens = u.output_tokens + excluded.output_tokens;
+  if p_subject_type <> 'global' then
+    insert into public.llm_usage as u (subject_type, subject_key, day, input_tokens, output_tokens)
+    values (p_subject_type, p_subject_key, today, p_input, p_output)
+    on conflict (subject_type, subject_key, day) do update
+      set input_tokens = u.input_tokens + excluded.input_tokens,
+          output_tokens = u.output_tokens + excluded.output_tokens;
+  end if;
+end;
 $$;
 
 -- ---------- rulebooks ----------
