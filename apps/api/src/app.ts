@@ -4,7 +4,6 @@ import type { Logger } from 'pino';
 import type { Config } from './config';
 import { createSupabaseClients, type SupabaseClients } from './db/client';
 import { createLlm } from './llm/setup';
-import type { LlmProvider } from './llm/types';
 import { createLogger } from './logger';
 import { cors } from './middleware/cors';
 import { errorHandler, notFoundRoute } from './middleware/errors';
@@ -16,13 +15,13 @@ import { meRouter } from './routes/me';
 import { quotaRouter } from './routes/quota';
 import { rulesRouter } from './routes/rules';
 
-export type AppDeps = { logger?: Logger; clients?: SupabaseClients; llmProvider?: LlmProvider };
+export type AppDeps = { logger?: Logger; clients?: SupabaseClients };
 
 /** The Express app without `listen`, so tests can drive it with Supertest. */
 export function createApp(config: Config, deps: AppDeps = {}): Express {
   const logger = deps.logger ?? createLogger(config);
   const clients = deps.clients ?? createSupabaseClients(config.supabase);
-  const llm = createLlm(config, clients, logger, deps.llmProvider);
+  const llm = createLlm(config, clients, logger);
 
   const app = express();
   app.disable('x-powered-by');

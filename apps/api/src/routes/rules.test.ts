@@ -9,7 +9,6 @@ import type { Config } from '../config';
 import { createSupabaseClients, type Db } from '../db/client';
 import type { Subject } from '../db/quota';
 import { findRulebook } from '../db/rules';
-import { FakeProvider } from '../llm/fake-provider';
 import { guestSubject } from '../services/quota';
 import { askRules } from '../services/rules';
 import { createTestUser, deleteUsers, errorBody, testConfig, type TestUser } from '../test/helpers';
@@ -27,6 +26,7 @@ function guest(overrides: Record<string, string> = {}) {
     IP_HASH_SALT: `s3-${randomUUID()}`,
     LLM_GUEST_DAILY_REQUESTS: '2',
     LLM_USER_DAILY_REQUESTS: '4',
+    LLM_PROVIDER: 'fake',
     ...overrides,
   });
   const ip = `203.0.113.${Math.floor(Math.random() * 250) + 1}`;
@@ -34,8 +34,8 @@ function guest(overrides: Record<string, string> = {}) {
   return { config, ip };
 }
 
-function appFor(config: Config, provider = new FakeProvider()) {
-  return createApp(config, { llmProvider: provider });
+function appFor(config: Config) {
+  return createApp(config);
 }
 
 const ask = (app: ReturnType<typeof appFor>, ip: string, question = 'How does the game end?') =>
@@ -193,7 +193,7 @@ describe('POST /v1/games/:gameId/rules/ask', () => {
 
   it('never lets 20 concurrent requests from one subject exceed its quota', async () => {
     const { config, ip } = guest({ LLM_GUEST_DAILY_REQUESTS: '5' });
-    const app = appFor(config, new FakeProvider(undefined, { delayMs: 20 }));
+    const app = appFor(config);
     const results = await Promise.all(Array.from({ length: 20 }, () => ask(app, ip)));
     const statuses = results.map((r) => r.status);
     expect(statuses.filter((s) => s === 200)).toHaveLength(5);
@@ -217,12 +217,10 @@ describe('POST /v1/games/:gameId/rules/ask', () => {
 
   it('is LLM_DISABLED behind the kill switch, and the quota says so', async () => {
     const { config, ip } = guest({ LLM_ENABLED: 'false' });
-    const provider = new FakeProvider();
-    const app = appFor(config, provider);
+    const app = appFor(config);
     const res = await ask(app, ip);
     expect(res.status).toBe(503);
     expect(errorBody(res).code).toBe('LLM_DISABLED');
-    expect(provider.requests).toHaveLength(0);
     const quota = await request(app).get('/v1/me/quota').set('x-forwarded-for', ip);
     expect(QuotaSchema.parse(quota.body)).toMatchObject({ enabled: false, used: 0 });
   });

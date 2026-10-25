@@ -82,30 +82,19 @@ export class FakeProvider implements LlmProvider {
   readonly name = 'fake';
   readonly requests: CompletionRequest[] = [];
   private readonly steps: FakeStep[];
-  private readonly delayMs: number;
 
-  constructor(steps: FakeStep[] = [rulebookReader], options: { delayMs?: number } = {}) {
+  constructor(steps: FakeStep[] = [rulebookReader]) {
     this.steps = steps;
-    this.delayMs = options.delayMs ?? 0;
   }
 
-  async complete(request: CompletionRequest): Promise<CompletionResponse> {
+  complete(request: CompletionRequest): Promise<CompletionResponse> {
     this.requests.push({ ...request, messages: [...request.messages] });
-    if (this.delayMs > 0) {
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(resolve, this.delayMs);
-        request.signal.addEventListener('abort', () => {
-          clearTimeout(timer);
-          reject(new Error('aborted'));
-        });
-      });
-    }
     const step = this.steps[Math.min(this.requests.length - 1, this.steps.length - 1)];
     const content = step ? step(request) : [];
-    return {
+    return Promise.resolve({
       content,
       stopReason: content.some((block) => block.type === 'tool_use') ? 'tool_use' : 'end_turn',
       usage: FAKE_USAGE,
-    };
+    });
   }
 }
