@@ -1,0 +1,48 @@
+{
+  "name": "tablekeeper",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "prepare": "simple-git-hooks",
+    "dev": "node scripts/dev.mjs",
+    "build": "pnpm -r build",
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r typecheck",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "lint:commits": "node scripts/lint-commits.mjs",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "db:start": "node scripts/db.mjs start",
+    "db:reset": "node scripts/db.mjs reset",
+    "db:types": "node scripts/db.mjs types",
+    "ingest": "node scripts/not-implemented.mjs ingest S3",
+    "eval:cv": "node scripts/not-implemented.mjs eval:cv S2",
+    "rules:smoke": "node scripts/not-implemented.mjs rules:smoke S3"
+  },
+  "simple-git-hooks": {
+    "commit-msg": "pnpm exec commitlint --edit \"$1\""
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.4.3",
+    "@playwright/test": "^1.64.1",
+    "@supabase/supabase-js": "^2.118.0",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "simple-git-hooks": "^2.14.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}
