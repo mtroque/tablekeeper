@@ -1,6 +1,6 @@
 # S3: Rules assistant
 
-**Status:** 🟨 · **Depends on:** S0
+**Status:** ✅ · **Depends on:** S0
 
 **Goal:** rules answers for every supported game, drawn only from its official rulebook with page citations, behind quotas that keep a public deployment from running up the LLM bill.
 
@@ -11,7 +11,8 @@
 - `packages/core/src/contracts/{rules,quota}.ts`
 - `apps/web/src/app/games/[gameId]/rules/**`, `apps/web/src/components/{chat-thread,citation-chip,quota-pill}.tsx`
 - `tests/e2e/S3.spec.ts`
-- Wiring, additions only (see Shared change requests): two export lines in `packages/core/src/index.ts`, two router lines in `apps/api/src/app.ts`, the `ingest` / `rules:smoke` scripts and new dev dependencies in the root `package.json`, `@anthropic-ai/sdk` in `apps/api/package.json`, the regenerated `apps/api/src/db/database.types.ts`.
+- Additive wiring (AGENTS.md → Parallel sessions), listed under Decisions.
+- The `ingest` and `rules:smoke` entries in the root `package.json` (S0 left them as "not implemented yet" placeholders for this slice), new dependencies, and the regenerated `apps/api/src/db/database.types.ts`.
 
 ## Scope
 - Everything in `docs/ARCHITECTURE.md` → Rules assistant and → LLM gateway and abuse protection, plus the `rules/ask` and `me/quota` routes (`NOT_FOUND` when a game has no ingested rulebook).
@@ -34,6 +35,8 @@
 
 **Gateway** (`apps/api/src/llm/gateway.ts`): `gateway.run({ purpose, subject, limits }, (model) => ...)` checks the kill switch, consumes one request from the global and subject quotas, and hands the callback a `model.complete(...)` that records tokens after every call (including failed ones) and enforces the overall timeout. One rules question is one request, however many model calls the agent makes.
 
+**Commands:** `pnpm ingest <gameId>` writes the review file and refuses to overwrite an existing one (which may hold review edits) unless given `--force`; `pnpm ingest <gameId> --load` loads it. `pnpm rules:smoke <gameId> "<question>"` runs one question through the API's own gateway, quotas and service, counted against a guest subject named `rules-smoke`.
+
 ## UI states
 Beyond `docs/UX.md` → Screen states:
 - Asking: the question appears at once, followed by a "Reading the rulebook." placeholder; the input is disabled until the answer arrives.
@@ -44,12 +47,12 @@ Beyond `docs/UX.md` → Screen states:
 - Error: the message from the API with "Try Again", which resends the same question.
 
 ## Acceptance criteria
-- [ ] Ingest → review → `--load` works for all four games, and re-running is idempotent.
-- [ ] "How does the game end?" gets a cited answer with a working page link for each game.
-- [ ] An off-topic question returns `notCovered` with no invented rules.
-- [ ] Guest request N+1 gets `QUOTA_EXCEEDED`; the signed-in limit is separate and higher; `LLM_ENABLED=false` shows the disabled state.
-- [ ] 20 concurrent requests from one subject never exceed its quota.
-- [ ] E2E (with `FakeProvider`): ask → cited answer → quota exhausted.
+- [x] Ingest → review → `--load` works for all four games, and re-running is idempotent. (Manual run: 9, 13, 17 and 10 sections for Patchwork, Azul, Harmonies, Dorfromantik; I reviewed titles, pages and bodies. Loading twice kept the same rulebook ids and the same md5 over every section's title, body, pages and parent. Splitting, page numbers and the review file: `scripts/lib/sections.test.js`.)
+- [x] "How does the game end?" gets a cited answer with a working page link for each game. (Manual `pnpm rules:smoke` with the real model, 2026-10-25: all four answered correctly with citations; Azul "End of the game" printed p. 6 → `#page=5`, Harmonies "End of Game" p. 7 → `#page=4`, Dorfromantik p. 5 to 7 → `#page=5`, Patchwork "End of the Game" no printed page → `#page=2`, each matching the page note in `docs/games/<gameId>.md`. Link format: `apps/api/src/routes/rules.test.ts`.)
+- [x] An off-topic question returns `notCovered` with no invented rules. (Real model: "What is the capital of France?" for Patchwork and "Can I trade tiles with another player?" for Azul both returned `notCovered: true` and said the rulebook doesn't cover it. With `FakeProvider`: `rules.test.ts`, `agent.test.ts`, e2e.)
+- [x] Guest request N+1 gets `QUOTA_EXCEEDED`; the signed-in limit is separate and higher; `LLM_ENABLED=false` shows the disabled state. (`rules.test.ts`: guest limit 2 then 429 with `scope: guest`; the same IP signed in gets its own limit of 4; kill switch gives 503 `LLM_DISABLED` and `/me/quota` reports `enabled: false`; the page's disabled state was checked in screenshots, light and dark.)
+- [x] 20 concurrent requests from one subject never exceed its quota. (`rules.test.ts`: exactly 5 of 20 succeed with a limit of 5, and `used` is 5; the full API suite was run 5 times in a row after the lock-order fix.)
+- [x] E2E (with `FakeProvider`): ask → cited answer → quota exhausted. (`tests/e2e/S3.spec.ts`, which also covers the "Not in the Rulebook" answer.)
 
 ## Tests
 - core: contract schemas.
@@ -66,5 +69,18 @@ None open. Resolved from the docs:
 - The global budget returns `QUOTA_EXCEEDED` with `details.scope = 'global'`.
 
 ## Decisions
+- **Migration applied by hand:** worktrees can't run `pnpm db:reset`, so `20261025200000_rules_assistant.sql` was applied to the shared local database with `psql` (not recorded in the migration history). After merging, run `pnpm db:reset` on `main` so it is recorded, then `pnpm ingest <gameId> --load` for each game again (reset empties the rulebook tables).
+- **One question is one quota request**, however many model calls it takes; `gateway.run` takes a callback that receives the timed, recorded model, rather than a single message list.
+- **No forced tool choice:** current Claude models reject a forced `tool_choice`, so the final `answer` tool is required by the prompt, with `strict: true` tool schemas. If the model replies in text, it gets one reminder; then the reply is "Couldn't find an answer in the rulebook."
+- **The tool list never changes within a run.** Claude's thinking blocks are bound to it (changing it returned a 400 in a real run). Past `RULES_MAX_TOOL_CALLS`, tool calls get a tool error and a reminder to answer.
+- **An answer citing nothing it read is marked `notCovered`**, so an uncited claim is never shown as "From the Rulebook".
+- **Model:** `LLM_MODEL_RULES`, defaulting to `claude-opus-5-5` at medium effort, with the server-side refusal fallback (`fallbacks: 'default'`). A rules question took 4 to 11 seconds and about 7,000 input tokens in the smoke runs; `RULES_MAX_OUTPUT_TOKENS=800` was enough.
+- **Usage rows lock global first** in both quota functions, so concurrent requests can't deadlock (a first version did, under the 20 request test).
+- **Ingestion splits by heading size**, since none of the four PDFs has an outline. Per-game settings (heading fonts and sizes, columns per page, skipped pages, printed page numbers) live in `scripts/lib/rulebook-layouts.ts`; font ids belong to the exact PDF version, so a new rulebook version needs a review of that file. Text smaller than the body (the score and campaign sheets reproduced in Dorfromantik) is dropped.
+- **Review notes:** Patchwork's Setup section reads in diagram order (numbered callouts), Harmonies' End of Game puts the second end condition after a diagram caption, and the Harmonies player aid (PDF page 7) repeats sections in short form. All are readable for the model and were left as extracted.
+- **Additive wiring:** `packages/core/src/index.ts` exports `contracts/quota` and `contracts/rules`; `apps/api/src/app.ts` imports `createLlm`, `quotaRouter` and `rulesRouter`, creates the LLM services and mounts both routers.
+- **Dependencies:** `@anthropic-ai/sdk` (API); `pdfjs-dist`, `tsx` and `zod` as root dev dependencies for the scripts.
+- **Tests reach the API with a forwarded IP** (`x-forwarded-for`, trusted through `trust proxy`) and their own `IP_HASH_SALT`, so every test starts with a fresh guest quota; each removes its usage rows and takes them back off the global row.
 
 ## Shared change requests
+None.
