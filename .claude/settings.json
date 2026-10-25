@@ -7,6 +7,7 @@
       "Bash(pnpm test:*)",
       "Bash(pnpm test:e2e:*)",
       "Bash(pnpm build:*)",
+      "Bash(pnpm clean:*)",
       "Bash(pnpm dev:*)",
       "Bash(pnpm ingest:*)",
       "Bash(pnpm eval:cv:*)",

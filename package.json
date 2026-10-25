@@ -10,6 +10,7 @@
     "prepare": "simple-git-hooks",
     "dev": "node scripts/dev.mjs",
     "build": "pnpm -r build",
+    "clean": "node scripts/clean.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r typecheck",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
