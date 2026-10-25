@@ -56,10 +56,11 @@ Web on Vercel, API on Render, database and auth on Supabase cloud. Local develop
 
 ## 4. Vercel (web)
 
-1. Import the repo; Framework: Next.js; Root directory: `apps/web`.
-2. Vercel detects pnpm workspaces; if needed, Install command: `pnpm install --frozen-lockfile` (run from the repo root via "Include files outside root directory").
-3. Environment variables: every variable under "Web" in `.env.example`: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the cloud project's), `NEXT_PUBLIC_API_URL` = the Render URL, `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=false`. Nothing under "Local only".
-4. Deploy; copy the production URL back into Supabase (Site URL, redirects), Google (origins) and Render (`WEB_ORIGINS`), then redeploy the API.
+1. Import the repo; Framework: Next.js; Root directory: `apps/web`. "Include files outside the root directory" is on by default (Project Settings → Build and Deployment); the app needs `packages/core` and `packages/cv`.
+2. Install command: the default. Vercel detects the pnpm workspace and installs from the repo root.
+3. **Build command: `next build --webpack`** (override). The default Turbopack build hangs because the CV worker imports the web game UI registry; until S4 fixes it, the webpack build deploys every page, and photo detection fails in the worker. Details: `docs/slices/S4-cv-worker-detectors.md`. Remove the override when S4 is done.
+4. Environment variables: every variable under "Web" in `.env.example`: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the cloud project's), `NEXT_PUBLIC_API_URL` = the Render URL, `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=false`. Nothing under "Local only". Also `ENABLE_EXPERIMENTAL_COREPACK=1`, so Vercel uses the pnpm version pinned in `package.json` (`packageManager`), which wrote the lockfile.
+5. Deploy; copy the production URL back into Supabase (Site URL, redirects), Google (origins) and Render (`WEB_ORIGINS`), then redeploy the API.
 
 ## 5. Anthropic
 
