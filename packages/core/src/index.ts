@@ -16,3 +16,4 @@ export * from './contracts/sessions';
 export * from './contracts/campaigns';
 export * from './games/_example';
 export * from './games/patchwork';
+export * from './games/harmonies';
