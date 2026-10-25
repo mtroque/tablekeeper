@@ -1,6 +1,8 @@
 # S0: Foundation
 
-**Status:** 🟨 · **Depends on:** none
+**Status:** ⏸ · **Depends on:** none
+
+**Paused (2026-10-25):** local Supabase for this repo can't start: another local Supabase project (`~/supabase-warmup`) holds the default ports 54321 to 54327, and stopping it needs the owner's OK. Everything is built; still to run against the database: `pnpm db:start && pnpm db:reset && pnpm db:types` (replaces the hand-written placeholder `apps/api/src/db/database.types.ts`), the API integration tests (`/v1/me`, RLS), the signed-in e2e test, and a manual Google sign-in with the OAuth client in `.env.local`.
 
 **Goal:** a running, tested skeleton that every later slice plugs into without touching shared plumbing: monorepo, web + API + database, Google sign-in and guest mode, game library and hub, every table and every shared type.
 
@@ -47,15 +49,15 @@ Everything. After S0, `packages/core/src/kit/types.ts` and the migration are fro
 - Unknown `gameId`: Next.js not-found page with a link back to the library.
 
 ## Acceptance criteria
-- [ ] Fresh clone → `pnpm install && pnpm db:start && pnpm db:reset && pnpm dev` gives a working app and API, with no Supabase values in `.env.local`.
-- [ ] With local Supabase stopped, `pnpm dev` exits with the "isn't running" message; an explicit `SUPABASE_URL` in the environment overrides the detected one.
-- [ ] The library shows the four games with correct feature tags; each hub shows the right tabs.
-- [ ] Google sign-in and sign-out work locally.
+- [ ] Fresh clone → `pnpm install && pnpm db:start && pnpm db:reset && pnpm dev` gives a working app and API, with no Supabase values in `.env.local`. (Not run yet: database blocked. `pnpm install` and `pnpm dev` with explicit Supabase values work.)
+- [x] With local Supabase stopped, `pnpm dev` exits with the "isn't running" message; an explicit `SUPABASE_URL` in the environment overrides the detected one. (Manual run; `scripts/lib/local-env.test.js`.)
+- [x] The library shows the four games with correct feature tags; each hub shows the right tabs. (`tests/e2e/S0.spec.ts`, `apps/web/src/lib/game-tabs.test.ts`.)
+- [ ] Google sign-in and sign-out work locally. (Sign In reaches Supabase's Google authorize URL with the right `redirect_to`, e2e; sign-out tested with a seeded user once the database runs; the Google round trip needs a manual run.)
 - [ ] `GET /v1/me` returns the 401 envelope without a token and the profile with one.
 - [ ] User A can't read user B's `play_sessions` (integration test).
-- [ ] At 1440px: centered column with QR side note; at 390px: no side note.
-- [ ] A second `pnpm dev` in another checkout picks the next free ports with no env edits.
-- [ ] A commit message like `added stuff` is rejected by the hook; `pnpm lint` fails on a UI string containing an em dash.
+- [x] At 1440px: centered column with QR side note; at 390px: no side note. (e2e, plus screenshots checked in light and dark.)
+- [x] A second `pnpm dev` in another checkout picks the next free ports with no env edits. (Manual: a second checkout got 3001 / 4001 while the first ran on 3000 / 4000.)
+- [x] A commit message like `added stuff` is rejected by the hook; `pnpm lint` fails on a UI string containing an em dash. (Manual runs; `eslint-rules/ui-copy.test.js`.)
 
 ## Tests
 core registry and contracts; API health, games, auth paths, error envelope, RLS; e2e library → hub and a signed-in state with a seeded user.
@@ -70,6 +72,14 @@ None open. Resolved from the docs:
 - Example game (`NEXT_PUBLIC_ENABLE_EXAMPLE_GAME`): S1 owns it; S0 only parses the variable.
 
 ## Decisions
+- TypeScript is pinned to 6.0: typescript-eslint doesn't support TypeScript 7 yet.
+- Workspace packages ship TypeScript source. Next.js transpiles them (`transpilePackages`); the API is bundled with tsup for Render.
+- Package boundaries are enforced twice: by package name (`@typescript-eslint/no-restricted-imports`, which also allows cv's type-only imports of core) and by relative path (`import-x/no-restricted-paths`).
+- `GameUiModule` and its props types live in `apps/web/src/games/types.ts` (they need React). Every member except `Motif` is optional, since game slices add them.
+- The browser uses plain `supabase-js` with PKCE and the session in localStorage (`tk:auth`); there is no server-side auth, because data goes through the API with a bearer token. E2E tests sign seeded users in by password and put the session under that key.
+- `game_id` columns are checked against an id pattern, not the four ids, so S1's `_example` game can be saved in tests; the API validates ids against the registry.
+- `pnpm db:start` and `pnpm db:reset` refuse to run in a worktree, since every worktree shares one database.
+- CORS is a small local middleware rather than the `cors` package.
 
 ## Shared change requests
 None.
