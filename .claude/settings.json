@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm test:e2e:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm ingest:*)",
+      "Bash(pnpm eval:cv:*)",
+      "Bash(pnpm db:types:*)",
+      "Bash(pnpm --filter:*)",
+      "Bash(pnpm exec:*)",
+      "Bash(pnpm add:*)",
+      "Bash(npx playwright:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git rebase:*)",
+      "Bash(git worktree list:*)",
+      "Bash(git branch:*)",
+      "Bash(supabase status:*)",
+      "Bash(supabase migration new:*)",
+      "Bash(scripts/worktrees.sh status:*)",
+      "Bash(git -C .claude/worktrees/:*)",
+      "Bash(tmux list-windows:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(rm -rf:*)",
+      "Read(.env.local)",
+      "Read(.env)"
+    ]
+  },
+  "worktree": {
+    "baseRef": "head"
+  }
+}

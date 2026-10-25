@@ -1,0 +1,46 @@
+{
+  "gameId": "azul",
+  "accuracyThreshold": 0.98,
+  "items": [
+    {
+      "image": "images/01-early-wall-3-first-player.jpg",
+      "corners": [[126, 79], [1487, 68], [1494, 1436], [130, 1435]],
+      "label": {
+        "wall": ["...#.", "....#", "..#..", ".....", "....."],
+        "floorCount": 1
+      }
+    },
+    {
+      "image": "images/02-early-wall-7.jpg",
+      "corners": [[117, 113], [1455, 75], [1487, 1439], [117, 1454]],
+      "label": {
+        "wall": ["#..#.", "#...#", "..#..", "....#", "..#.."],
+        "floorCount": 0
+      }
+    },
+    {
+      "image": "images/03-mid-wall-11-floor-2.jpg",
+      "corners": [[91, 111], [1460, 77], [1524, 1478], [88, 1511]],
+      "label": {
+        "wall": ["#..##", "#.#.#", "#.#..", ".#..#", "..#.."],
+        "floorCount": 2
+      }
+    },
+    {
+      "image": "images/04-mid-wall-14.jpg",
+      "corners": [[87, 99], [1434, 70], [1483, 1431], [89, 1466]],
+      "label": {
+        "wall": ["##.##", "#.###", "#.##.", ".#..#", "..#.."],
+        "floorCount": 0
+      }
+    },
+    {
+      "image": "images/05-late-top-row-done-floor-3.jpg",
+      "corners": [[119, 111], [1451, 90], [1490, 1434], [116, 1459]],
+      "label": {
+        "wall": ["#####", "#.###", "#.###", ".#..#", "#.#.."],
+        "floorCount": 3
+      }
+    }
+  ]
+}

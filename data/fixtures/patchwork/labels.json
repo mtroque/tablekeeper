@@ -1,0 +1,94 @@
+{
+  "gameId": "patchwork",
+  "accuracyThreshold": 0.97,
+  "items": [
+    {
+      "image": "images/01-red-white-table.jpg",
+      "corners": [[517, 118], [1522, 125], [1524, 1117], [524, 1145]],
+      "label": {
+        "board": "red",
+        "grid": ["#########", "#######.#", "#######.#", "#######.#", "#########", "#########", "#########", "#########", "###.####."],
+        "tokens": { "one": 6, "five": 0, "ten": 2, "twenty": 0 },
+        "specialTile": true,
+        "expectedScore": 23
+      }
+    },
+    {
+      "image": "images/02-red-wood-table.jpg",
+      "corners": [[110, 513], [1115, 507], [1119, 1490], [122, 1530]],
+      "label": {
+        "board": "red",
+        "grid": ["..####..#", "..#######", ".####.###", "#########", "####.###.", "####.####", "#####.###", "#########", "#.######."],
+        "tokens": { "one": 2, "five": 3, "ten": 0, "twenty": 0 },
+        "specialTile": false,
+        "expectedScore": -11
+      }
+    },
+    {
+      "image": "images/03-red-dark-table-tile.jpg",
+      "corners": [[120, 103], [1092, 148], [1066, 1104], [101, 1081]],
+      "label": {
+        "board": "red",
+        "grid": [".########", "######.##", "#####.###", "#########", "#########", "#########", ".########", ".########", "#####.#.."],
+        "tokens": { "one": 5, "five": 1, "ten": 3, "twenty": 0 },
+        "specialTile": true,
+        "expectedScore": 31
+      }
+    },
+    {
+      "image": "images/04-red-dark-table.jpg",
+      "corners": [[81, 77], [1116, 74], [1128, 1104], [96, 1107]],
+      "label": {
+        "board": "red",
+        "grid": ["#########", "#########", ".########", "#########", ".##...###", "#########", "#########", "#.#######", "#####.###"],
+        "tokens": { "one": 9, "five": 1, "ten": 1, "twenty": 0 },
+        "specialTile": false,
+        "expectedScore": 10
+      }
+    },
+    {
+      "image": "images/05-gray-pink-table.jpg",
+      "corners": [[567, 52], [1479, 36], [1492, 934], [592, 959]],
+      "label": {
+        "board": "gray",
+        "grid": ["#########", ".##..####", ".###.####", "####.####", "#########", "###.#####", ".#######.", "#########", "######..."],
+        "tokens": { "one": 3, "five": 4, "ten": 2, "twenty": 0 },
+        "specialTile": false,
+        "expectedScore": 19
+      }
+    },
+    {
+      "image": "images/06-gray-light-wood-glare.jpg",
+      "corners": [[537, 23], [1512, 29], [1505, 995], [537, 1012]],
+      "label": {
+        "board": "gray",
+        "grid": ["...#....#", "######.##", "#########", ".##.###.#", "#######..", "######..#", "##.######", "######.##", "#######.#"],
+        "tokens": { "one": 6, "five": 2, "ten": 2, "twenty": 0 },
+        "specialTile": true,
+        "expectedScore": 7
+      }
+    },
+    {
+      "image": "images/07-gray-dark-wood.jpg",
+      "corners": [[67, 85], [1054, 79], [1074, 1085], [42, 1096]],
+      "label": {
+        "board": "gray",
+        "grid": [".########", "######.##", "######.##", ".########", "#####.###", "#########", "##.######", ".#######.", "#########"],
+        "tokens": { "one": 3, "five": 3, "ten": 1, "twenty": 0 },
+        "specialTile": false,
+        "expectedScore": 12
+      }
+    },
+    {
+      "image": "images/08-gray-dark-table-tile.jpg",
+      "corners": [[76, 81], [1045, 123], [1009, 1070], [47, 1052]],
+      "label": {
+        "board": "gray",
+        "grid": ["########.", "#########", "##.######", "######.##", "######.##", "#########", "##.#####.", ".#######.", "####.###."],
+        "tokens": { "one": 5, "five": 1, "ten": 2, "twenty": 0 },
+        "specialTile": true,
+        "expectedScore": 17
+      }
+    }
+  ]
+}

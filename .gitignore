@@ -1,0 +1,34 @@
+node_modules/
+.pnpm-store/
+dist/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.turbo/
+
+# env
+.env
+.env.*
+!.env.example
+
+# data
+data/rulebooks/*
+!data/rulebooks/.gitkeep
+data/fixtures/*/eval-report.md
+
+# supabase local
+supabase/.branches/
+supabase/.temp/
+
+# Claude Code worktrees
+.claude/worktrees/
+.claude/settings.local.json
+
+# os / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
