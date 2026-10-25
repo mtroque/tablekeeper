@@ -2,7 +2,7 @@
 
 > **Take-home exam.** This iteration of the repo was created within 2 hours with Claude Code, using parallel agents. The planning, documentation and fixtures were prepared before those 2 hours, and the deployment was done after them.
 >
-> **Live:** [tablekeeper-beryl.vercel.app](https://tablekeeper-beryl.vercel.app/). The web app is hosted on Vercel, the API on Render and the database on Supabase, with sign-in through Google OAuth.
+> **Live:** [tablekeeper-beryl.vercel.app](https://tablekeeper-beryl.vercel.app/). The web app is hosted on Vercel, the API on Render and the database on Supabase, with sign-in through Google OAuth. An ad blocker may make the app say "Couldn't reach the server." by blocking its health check; everything still works.
 
 **Your games stay physical. Tablekeeper takes away the friction around them.**
 
