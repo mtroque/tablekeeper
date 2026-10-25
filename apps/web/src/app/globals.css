@@ -1,0 +1,97 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* Design tokens: docs/UX.md → Design tokens. The only hex colors outside game modules. */
+:root {
+  --bg: #f6f1e9;
+  --surface: #fffdf8;
+  --ink: #2b211c;
+  --muted: #7a6a5f;
+  --line: #e5dccf;
+  --accent: #1f6f6b;
+  --accent-soft: #d7ebe8;
+  --warn: #c2681b;
+  --warn-soft: #fbe8d3;
+  --danger: #c2463a;
+  --on-accent: #fffdf8;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #171311;
+    --surface: #221c19;
+    --ink: #f1e9df;
+    --muted: #a8988b;
+    --line: #3a312b;
+    --accent: #5bb5ad;
+    --accent-soft: #1d3533;
+    --warn: #e39a55;
+    --warn-soft: #3b2a1b;
+    --danger: #e07468;
+    --on-accent: #171311;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-on-accent: var(--on-accent);
+
+  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  /* 6px controls, 10px cards, 16px sheets. */
+  --radius-control: 6px;
+  --radius-card: 10px;
+  --radius-sheet: 16px;
+
+  --ease-calm: cubic-bezier(0, 0, 0.2, 1);
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+  html {
+    background: var(--bg);
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
