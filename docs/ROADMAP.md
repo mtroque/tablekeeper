@@ -13,11 +13,13 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | D1 | Dorfromantik scoresheet | S1 | ✅ |
 | D2 | Dorfromantik campaign and unlocks | D1 | ⬜ |
 | P1 | Patchwork manual scorer | S1 | ✅ |
-| P2 | Patchwork board detection | P1, S2 | ⬜ |
+| P2 | Patchwork board detection | P1, S2, S4 | ⬜ |
 | P3 | Patchwork token detection | P2 | ⬜ |
 | A1 | Azul manual round tracker | S1 | ✅ |
 | H1 | Harmonies manual scorer | S1 | ✅ |
-| H2 | Harmonies photo detection | H1, S2 | ⬜ |
+| H2 | Harmonies photo detection | H1, S2, S4 | ⬜ |
+| S4 | CV worker detectors without UI (production builds) | S2 | ⬜ |
+| X1 | Privacy policy page | S0 | ⬜ |
 
 ## Suggested runs
 
@@ -33,8 +35,9 @@ Most value first:
 
 1. S0, S1, S3: rules for four games plus saved scores.
 2. D1, P1, A1, H1: every game has a scorer.
-3. S2, P2: photo-to-draft shown on one game.
-4. D2, H2, P3.
+3. S4, X1: production builds with the default bundler; a privacy policy for the Google consent screen.
+4. S2, P2: photo-to-draft shown on one game.
+5. D2, H2, P3.
 
 ## Later
 
