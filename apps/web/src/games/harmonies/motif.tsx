@@ -1,13 +1,10 @@
 import { hexPoints } from '../hex';
 import type { MotifProps } from '../types';
 
+import { PIECE_COLORS, SPACE_EDGE, SPACE_FILL } from './pieces';
+
 // Round tokens sitting on a hex grid, in the token colors (docs/games/harmonies.md → Pieces).
-const WATER = '#3d7fc1';
-const FIELD = '#e8c440';
-const MOUNTAIN = '#8d8f93';
-const TRUNK = '#7a4f2e';
-const LEAVES = '#4f9a45';
-const ROOF = '#c4413a';
+const { W: WATER, F: FIELD, M: MOUNTAIN, T: TRUNK, L: LEAVES, R: ROOF } = PIECE_COLORS;
 
 const R = 10;
 const W = Math.sqrt(3) * R;
@@ -29,8 +26,8 @@ export function Motif({ className }: MotifProps) {
         <g key={i}>
           <polygon
             points={hexPoints(x, y, R - 0.6)}
-            fill="#e9dcc3"
-            stroke="#b9a582"
+            fill={SPACE_FILL}
+            stroke={SPACE_EDGE}
             strokeWidth="0.8"
           />
           {stack.map((color, level) => (
