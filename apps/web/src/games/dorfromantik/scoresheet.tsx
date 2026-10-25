@@ -124,7 +124,8 @@ function ExtraRowInput({
         />
       )}
       <p className="text-sm text-muted">
-        {row.hint}. {row.input === 'count' ? `Enter: ${row.counts.toLowerCase()}.` : null}
+        <span className="font-semibold">{row.hint}</span>
+        {row.input === 'count' && ` · ${row.counts}`}
       </p>
     </div>
   );

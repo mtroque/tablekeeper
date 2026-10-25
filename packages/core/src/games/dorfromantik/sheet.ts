@@ -102,7 +102,7 @@ export const EXTRA_ROWS: readonly ExtraRow[] = [
     label: 'Harbor',
     hint: 'closed off = 1/tile',
     input: 'count',
-    counts: 'Tiles',
+    counts: 'Tiles closed off',
     multiplier: 1,
   },
   {
@@ -110,7 +110,7 @@ export const EXTRA_ROWS: readonly ExtraRow[] = [
     label: 'Train Station',
     hint: 'closed off = 1/tile',
     input: 'count',
-    counts: 'Tiles',
+    counts: 'Tiles closed off',
     multiplier: 1,
   },
   {
