@@ -143,7 +143,7 @@ export interface OpenCv {
 let instance: OpenCv | undefined;
 let loading: Promise<OpenCv> | undefined;
 let loads = 0;
-let loader: () => Promise<unknown> = () => import('@techstark/opencv-js');
+let loader: (() => Promise<unknown>) | undefined;
 
 function isOpenCv(value: unknown): value is OpenCv {
   return (
@@ -152,9 +152,10 @@ function isOpenCv(value: unknown): value is OpenCv {
 }
 
 /**
- * Replaces how the opencv.js package is imported, before the first load. Node callers (tests, the
- * eval) pass a `require`-based loader (`../node.ts`): Vitest's CommonJS interop turns the package's
- * promise export into a thenable namespace that `import()` can't resolve.
+ * Sets how opencv.js is fetched, before the first load. The package is never imported statically:
+ * bundlers can't resolve its Node-only `require("fs")`, and Vitest's CommonJS interop turns its
+ * promise export into a thenable namespace that `import()` can't resolve. Node callers use
+ * `loadOpenCvInNode` (`../node.ts`); the web worker evaluates the script itself.
  */
 export function setOpenCvLoader(load: () => Promise<unknown>): void {
   if (loading) throw new Error('opencv.js is already loading');
@@ -166,6 +167,7 @@ export function setOpenCvLoader(load: () => Promise<unknown>): void {
  * ready module (or the module itself in older builds), possibly as a namespace's default.
  */
 export function loadOpenCv(): Promise<OpenCv> {
+  if (!loader) return Promise.reject(new Error('No opencv.js loader; call setOpenCvLoader first'));
   loading ??= loader().then(async (mod: unknown) => {
     loads += 1;
     const exported: unknown = isOpenCv(mod)

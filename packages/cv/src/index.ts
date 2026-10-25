@@ -4,6 +4,7 @@ export type { Detector, Draft } from '@tablekeeper/core';
 
 export {
   loadOpenCv,
+  setOpenCvLoader,
   getCv,
   isOpenCvLoaded,
   openCvLoadCount,
