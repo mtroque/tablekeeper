@@ -15,7 +15,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | P1 | Patchwork manual scorer | S1 | ✅ |
 | P2 | Patchwork board detection | P1, S2 | ⬜ |
 | P3 | Patchwork token detection | P2 | ⬜ |
-| A1 | Azul manual round tracker | S1 | ⬜ |
+| A1 | Azul manual round tracker | S1 | ✅ |
 | H1 | Harmonies manual scorer | S1 | ✅ |
 | H2 | Harmonies photo detection | H1, S2 | ⬜ |
 
