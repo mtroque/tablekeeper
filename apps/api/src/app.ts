@@ -9,11 +9,13 @@ import { cors } from './middleware/cors';
 import { errorHandler, notFoundRoute } from './middleware/errors';
 import { burstLimit } from './middleware/rate-limit';
 import { requestId } from './middleware/request-id';
+import { campaignsRouter } from './routes/campaigns';
 import { gamesRouter } from './routes/games';
 import { healthRouter } from './routes/health';
 import { meRouter } from './routes/me';
 import { quotaRouter } from './routes/quota';
 import { rulesRouter } from './routes/rules';
+import { sessionsRouter } from './routes/sessions';
 
 export type AppDeps = { logger?: Logger; clients?: SupabaseClients };
 
@@ -38,6 +40,8 @@ export function createApp(config: Config, deps: AppDeps = {}): Express {
   v1.use(meRouter(clients));
   v1.use(quotaRouter(config, clients, llm));
   v1.use(rulesRouter(config, clients, llm));
+  v1.use(sessionsRouter(clients));
+  v1.use(campaignsRouter(clients));
   app.use('/v1', v1);
 
   app.use(notFoundRoute);
