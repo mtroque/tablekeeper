@@ -1,6 +1,8 @@
 # Tablekeeper
 
-> **Take-home exam.** This iteration of the repo was created within 2 hours. The planning, documentation and fixtures were prepared before those 2 hours, and the deployment was done after them.
+> **Take-home exam.** This iteration of the repo was created within 2 hours with Claude Code, using parallel agents. The planning, documentation and fixtures were prepared before those 2 hours, and the deployment was done after them.
+>
+> **Live:** [tablekeeper-beryl.vercel.app](https://tablekeeper-beryl.vercel.app/). The web app is hosted on Vercel, the API on Render and the database on Supabase, with sign-in through Google OAuth.
 
 **Your games stay physical. Tablekeeper takes away the friction around them.**
 
