@@ -53,6 +53,7 @@ Web on Vercel, API on Render, database and auth on Supabase cloud. Local develop
 ### Keep-alive
 - External pinger (cron-job.org or UptimeRobot) → `GET https://<render-service>/health` every 10 minutes.
 - The web app also calls `/health` on load, so the API starts waking as soon as someone opens the site.
+- Known false alarm (suspected, not yet confirmed): an ad or tracker blocker that blocks the `/health` request makes the status line show "Couldn't reach the server. Scoring still works." even though the API is up and other calls succeed. When debugging that message, check the browser's network tab for a blocked `/health` request, or retry with the blocker off, before assuming the API is down. S5 removes this line (`docs/slices/S5-quiet-server-status.md`).
 
 ## 4. Vercel (web)
 

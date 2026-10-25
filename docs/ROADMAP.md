@@ -20,6 +20,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | H2 | Harmonies photo detection | H1, S2, S4 | ⬜ |
 | S4 | CV worker detectors without UI (production builds) | S2 | ⬜ |
 | X1 | Privacy policy page | S0 | ✅ |
+| S5 | Quiet server status: drop the false "Couldn't reach the server." line | S0 | ⬜ |
 
 ## Suggested runs
 
