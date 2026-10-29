@@ -1,6 +1,6 @@
 # S4: CV Worker Detectors Without UI
 
-**Status:** ⬜ · **Depends on:** S2
+**Status:** 🟨 · **Depends on:** S2
 
 **Goal:** Photo scoring works in production builds. The CV worker finds detectors without importing the web game UI, so `next build` (Turbopack) finishes and the worker runs in the deployed app.
 
@@ -20,13 +20,14 @@ Found on 2026-10-25 during the first Vercel deploy:
 
 ## Owns
 
-- `apps/web/src/workers/cv.worker.ts`
-- A new UI-free detector registry, e.g. `apps/web/src/games/detectors.ts`
-- `apps/web/src/games/types.ts` (removing `detector` from `GameUiModule`)
-- `apps/web/src/games/_example/` (moving its detector loader)
-- `docs/ARCHITECTURE.md` → Game modules and Computer vision (the `detector` contract)
+- `apps/web/src/workers/cv.worker.ts` and a new `apps/web/src/workers/cv-worker-imports.test.ts`
+- `apps/web/src/games/detectors.ts` (new): the UI-free detector lookup
+- `apps/web/src/games/<gameId>/detector.ts` (new) for `_example`, `patchwork`, `azul`, `harmonies`, `dorfromantik`: one loader stub per game; game slices own them afterwards
+- `apps/web/src/games/types.ts` (removing `detector` from `GameUiModule`), `apps/web/src/games/_example/index.ts`
+- `scripts/test-build.mjs` and `tests/build/playwright.config.ts` (new), the root `package.json` `test:build` script, its line in `README.md` → Commands
+- `docs/ARCHITECTURE.md` → Monorepo, Game modules and Computer vision (the detector contract)
 - `docs/DEPLOYMENT.md` → Vercel (removing the webpack workaround)
-- A production build check (script or test) and `tests/e2e/S4.spec.ts`
+- `tests/e2e/S4.spec.ts`
 
 ## Scope
 
@@ -36,7 +37,17 @@ Must cover:
 - Games stay pre-registered (D-008): game slices add their detector without editing a registry.
 - A check that fails when the worker graph pulls in UI again: a production `next build` that must finish in a time limit, plus starting the built worker in a browser and getting a reply.
 - `docs/DEPLOYMENT.md` goes back to the default build command once Turbopack builds; Vercel's build command override is removed.
-- D-029 is superseded in `docs/DECISIONS.md`.
+- D-029 is superseded in `docs/DECISIONS.md` (by `/merge`, from this spec's Decisions).
+
+**Detector lookup.** Each web game folder has a `detector.ts` exporting `loadDetector: DetectorLoader | undefined` (`DetectorLoader = () => Promise<Detector<unknown>>`). It may import only `@tablekeeper/cv/games/<gameId>` (lazily) and types. S4 adds the stubs (`undefined` for the four real games, the cv `_example` loader for `_example`); P2 and H2 then fill in their own file, which their slices already own, so they edit no registry. `apps/web/src/games/detectors.ts` imports the five files and exports `findDetector(id: string)`: a registered game's loader, or `_example`'s outside production builds or when `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=true` (the rule S2 put in the worker). The worker imports only `findDetector`. `GameUiModule.detector` is removed; nothing in the UI read it.
+
+**Import guard (`pnpm test`).** `cv-worker-imports.test.ts` walks the worker's module graph with TypeScript's own module resolution (the web `tsconfig.json`, so `@/` paths and workspace packages resolve), following static and dynamic imports and skipping type-only ones, which bundlers erase. It fails, printing the chain, if the graph reaches a `.tsx` file, `react`, `react-dom`, `next`, `games/registry.ts` or `lib/cv-client.ts`. It takes about a second, so it stays in `pnpm test`.
+
+**Production check (`pnpm test:build`).** `scripts/test-build.mjs` runs `next build` for `apps/web` (Turbopack, the default) with `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=true` so the `/dev/cv` harness exists, and fails if the build takes longer than 5 minutes. It then runs `tests/e2e/S4.spec.ts` with `tests/build/playwright.config.ts`, which serves the build with `next start` on a free port. The same spec also runs in `pnpm test:e2e` against `next dev`, which covers the dev lookup.
+
+## UI states
+
+None. The spec uses the S2 harness page.
 
 ## Acceptance criteria
 
@@ -46,15 +57,21 @@ Must cover:
 - [ ] The build check runs in `pnpm test` or CI and fails if the worker imports the UI registry again.
 - [ ] Vercel deploys with its default build command.
 
+## Tests
+
+- `apps/web/src/workers/cv-worker-imports.test.ts`: the worker graph is UI-free; a control case shows the walker catches the old chain (`games/registry.ts` reaches `lib/cv-client.ts`).
+- `apps/web/src/games/detectors.test.ts`: `findDetector` returns `_example` when enabled, `undefined` for games without a detector and unknown ids.
+- `tests/e2e/S4.spec.ts`: on `/dev/cv`, read the example board, `stats` reports one opencv load, and no `pageerror` fires. Runs under `next dev` (`pnpm test:e2e`) and `next start` (`pnpm test:build`).
+
 ## Out of scope
 
 - Any game's detector (P2, H2).
 - Changing the CV pipeline or `cv-client.ts`'s API.
+- Turning photo scoring on in production (D-055 waits for a game's detector).
 
 ## Open questions
 
-- Where each game's loader lives without overlapping game slices' ownership: a `detector.ts` beside each web game module (owned by the game slice; the registry imports it) or a pre-registered map importing `@tablekeeper/cv/games/<gameId>` directly. Either way, P2 and H2 need the stub for their game to exist, so S4 should land before they merge.
-- Whether the build check belongs in `pnpm test` (slow: a full production build) or a separate `pnpm test:build` step in the definition of done.
+None. Resolved: loaders live in a `detector.ts` beside each web game module (game slices own their folder, the registry imports the stub); the full production build is its own `pnpm test:build` step, and a fast import-graph test in `pnpm test` catches the regression.
 
 ## Decisions
 
