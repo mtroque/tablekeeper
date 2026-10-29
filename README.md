@@ -82,6 +82,7 @@ pnpm lint                       # includes the UI copy rules
 pnpm lint:commits               # Conventional Commits check for this branch
 pnpm test                       # unit + API integration (needs local Supabase)
 pnpm test:e2e                   # Playwright
+pnpm test:build                 # production build of the web app, then S4's e2e test against it
 pnpm db:types                   # regenerate Supabase types after a migration
 pnpm eval:cv <gameId>           # board-reading accuracy on labeled photos (--calibrate to rebuild the profile)
 pnpm rules:smoke <gameId> "<question>"   # one real rules-assistant call

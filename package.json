@@ -17,6 +17,7 @@
     "lint:commits": "node scripts/lint-commits.mjs",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:build": "node scripts/test-build.mjs",
     "db:start": "node scripts/db.mjs start",
     "db:reset": "node scripts/db.mjs reset",
     "db:types": "node scripts/db.mjs types",
