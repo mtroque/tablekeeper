@@ -1,15 +1,17 @@
 'use client';
 
-import { CloudOff, LoaderCircle, WifiOff } from 'lucide-react';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { LoaderCircle, WifiOff } from 'lucide-react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 
-type Health = 'checking' | 'slow' | 'ok' | 'down';
+type Health = 'checking' | 'slow' | 'settled';
 
-/** How long `/health` may take before we say the server is waking up (Render cold start). */
-const SLOW_AFTER_MS = 1500;
+/**
+ * How long `/health` may take before we say the server is waking up (Render cold start). Above
+ * the API client's 1500ms retry delay, so a blocked `/health` settles before the line shows.
+ */
+const SLOW_AFTER_MS = 2500;
 const GIVE_UP_AFTER_MS = 75_000;
 
 function subscribeOnline(callback: () => void) {
@@ -23,7 +25,9 @@ function subscribeOnline(callback: () => void) {
 
 /**
  * Pings `/health` on load (fire and forget, so the API starts waking) and shows a quiet line
- * while it's slow, if it fails, or when the browser is offline. Nothing here blocks the page.
+ * while it's slow or when the browser is offline. A failed `/health` shows nothing: ad blockers
+ * block it while the API is up, and each feature reports its own failed calls. Nothing here
+ * blocks the page.
  */
 export function ServerStatus() {
   const online = useSyncExternalStore(
@@ -32,9 +36,9 @@ export function ServerStatus() {
     () => true,
   );
   const [health, setHealth] = useState<Health>('checking');
-  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let unmounted = false;
     const controller = new AbortController();
     const slow = setTimeout(() => {
       setHealth('slow');
@@ -44,26 +48,18 @@ export function ServerStatus() {
     }, GIVE_UP_AFTER_MS);
     api()
       .health(controller.signal)
-      .then(() => {
-        setHealth('ok');
-      })
-      .catch(() => {
-        setHealth('down');
-      })
+      .catch(() => undefined)
       .finally(() => {
         clearTimeout(slow);
         clearTimeout(giveUp);
+        if (!unmounted) setHealth('settled');
       });
     return () => {
+      unmounted = true;
       clearTimeout(slow);
       clearTimeout(giveUp);
       controller.abort();
     };
-  }, [attempt]);
-
-  const retry = useCallback(() => {
-    setHealth('checking');
-    setAttempt((n) => n + 1);
   }, []);
 
   if (!online) {
@@ -80,16 +76,6 @@ export function ServerStatus() {
         testId="status-waking"
       >
         Waking up the server. This can take up to a minute.
-      </StatusLine>
-    );
-  }
-  if (health === 'down') {
-    return (
-      <StatusLine icon={<CloudOff />} testId="status-down">
-        <span className="flex-1">Couldn&apos;t reach the server. Scoring still works.</span>
-        <Button variant="quiet" size="small" onClick={retry}>
-          Retry
-        </Button>
       </StatusLine>
     );
   }
