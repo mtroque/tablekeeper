@@ -41,7 +41,7 @@ Everything. After S0, `packages/core/src/kit/types.ts` and the migration are fro
 
 ## UI states
 - Header while the auth session loads: a skeleton in place of the sign-in button.
-- Server status line (all screens): "Waking up the server." with a hint while `/health` is slow; "Couldn't reach the server." with Retry if it fails; "You're offline." when the browser is offline. The library always renders.
+- Server status line (all screens): "Waking up the server." with a hint while `/health` is slow; "You're offline." when the browser is offline. A failed or blocked `/health` shows nothing (S5). The library always renders.
 - Account sheet: display name from `/v1/me` (skeleton while loading, email if it fails) and "Sign Out".
 - Sign-in callback: "Signing you in." while exchanging the code; on failure "Couldn't finish signing in." with "Try Again".
 - Unknown `gameId`: Next.js not-found page with a link back to the library.
