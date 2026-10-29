@@ -28,8 +28,10 @@ Hosting is described in `docs/DEPLOYMENT.md`.
 ```
 apps/web/src/
   app/                   routes (see docs/UX.md → Routes)
-  games/<gameId>/        GameUiModule: Editor, ScoreFlow, Campaign, detector loader, samples
+  games/<gameId>/        GameUiModule: Editor, ScoreFlow, Campaign, samples
+  games/<gameId>/detector.ts   the game's detector loader for the CV worker (no UI imports)
   games/registry.ts      imports every games/<gameId>/index.ts
+  games/detectors.ts     findDetector: imports every games/<gameId>/detector.ts, for the worker
   components/            shared UI (docs/UX.md → Components); components/ui = shadcn
   lib/api-client.ts      typed fetch wrapper built on core contracts
   lib/session-store/     SessionStore: LocalStore (guest) / ApiStore (signed in)
@@ -111,11 +113,13 @@ interface GameUiModule<State> {
   Motif: React.FC;                           // small SVG drawn from the game's geometry and colors (docs/UX.md → Visuals)
   Editor: React.FC<EditorProps<State>>;      // manual entry and draft review
   Breakdown?: React.FC<BreakdownProps<State>>;
-  detector?: () => Promise<Detector<State>>; // lazy-loaded inside the CV worker
   ScoreFlow?: React.FC<ScoreFlowProps>;      // replaces the default capture → review → result flow
   Campaign?: React.FC;
   samples?: string[];                        // paths under /samples/<gameId>/
 }
+
+// apps/web/src/games/<gameId>/detector.ts: imports only @tablekeeper/cv/games/<gameId>, lazily
+export const loadDetector: (() => Promise<Detector<unknown>>) | undefined;
 ```
 
 - Shared code never branches on game id.
@@ -214,5 +218,6 @@ Outside the app, the Anthropic account has a monthly spend limit. Providers: `An
 | Match | `matchTemplateRotInvariant(crop, refs)` | rotation-invariant comparison against reference crops |
 
 - **Calibration profiles** (`games/<gameId>/profile.json`) hold per-class feature centroids, spreads and tolerance, built from labeled fixtures by `pnpm eval:cv <gameId> --calibrate`.
+- **Detector lookup:** the worker calls `findDetector(id)` (`apps/web/src/games/detectors.ts`), which gathers each game's `detector.ts` loader, plus the `_example` detector outside production builds or when `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=true`. The worker's module graph must never reach React, the DOM, the game UI registry or `cv-client.ts`: that loop hung Turbopack's production build and crashed the webpack build's worker (`docs/slices/S4-cv-worker-detectors.md`). `apps/web/src/workers/cv-worker-imports.test.ts` guards it in `pnpm test`, and `pnpm test:build` builds for production and starts the worker.
 - **Worker API** (`cv-client.ts`): `detectBoard(gameId, image, corners?) => Promise<Result<Draft>>`, with progress events (`loading-opencv`, `finding-board`, `classifying`) and a 20s timeout.
 - **Evaluation** (`pnpm eval:cv <gameId>`): runs the detector on `data/fixtures/<gameId>` and reports board-found rate, corner error, per-cell accuracy, confusion matrix, the share of errors flagged low-confidence, and timing; writes `eval-report.md` and fails below the fixture set's threshold.
