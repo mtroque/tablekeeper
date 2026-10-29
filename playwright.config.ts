@@ -12,6 +12,8 @@ const env = Object.fromEntries(
 env.NEXT_PUBLIC_ENABLE_EXAMPLE_GAME = 'true';
 // S1 and S2 test the photo flow, which production keeps off until S4 (D-055).
 env.NEXT_PUBLIC_ENABLE_PHOTO_SCORING = 'true';
+// Every test calls the API from localhost, so the whole suite shares one burst-limit bucket.
+env.RATE_LIMIT_MAX = '100000';
 
 export default defineConfig({
   testDir: 'tests/e2e',
