@@ -1,6 +1,6 @@
 # S5: Quiet server status
 
-**Status:** 🟨 · **Depends on:** S0
+**Status:** ✅ · **Depends on:** S0
 
 **Goal:** Players never see a false "Couldn't reach the server." line. Today an ad or tracker blocker that blocks `GET /health` shows it even though the API is up, which makes a working app look broken.
 
@@ -31,9 +31,9 @@ None beyond `docs/UX.md` → Screen states.
 
 ## Acceptance criteria
 
-- [ ] With `/health` blocked (Playwright `route.abort('blockedbyclient')`), no server status line appears (not even briefly) and the library renders.
-- [ ] With `/health` held open, "Waking up the server." still appears.
-- [ ] A rules question with the API unreachable still shows "Couldn't reach the server. Try again." on that turn.
+- [x] With `/health` blocked (Playwright `route.abort('blockedbyclient')`), no server status line appears (not even briefly) and the library renders. (`tests/e2e/S5.spec.ts`: a MutationObserver records any `status-*` element from page load through 3s after both blocked calls; the same test fails against the old component.)
+- [x] With `/health` held open, "Waking up the server." still appears. (`tests/e2e/S5.spec.ts`)
+- [x] A rules question with the API unreachable still shows "Couldn't reach the server. Try again." on that turn. (`tests/e2e/S5.spec.ts`, every API call refused)
 
 ## Tests
 
@@ -48,4 +48,9 @@ None beyond `docs/UX.md` → Screen states.
 
 ## Decisions
 
+- A failed `/health` hides the status line rather than showing any message: the page can't tell an ad blocker from a down API, and each feature already reports its own failed calls.
+- `SLOW_AFTER_MS` goes from 1500 to 2500. With the API client's single retry after 1500ms, a blocked `/health` settles just after 1500ms and would otherwise race the slow timer and flash "Waking up the server.". A real Render cold start takes far longer, so the waking line still shows.
+
 ## Shared change requests
+
+- `README.md`, the "Live:" note: drop the sentence "An ad blocker may make the app say "Couldn't reach the server." by blocking its health check; everything still works." S5 removes that message, so the note is stale once merged.
