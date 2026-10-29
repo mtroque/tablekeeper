@@ -27,7 +27,7 @@ function exampleEnabled(): boolean {
 
 /** A game's loader, or the S1 example game's outside production; `undefined` when there's none. */
 export function findDetector(id: string): DetectorLoader | undefined {
-  if (isGameId(id)) return DETECTORS[id];
-  if (id === '_example' && exampleEnabled()) return example;
-  return undefined;
+  // Before isGameId, which also accepts the example game's id when it's enabled (D-040).
+  if (id === '_example') return exampleEnabled() ? example : undefined;
+  return isGameId(id) ? DETECTORS[id] : undefined;
 }
