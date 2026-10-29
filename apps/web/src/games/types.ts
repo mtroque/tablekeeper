@@ -1,4 +1,4 @@
-import type { Detector, GameId, ScoreBreakdown } from '@tablekeeper/core';
+import type { GameId, ScoreBreakdown } from '@tablekeeper/core';
 import type * as React from 'react';
 
 /** The web side of a game (docs/ARCHITECTURE.md → Game modules). Game slices fill in the rest. */
@@ -8,8 +8,6 @@ export interface GameUiModule<State = unknown> {
   /** Manual entry and draft review. */
   Editor?: React.FC<EditorProps<State>>;
   Breakdown?: React.FC<BreakdownProps<State>>;
-  /** Lazy-loaded inside the CV worker. */
-  detector?: () => Promise<Detector<State>>;
   /** Replaces the default capture → review → result flow. */
   ScoreFlow?: React.FC<ScoreFlowProps>;
   Campaign?: React.FC;

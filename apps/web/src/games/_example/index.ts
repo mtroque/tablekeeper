@@ -13,5 +13,4 @@ export const exampleUi: GameUiModule = {
   Breakdown,
   ScoreFlow,
   Campaign,
-  detector: () => import('@tablekeeper/cv/games/_example').then((m) => m.detector),
 };
