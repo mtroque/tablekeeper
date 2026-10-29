@@ -24,7 +24,10 @@ function specifiers(file: string): string[] {
   const source = ts.createSourceFile(file, ts.sys.readFile(file) ?? '', ts.ScriptTarget.Latest);
   const found: string[] = [];
   const visit = (node: ts.Node) => {
-    if (ts.isImportDeclaration(node) && !node.importClause?.isTypeOnly) {
+    if (
+      ts.isImportDeclaration(node) &&
+      node.importClause?.phaseModifier !== ts.SyntaxKind.TypeKeyword
+    ) {
       if (ts.isStringLiteral(node.moduleSpecifier)) found.push(node.moduleSpecifier.text);
     } else if (ts.isExportDeclaration(node) && !node.isTypeOnly && node.moduleSpecifier) {
       if (ts.isStringLiteral(node.moduleSpecifier)) found.push(node.moduleSpecifier.text);

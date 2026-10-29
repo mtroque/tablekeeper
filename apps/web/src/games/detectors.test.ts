@@ -10,8 +10,7 @@ describe('findDetector', () => {
   it('finds the example detector outside production', async () => {
     const load = findDetector('_example');
     expect(load).toBeTypeOf('function');
-    const detector = await load!();
-    expect(detector.detect).toBeTypeOf('function');
+    await expect(load!()).resolves.toHaveProperty('detect');
   });
 
   it('hides the example detector in production unless the example game is enabled', () => {
