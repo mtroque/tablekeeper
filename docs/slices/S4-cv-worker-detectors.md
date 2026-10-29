@@ -1,6 +1,6 @@
 # S4: CV Worker Detectors Without UI
 
-**Status:** 🟨 · **Depends on:** S2
+**Status:** ✅ · **Depends on:** S2
 
 **Goal:** Photo scoring works in production builds. The CV worker finds detectors without importing the web game UI, so `next build` (Turbopack) finishes and the worker runs in the deployed app.
 
@@ -16,7 +16,7 @@ Found on 2026-10-25 during the first Vercel deploy:
 - **Webpack (`next build --webpack`):** builds, but the worker crashes on load in the browser with `ReferenceError: document is not defined`, because UI code runs in the worker scope. Checked by serving the build with `next start` and starting the worker in Chromium.
 - **`next dev`** compiles lazily and never hits the loop, so dev and every e2e test (which run against `next dev`) look fine.
 
-**Workaround until this slice is done:** Vercel builds with `next build --webpack` (`docs/DEPLOYMENT.md` → Vercel). Pages work; photo detection doesn't, which on `main` affects no real game yet, since no game ships a detector before P2 and H2.
+**Workaround before this slice (removed by it):** Vercel builds with `next build --webpack` (`docs/DEPLOYMENT.md` → Vercel). Pages work; photo detection doesn't, which on `main` affects no real game yet, since no game ships a detector before P2 and H2.
 
 ## Owns
 
@@ -51,11 +51,11 @@ None. The spec uses the S2 harness page.
 
 ## Acceptance criteria
 
-- [ ] `next build` (Turbopack) completes for `apps/web` from a clean clone.
-- [ ] In a production build served with `next start`, the CV worker starts and answers a `stats` message with no page errors.
-- [ ] The `_example` detector still runs in dev and tests through the new lookup.
-- [ ] The build check runs in `pnpm test` or CI and fails if the worker imports the UI registry again.
-- [ ] Vercel deploys with its default build command.
+- [x] `next build` (Turbopack) completes for `apps/web` from a clean clone. *A fresh clone of this branch, `pnpm install --frozen-lockfile`, then `next build` in `apps/web` with no env vars: compiled in 2.4s, whole build 9.2s. Before the change, the same command was still at "Creating an optimized production build" when cut off at 120s.*
+- [x] In a production build served with `next start`, the CV worker starts and answers a `stats` message with no page errors. *`pnpm test:build`: build in 8.0s, then `tests/e2e/S4.spec.ts` against `next start` reads the example board correctly, shows 1 worker and 1 opencv load from the worker's `stats` reply, and records no `pageerror`.*
+- [x] The `_example` detector still runs in dev and tests through the new lookup. *`tests/e2e/S4.spec.ts` and `S2.spec.ts` pass under `next dev` in `pnpm test:e2e` (26 of 26); `games/detectors.test.ts` loads the detector through `findDetector`.*
+- [x] The build check runs in `pnpm test` or CI and fails if the worker imports the UI registry again. *`workers/cv-worker-imports.test.ts` runs in `pnpm test`. With `import { GAME_UI } from '@/games/registry'` put back into the worker it fails and prints chains such as `cv.worker.ts → games/registry.ts → games/_example/index.ts → games/_example/campaign.tsx → react`. With the same import, `pnpm test:build` also fails: from a clean `.next` with "next build didn't finish in 180s" (no build process left running), and over a cached `.next` with a Turbopack panic.*
+- [x] Vercel deploys with its default build command. *Verified up to the deploy itself: the clean-clone `next build` above is what Vercel runs from `apps/web`, and `docs/DEPLOYMENT.md` → Vercel now says to use the default. The override is a Vercel dashboard setting, so removing it and redeploying is the owner's step.*
 
 ## Tests
 
@@ -75,4 +75,14 @@ None. Resolved: loaders live in a `detector.ts` beside each web game module (gam
 
 ## Decisions
 
+- **Supersedes D-029:** the CV worker finds detectors through `findDetector(id)` in `apps/web/src/games/detectors.ts`, which imports each game's `games/<gameId>/detector.ts` (`loadDetector: DetectorLoader | undefined`). `GameUiModule.detector` is gone; nothing in the UI read it. A game's detector slice (P2, H2) fills in its own `detector.ts`, in the folder it already owns, so it edits no registry.
+- **Supersedes D-053:** Vercel builds with its default command (Turbopack). The import loop through the worker was the whole cause.
+- **`_example` is checked before `isGameId`,** which also accepts the example id when the example game is enabled (D-040). Checking it second made the lookup return nothing for `_example`; the unit test caught it.
+- **Two guards.** `cv-worker-imports.test.ts` in `pnpm test` walks the worker's graph with TypeScript's resolution of the web tsconfig (static, re-export and dynamic imports; `import type` skipped, since `verbatimModuleSyntax` keeps every other import) and fails on any `.tsx`, `react`, `react-dom`, `next`, `games/registry.ts` or `lib/cv-client.ts`. `pnpm test:build` makes the real production build (180s limit; a clean build takes about 8s) and runs `tests/e2e/S4.spec.ts` against `next start` with `tests/build/playwright.config.ts`.
+- **`pnpm test:build` builds and serves with `NODE_ENV=production`.** `.env.local` sets `NODE_ENV=development` for the API and `loadLocalEnv` passes it on; a build with it fails to prerender `/_global-error`. It sets `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=true` so the `/dev/cv` harness exists, and picks the ports before building so the baked-in API URL matches.
+- **Photo scoring stays off in production (D-055)** until a game ships a detector; S4 only makes that possible.
+- **Shared files edited:** root `package.json` (the new `test:build` line only) and `README.md` → Commands (its line), both listed under Owns. No registry, hub or test config lines changed.
+
 ## Shared change requests
+
+- `AGENTS.md` → Definition of done, step 1: add `pnpm test:build` to the command list, so every slice proves the production build still finishes and the CV worker still starts. It takes about 15 seconds.
