@@ -48,3 +48,64 @@ test('glare on a gray board photo is outlined for review', async ({ page }) => {
   await expect(uncertain).toHaveCount(4);
   await expect(uncertain.first()).toHaveAccessibleName('Row 1, column 1: empty');
 });
+
+test('switching the board rereads the photo and keeps the chits and special tile', async ({
+  page,
+}) => {
+  await readSample(page, 'Try Sample Photo 1');
+  await expect(page.getByTestId('empty-count')).toHaveText('14 empty spaces');
+  await page.getByRole('button', { name: 'Increase Chits of 5', exact: true }).click();
+  await page.getByRole('switch', { name: /Special Tile/ }).click();
+
+  // Read against the gray board's references, the red board's spaces come out differently.
+  await page.getByRole('button', { name: 'Gray', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Gray', pressed: true })).toBeVisible();
+  await expect(page.getByTestId('empty-count')).not.toHaveText('14 empty spaces');
+  await expect(page.getByTestId('pralines-held')).toHaveText('5 pralines');
+  await expect(page.getByRole('switch', { name: /Special Tile/ })).toBeChecked();
+  // The player chose the board, so the switch isn't outlined.
+  await expect(
+    page.getByRole('group', { name: 'Box Board Color' }).locator('xpath=..'),
+  ).not.toHaveAttribute('data-low-confidence');
+
+  // Back to red: the original reading returns, and the chits and tile stay.
+  await page.getByRole('button', { name: 'Red', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Red', pressed: true })).toBeVisible();
+  await expect(page.getByTestId('empty-count')).toHaveText('14 empty spaces');
+  await expect(page.getByTestId('pralines-held')).toHaveText('5 pralines');
+  await expect(page.getByTestId('running-total')).toHaveText('-16 Points');
+});
+
+test('a failed reread keeps the new color and asks the player to check the spaces', async ({
+  page,
+}) => {
+  // Every reading sent with a hint (only rereads have one) fails after a moment, as if the
+  // worker had crashed.
+  await page.addInitScript(() => {
+    const RealWorker = window.Worker;
+    window.Worker = class extends RealWorker {
+      override postMessage(message: unknown, transfer?: unknown): void {
+        const request = message as { type?: string; id?: number; hints?: unknown };
+        if (request.type === 'detect' && request.hints) {
+          const data = { type: 'result', id: request.id, result: { ok: false, error: 'failed' } };
+          setTimeout(() => {
+            this.onmessage?.(new MessageEvent('message', { data }));
+          }, 800);
+          return;
+        }
+        super.postMessage(message, transfer as Transferable[]);
+      }
+    };
+  });
+  await readSample(page, 'Try Sample Photo 1');
+  await page.getByRole('button', { name: 'Gray', exact: true }).click();
+  // While it reads, the board can't be changed, so no tap is lost.
+  await expect(page.getByRole('status').filter({ hasText: 'Reading the spaces.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Row 1, column 1: empty' })).toBeDisabled();
+  await expect(
+    page.getByRole('alert').filter({ hasText: "Couldn't reread the photo. Check the spaces." }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Gray', pressed: true })).toBeVisible();
+  await expect(page.getByTestId('empty-count')).toHaveText('14 empty spaces');
+  await expect(page.getByRole('button', { name: 'Row 1, column 1: empty' })).toBeEnabled();
+});
