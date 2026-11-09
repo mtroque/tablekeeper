@@ -10,7 +10,7 @@ export default function PrivacyPage() {
     <article className="flex flex-col gap-6 px-4 py-6">
       <header className="flex flex-col gap-1">
         <h1 className="text-3xl">Privacy</h1>
-        <p className="text-sm text-muted">Last updated 25 October 2026</p>
+        <p className="text-sm text-muted">Last updated 9 November 2026</p>
       </header>
 
       <Section title="Without an Account">
@@ -57,8 +57,7 @@ export default function PrivacyPage() {
 
       <Section title="Services Used">
         <ul className="flex list-disc flex-col gap-1 pl-5">
-          <li>Vercel hosts the website.</li>
-          <li>Render hosts the server.</li>
+          <li>Vercel hosts the website and the server.</li>
           <li>Supabase holds the database and handles sign-in.</li>
           <li>Google provides the sign-in.</li>
           <li>Anthropic writes rules answers.</li>
