@@ -59,6 +59,8 @@ export type DetectStage = 'loading-opencv' | 'finding-board' | 'classifying';
 export type DetectOptions = {
   /** User-adjusted corners; skips board finding when given. */
   corners?: Quad;
+  /** A game-specific reading hint, e.g. which board to read against. Detectors validate it. */
+  hints?: Record<string, string>;
   signal?: AbortSignal;
   onProgress?: (stage: DetectStage) => void;
 };

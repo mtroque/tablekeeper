@@ -1,4 +1,4 @@
-import type { DetectStage, Draft } from '@tablekeeper/core';
+import type { DetectStage, Draft, Quad } from '@tablekeeper/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createCvClient, type CvRequest, type CvResponse, type CvWorker } from './cv-client';
@@ -63,6 +63,20 @@ describe('cv-client', () => {
     worker.reply({ type: 'result', id: request.id, result: { ok: true, value: DRAFT } });
     await expect(pending).resolves.toEqual({ ok: true, value: DRAFT });
     expect(stages).toEqual(['loading-opencv', 'classifying']);
+  });
+
+  it('sends the corners and hints with the request', () => {
+    const client = createCvClient(factory);
+    const corners: Quad = [P, P, P, P];
+    void client.detectWith('patchwork', IMAGE, corners, { hints: { board: 'blue' } });
+    expect(workers[0]!.requests[0]).toMatchObject({
+      type: 'detect',
+      detectorId: 'patchwork',
+      corners,
+      hints: { board: 'blue' },
+    });
+    void client.detectWith('patchwork', IMAGE);
+    expect(workers[0]!.requests[1]).not.toHaveProperty('hints');
   });
 
   it('keeps one worker across calls and reports stats', async () => {

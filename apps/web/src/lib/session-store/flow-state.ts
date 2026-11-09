@@ -13,7 +13,7 @@ export const FlowStateSchema = z.object({
   stateVersion: z.int().min(0),
   /** What the photo reading produced, to tell corrections apart. */
   draft: z.object({ state: z.unknown(), confidence: z.record(z.string(), z.number()) }).nullable(),
-  /** The photo as a downscaled data URL, while on the capture step. */
+  /** The photo as a downscaled data URL, for the capture step and rereading on review. */
   photo: z.object({ src: z.string(), width: z.number(), height: z.number() }).nullable(),
   corners: z
     .array(z.object({ x: z.number(), y: z.number() }))

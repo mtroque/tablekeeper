@@ -22,6 +22,11 @@ export type EditorProps<State> = {
   onChange: (state: State) => void;
   /** Confidence per cell or field key from a photo draft; absent for manual entry. */
   confidence?: Record<string, number>;
+  /**
+   * Reads the photo again at the same corners with a game-specific hint, replacing the board and
+   * its draft. Resolves false when the reading fails. Absent without a photo (manual entry).
+   */
+  reread?: (hints: Record<string, string>) => Promise<boolean>;
 };
 
 export type BreakdownProps<State> = {

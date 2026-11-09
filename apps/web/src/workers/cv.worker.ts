@@ -28,6 +28,7 @@ const RequestSchema = z.discriminatedUnion('type', [
       height: z.number().int().positive(),
     }),
     corners: z.tuple([PointSchema, PointSchema, PointSchema, PointSchema]).optional(),
+    hints: z.record(z.string(), z.string()).optional(),
   }),
   z.object({ type: z.literal('stats'), id: z.number().int() }),
 ]);
@@ -42,6 +43,7 @@ async function detect(
     const detector = await load();
     const draft = await detector.detect(request.image, {
       ...(request.corners ? { corners: request.corners } : {}),
+      ...(request.hints ? { hints: request.hints } : {}),
       onProgress: (stage) => {
         scope.postMessage({ type: 'progress', id, stage });
       },

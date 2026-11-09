@@ -3,6 +3,8 @@ import type { DetectStage, Draft, GameId, ImageInput, Quad, Result } from '@tabl
 export type CvError = 'unavailable' | 'timeout' | 'failed';
 
 export type DetectBoardOptions = {
+  /** Passed to the detector as `DetectOptions.hints`. */
+  hints?: Record<string, string>;
   onProgress?: (stage: DetectStage) => void;
   signal?: AbortSignal;
 };
@@ -10,7 +12,14 @@ export type DetectBoardOptions = {
 // ---------- Worker protocol (shared with workers/cv.worker.ts) ----------
 
 export type CvRequest =
-  | { type: 'detect'; id: number; detectorId: string; image: ImageInput; corners?: Quad }
+  | {
+      type: 'detect';
+      id: number;
+      detectorId: string;
+      image: ImageInput;
+      corners?: Quad;
+      hints?: Record<string, string>;
+    }
   | { type: 'stats'; id: number };
 
 export type CvResponse =
@@ -100,6 +109,7 @@ export function createCvClient(
       detectorId,
       image: { data, width: image.width, height: image.height },
       ...(corners ? { corners } : {}),
+      ...(options.hints ? { hints: options.hints } : {}),
     };
 
     const response = await new Promise<CvResponse | 'timeout' | 'aborted'>((resolve) => {

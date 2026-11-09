@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import type { GameUiModule } from '@/games/types';
 import type { FlowState } from '@/lib/session-store/flow-state';
 
+import { rereadFlow } from './reread';
 import { scoreOf, type useFlow } from './use-flow';
 
 /** The editor with the draft (or an empty board), a running total and See Score. */
@@ -27,6 +28,14 @@ export function ReviewStep({
   const confidence = flow.flow.draft?.confidence;
   const lowCount = Object.values(confidence ?? {}).filter(isLowConfidence).length;
   const total = scoreOf(game, flow.flow)?.total;
+  const reread =
+    flow.flow.photo && flow.flow.corners
+      ? async (hints: Record<string, string>) => {
+          const next = await rereadFlow(game.id, flow.flow, hints);
+          if (next) flow.setFlow(next);
+          return next !== null;
+        }
+      : undefined;
 
   return (
     <section className="flex flex-col gap-4 px-4 py-5">
@@ -43,6 +52,7 @@ export function ReviewStep({
         <Editor
           state={flow.flow.state}
           {...(confidence ? { confidence } : {})}
+          {...(reread ? { reread } : {})}
           onChange={(state) => {
             flow.setFlow({ ...flow.flow, state });
           }}
