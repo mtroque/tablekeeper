@@ -86,6 +86,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"rate_limit_hits": {
+                  Row: {
+                    "hits": number,"key": string,"reset_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "hits": number,"key": string,"reset_at": string
+                  }
+                  Update: {
+                    "hits"?: number,"key"?: string,"reset_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"rulebook_sections": {
                   Row: {
                     "body": string,"id": string,"number": string | null,"ordinal": number,"parent_id": string | null,"pdf_page_end": number,"pdf_page_start": number,"printed_pages": string | null,"rulebook_id": string,"search": unknown,"title": string
@@ -137,6 +151,14 @@ isOneToOne: false
                            },
 "llm_record_tokens":
 { Args: { "p_input": number,"p_output": number,"p_subject_key": string,"p_subject_type": string }; Returns: undefined
+                           },
+"rate_limit_hit":
+{ Args: { "p_key": string,"p_window_ms": number }; Returns: {
+              "hits": number,"reset_at": string
+            }[]
+                           },
+"rate_limit_undo":
+{ Args: { "p_key": string }; Returns: undefined
                            },
 "replace_rulebook":
 { Args: { "p_rulebook": Json,"p_sections": Json }; Returns: string
