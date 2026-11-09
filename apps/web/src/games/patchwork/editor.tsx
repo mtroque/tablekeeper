@@ -9,9 +9,11 @@ import {
   patchworkPralines,
   PRALINE_CHITS,
   SPECIAL_TILE_POINTS,
+  type PatchworkBoard,
   type PatchworkState,
   type SquareCell,
 } from '@tablekeeper/core';
+import { useEffect, useRef, useState } from 'react';
 
 import { ConfidenceOutline, isLowConfidence } from '@/components/confidence-outline';
 import { Counter } from '@/components/counter';
@@ -34,12 +36,47 @@ const index = ({ row, col }: SquareCell) => row * 9 + col;
  * The box board (tap a space to cover or uncover it) in the chosen board's color, the praline
  * chits held and the special tile.
  */
-export function Editor({ state, onChange, confidence }: EditorProps<unknown>) {
+export function Editor({ state, onChange, confidence, reread }: EditorProps<unknown>) {
   const current = asState(state);
   const { board, grid, tokens, specialTile } = current;
   const colors = BOARD_COLORS[board];
   const update = (patch: Partial<PatchworkState>) => {
     onChange({ ...current, ...patch });
+  };
+  const [rereading, setRereading] = useState(false);
+  const [rereadFailed, setRereadFailed] = useState(false);
+  // What the player set that a reread replaces: put back once the reread board arrives.
+  const keep = useRef<Pick<PatchworkState, 'board' | 'tokens' | 'specialTile'> | null>(null);
+
+  useEffect(() => {
+    const kept = keep.current;
+    if (!kept || kept.board !== board) return;
+    keep.current = null;
+    if (JSON.stringify([kept.tokens, kept.specialTile]) !== JSON.stringify([tokens, specialTile])) {
+      onChange({ ...current, tokens: kept.tokens, specialTile: kept.specialTile });
+    }
+  });
+
+  /**
+   * A board read from a photo is read again against the chosen board's references; a board
+   * entered by hand just changes color (docs/UX.md → Board color switch).
+   */
+  const switchBoard = async (option: PatchworkBoard) => {
+    if (option === board || rereading) return;
+    setRereadFailed(false);
+    if (!reread) {
+      update({ board: option });
+      return;
+    }
+    keep.current = { board: option, tokens, specialTile };
+    setRereading(true);
+    const ok = await reread({ board: option });
+    setRereading(false);
+    if (!ok) {
+      keep.current = null;
+      setRereadFailed(true);
+      update({ board: option });
+    }
   };
   const setAll = (covered: boolean) => {
     update({ grid: grid.map(() => covered) });
@@ -48,7 +85,12 @@ export function Editor({ state, onChange, confidence }: EditorProps<unknown>) {
 
   return (
     <div className="flex flex-col gap-5">
-      <section className="flex flex-col gap-3">
+      {/* Disabled while a reread runs, so no tap is lost when the new reading arrives. */}
+      <fieldset
+        disabled={rereading}
+        aria-busy={rereading}
+        className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0"
+      >
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-[15px] font-semibold">Box Board</h3>
           <ConfidenceOutline confidence={confidence?.[PATCHWORK_FIELD_KEYS.board]}>
@@ -59,9 +101,7 @@ export function Editor({ state, onChange, confidence }: EditorProps<unknown>) {
                   size="small"
                   variant={option === board ? 'primary' : 'secondary'}
                   aria-pressed={option === board}
-                  onClick={() => {
-                    if (option !== board) update({ board: option });
-                  }}
+                  onClick={() => void switchBoard(option)}
                 >
                   <span
                     aria-hidden
@@ -109,6 +149,16 @@ export function Editor({ state, onChange, confidence }: EditorProps<unknown>) {
             }}
           />
         </div>
+        {rereading && (
+          <p role="status" className="text-sm text-muted">
+            Reading the spaces.
+          </p>
+        )}
+        {rereadFailed && (
+          <p role="alert" className="rounded-card bg-warn-soft px-3 py-2 text-[15px]">
+            Couldn&apos;t reread the photo. Check the spaces.
+          </p>
+        )}
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm text-muted tabular" data-testid="empty-count">
             {emptyCount} empty {emptyCount === 1 ? 'space' : 'spaces'}
@@ -134,7 +184,7 @@ export function Editor({ state, onChange, confidence }: EditorProps<unknown>) {
             </Button>
           </div>
         </div>
-      </section>
+      </fieldset>
 
       <section className="flex flex-col gap-2 border-t border-line pt-4">
         <div className="flex items-baseline justify-between gap-3">
