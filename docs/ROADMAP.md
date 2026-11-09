@@ -27,7 +27,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | H3 | Harmonies review on the board: tap hexes, highlights until answered, one option per score-equivalent stack | H2 | ⬜ |
 | H4 | Harmonies Crescendo: Whispers, and the module switches | H3 | ⬜ |
 | H5 | Harmonies Crescendo: board sides C and D (layouts need verifying) | H4 | ⬜ |
-| H6 | Harmonies Crescendo: Sanctuaries (tile list needs verifying) | H5 | ⬜ |
+| H6 | Harmonies Crescendo: Sanctuaries, entered by their 2 colors | H5 | ⬜ |
 
 ## Next
 
