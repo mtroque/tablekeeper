@@ -10,5 +10,5 @@ export const patchworkUi: GameUiModule = {
   Editor,
   Breakdown,
   // One photo of each box board, from the fixtures (docs/DATA_ASSETS.md → Sample photos).
-  samples: ['red-board.jpg', 'gray-board.jpg'],
+  samples: ['red-board.jpg', 'gray-board.jpg', 'red-board-special-tile.jpg'],
 };
