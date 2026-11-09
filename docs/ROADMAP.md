@@ -14,7 +14,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | D2 | Dorfromantik campaign and unlocks | D1 | ✅ |
 | P1 | Patchwork manual scorer | S1 | ✅ |
 | P2 | Patchwork board detection | P1, S2, S4 | ✅ |
-| P3 | Patchwork token detection | P2 | ⬜ |
+| P3 | Patchwork token detection | P2 | ✅ |
 | A1 | Azul manual round tracker | S1 | ✅ |
 | H1 | Harmonies manual scorer | S1 | ✅ |
 | H2 | Harmonies photo detection | H1, S2, S4 | ✅ |
@@ -24,7 +24,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 
 ## Next
 
-P3, then whatever moves up from Later.
+Whatever moves up from Later.
 
 ## Later
 
