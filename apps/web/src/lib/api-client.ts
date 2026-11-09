@@ -41,7 +41,7 @@ type RequestOptions<T> = {
   signal?: AbortSignal;
 };
 
-// Render's free tier answers with a gateway error (or drops the connection) while it wakes.
+// A host answers with a gateway error (or drops the connection) while an instance starts.
 const COLD_START_STATUSES = new Set([502, 503, 504]);
 
 export type ApiClient = ReturnType<typeof createApiClient>;
