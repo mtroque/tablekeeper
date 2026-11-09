@@ -35,7 +35,7 @@ export function createApp(config: Config, deps: AppDeps = {}): Express {
   app.use(healthRouter());
 
   const v1 = express.Router();
-  v1.use(burstLimit(config.rateLimit));
+  v1.use(burstLimit(config, clients));
   v1.use(gamesRouter());
   v1.use(meRouter(clients));
   v1.use(quotaRouter(config, clients, llm));
