@@ -4,7 +4,7 @@
 
 ```
 ┌───────────────────────────────┐        ┌─────────────────────────────┐
-│ apps/web  (Next.js, Vercel)   │  HTTPS │ apps/api  (Express, Render) │
+│ apps/web  (Next.js, Vercel)   │  HTTPS │ apps/api  (Express, Vercel) │
 │ - UI (Tailwind + shadcn/ui)   │───────▶│ - verifies Supabase JWT     │
 │ - Supabase Auth (Google)      │  JSON  │ - sessions / campaigns      │
 │ - CV pipeline in a Web Worker │        │ - rules assistant (agent)   │
@@ -39,7 +39,8 @@ apps/web/src/
   workers/cv.worker.ts   runs packages/cv off the main thread
 apps/web/public/samples/<gameId>/   sample photos
 apps/api/src/
-  app.ts / server.ts     express app (no listen) / listen
+  app.ts / server.ts     express app (no listen) / listen, for local dev and tests
+  vercel.ts              the app as a Vercel Function handler (scripts/build-vercel.mjs bundles it)
   config.ts              env parsed with Zod
   middleware/            optionalAuth, requireAuth, validate, rate limit, errors, request id
   routes/ services/ db/  per resource: router → logic → queries
@@ -138,6 +139,7 @@ Game state is JSON validated by the game's schema, so games need no tables of th
 | `rulebooks` | `id`, `game_id`, `edition`, `title`, `publisher_url`, `source_version` | |
 | `rulebook_sections` | `id`, `rulebook_id`, `ordinal`, `number`, `title`, `parent_id`, `pdf_page_start`, `pdf_page_end`, `printed_pages`, `body`, `search` (generated tsvector, GIN) | PDF pages are for links; `printed_pages` (text, nullable, e.g. "4" or "4 and 5") is the page number printed in the rulebook, null when none is printed. A printed page and a PDF page don't map one to one (a PDF page can hold a two-page spread), so both are stored per section |
 | `llm_usage` | `subject_type` (`user`/`ip`/`global`), `subject_key`, `day`, `requests`, `input_tokens`, `output_tokens` | Unique per subject per UTC day; IPs stored as salted hashes |
+| `rate_limit_hits` | `key`, `hits`, `reset_at` | Burst limit windows; `key` is `burst:` plus a salted IP hash; windows ended over an hour ago are cleaned up |
 
 **RLS** is on for every table. Users can read and write only their own `profiles`, `play_sessions`, `campaigns`; the other tables have no user policies and are reached only by the API's service role.
 
@@ -147,7 +149,7 @@ REST under `/v1`, JSON. Every request and response is a Zod schema in `packages/
 
 | Method and path | Auth | Purpose |
 |---|---|---|
-| `GET /health` | - | Liveness; keep-alive target |
+| `GET /health` | - | Liveness; the deploy smoke test |
 | `GET /v1/games` | - | Registry summary |
 | `GET /v1/me` | required | Profile |
 | `GET /v1/me/quota` | optional | Rules questions left today |
@@ -160,7 +162,7 @@ REST under `/v1`, JSON. Every request and response is a Zod schema in `packages/
 
 - **Errors:** `{ "error": { "code", "message", "details"? } }` with a matching status. Codes: `VALIDATION`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `QUOTA_EXCEEDED`, `LLM_DISABLED`, `RATE_LIMITED`, `INTERNAL`.
 - **Auth:** `Authorization: Bearer <Supabase access token>`, verified by middleware. Database calls use a per-request client carrying that token, so RLS applies.
-- **CORS:** configured web origins only. `trust proxy` is on (Render).
+- **CORS:** configured web origins only. `trust proxy` is 1: Vercel overwrites `x-forwarded-for` with the client's IP, so `req.ip` is the client for quotas and the burst limit.
 - **History:** 20 per page, newest first (`played_at`, then `id`); the cursor is opaque base64 of the last row's `played_at` and `id`. `best` and `average` cover all the user's completed sessions of that game.
 - **Saving:** an unknown game is `NOT_FOUND`; a game without a scorer is 422 `VALIDATION`. State is parsed with `parseState` (upgrade, then validate), and a client-sent `scoreTotal` or `breakdown` is stripped (D-038). `detection_meta` holds the state paths that differ between the photo draft and the saved board and the number of detected values (D-037).
 - **Rules:** `ask` takes `{ question (1 to 500 chars, trimmed), history? }` (at most the last 6 turns) and returns `{ answer, notCovered, citations, quota }`; `NOT_FOUND` when the game has no ingested rulebook. `quota` and `GET /v1/me/quota` are `{ enabled, subject: 'guest' | 'user', limit, used, remaining, resetsAt }`. The global budget answers `QUOTA_EXCEEDED` with `details.scope = 'global'`.
@@ -200,10 +202,10 @@ Every model call goes through `gateway.run({ purpose, subject, limits }, (model)
 1. **Kill switch:** `LLM_ENABLED=false` → `LLM_DISABLED`.
 2. **Global daily budget:** `LLM_GLOBAL_DAILY_REQUESTS`, `LLM_GLOBAL_DAILY_TOKENS`.
 3. **Per-subject daily quota:** user id (`LLM_USER_DAILY_REQUESTS`) or salted SHA-256 of `req.ip` (`LLM_GUEST_DAILY_REQUESTS`). The check-and-increment is one SQL function (`llm_consume_request`, locking the global row first, D-034), so concurrent requests can't overshoot.
-4. **Burst limit:** `express-rate-limit` on all `/v1` routes.
+4. **Burst limit:** `express-rate-limit` on all `/v1` routes, counted in `rate_limit_hits` (`rate_limit_hit`, one statement per hit) so every serverless instance shares one window per client; keys are salted IP hashes. `RATE_LIMIT_STORE=memory`, the default outside production, counts in the process instead (D-073).
 5. **Usage recorded** in `llm_usage` after every call, including failures (`llm_record_tokens`).
 
-The SQL functions (these two, `search_rulebook_sections` and `replace_rulebook`) are `security definer`, executable by the service role only.
+The SQL functions (these two, `rate_limit_hit`, `rate_limit_undo`, `search_rulebook_sections` and `replace_rulebook`) are `security definer`, executable by the service role only.
 
 Outside the app, the Anthropic account has a monthly spend limit. Providers: `AnthropicProvider` (model from `LLM_MODEL_RULES`) and `FakeProvider` (scripted, used by all tests and selectable with `LLM_PROVIDER=fake`).
 

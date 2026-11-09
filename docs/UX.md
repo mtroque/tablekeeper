@@ -7,7 +7,7 @@ Screens, routes, states and interactions.
 1. **One phone layout.** A single column, 360-430px wide, on every screen size (see Desktop). No content breakpoints.
 2. **Uncertain first.** Low-confidence values are highlighted and reviewed first; manual entry is always one tap away.
 3. **Explain, don't just add.** Every score has a breakdown; tapping a category highlights where its points came from.
-4. **No dead ends.** Every failure (no board found, API asleep, quota used up) offers a next step.
+4. **No dead ends.** Every failure (no board found, server unreachable, quota used up) offers a next step.
 5. **Sign-in only when it pays off:** offered at the moment of saving, history or syncing, never as a wall.
 
 ## Desktop
@@ -48,14 +48,13 @@ Every screen implements these, plus any listed in its slice spec.
 | State | Treatment |
 |---|---|
 | Loading | Skeletons matching the layout, never a lone spinner for more than 300ms |
-| API waking up (Render cold start) | "Waking up the server." with a progress hint; game library still renders from the local registry |
 | Empty | Explains what goes here and offers the action that fills it |
 | Error | Plain-language message + retry; never raw error codes |
 | Guest | Persistence features show a sign-in prompt in place of content |
 | Offline | Scorers and CV still work; saving and rules show "You're offline." |
 
 App shell states:
-- Server status line: "Waking up the server." only once `/health` has taken 2500ms (D-056); "You're offline." while the browser is offline; nothing when `/health` fails or is blocked (D-056).
+- Server status line: "You're offline." while the browser is offline, nothing otherwise. Nothing calls `/health` on load (D-074).
 - Header while the auth session loads: a skeleton in place of the sign-in button. Account sheet: display name from `/v1/me` (skeleton while loading, email if it fails) and "Sign Out".
 - Sign-in callback: "Signing you in." while exchanging the code; on failure "Couldn't finish signing in." with "Try Again".
 - Unknown `gameId`: the not-found page with a link back to the library.

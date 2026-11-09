@@ -63,7 +63,7 @@ Rules and scoring details: `docs/games/<gameId>.md`. Screens: `docs/UX.md`.
 | Rules questions | Sent to Anthropic; not stored; daily limits count requests per account or per salted IP hash | `services/rules.ts`, `llm/quota-store.ts` |
 | Logs | Method, path, status and timing only; hosts keep their own request logs | `middleware/request-id.ts` |
 | Browser storage | Sign-in session (`tk:auth`) and in-progress games; no cookies, ads or analytics | `lib/supabase.ts` |
-| Services | Vercel, Render, Supabase, Google, Anthropic | `docs/DEPLOYMENT.md` |
+| Services | Vercel (website and server), Supabase, Google, Anthropic | `docs/DEPLOYMENT.md` |
 
 ## Out of scope (v1)
 

@@ -22,7 +22,7 @@ Everything except saving works without signing in.
 
 What's built and what's next: [`docs/ROADMAP.md`](docs/ROADMAP.md). What the app does and for whom: [`docs/PRODUCT.md`](docs/PRODUCT.md).
 
-TypeScript throughout: Next.js + Tailwind + shadcn/ui (Vercel), Express 5 (Render), Supabase (Postgres, Google sign-in), opencv.js in a Web Worker, and the Anthropic API.
+TypeScript throughout: Next.js + Tailwind + shadcn/ui (Vercel), Express 5 (Vercel), Supabase (Postgres, Google sign-in), opencv.js in a Web Worker, and the Anthropic API.
 
 ## Run locally
 

@@ -1,14 +1,14 @@
 # Tablekeeper: Deployment
 
-Web on Vercel, API on Render, database and auth on Supabase cloud. Local development is unchanged; production only adds hosted copies and env vars.
+Web and API as two Vercel projects (Hobby plan), database and auth on Supabase cloud. Local development is unchanged; production only adds hosted copies and env vars.
 
 ## Order of setup
 
 1. Supabase cloud project
 2. Google OAuth client
-3. Render (API)
+3. Vercel (API)
 4. Vercel (web)
-5. Wire URLs together, keep-alive, smoke test
+5. Wire URLs together, smoke test
 
 ## 1. Supabase cloud
 
@@ -37,31 +37,30 @@ Web on Vercel, API on Render, database and auth on Supabase cloud. Local develop
 4. Supabase → Auth → Providers → Google: paste client ID and secret.
 5. Local: put the same client ID/secret in `.env.local` (`SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`, `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`).
 
-## 3. Render (API)
+## 3. Vercel (API)
 
-1. New → Web Service → connect the GitHub repo.
+The API is its own Vercel project. Its build writes the [Build Output API](https://vercel.com/docs/build-output-api) layout itself: one Node function holding the Express app with every dependency bundled (`apps/api/scripts/build-vercel.mjs`), and a route sending every path to it. Vercel's zero-config Express detection isn't used (D-072).
+
+1. Add New → Project → import the same repo again; name it e.g. `tablekeeper-api`.
 2. Settings:
-   - Root directory: repository root
-   - Runtime: Node
-   - Build command: `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @tablekeeper/api... build`
-   - Start command: `pnpm --filter @tablekeeper/api start`
-   - Health check path: `/health`
-   - Instance type: Free
-3. Environment variables: every variable under "API" in `.env.example`, with production values, including the commented-out `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` (the cloud project's), `WEB_ORIGINS` = the Vercel URL(s) and `NODE_ENV=production`. Nothing under "Local only".
-4. The free tier sleeps after 15 minutes without traffic and can take up to a minute to wake; one always-on free service fits the monthly free hours only if it's the workspace's only free service.
+   - Framework Preset: Other
+   - Root directory: `apps/api`, with "Include files outside the root directory" on (the default; the build needs `packages/core`)
+   - Install command: the default (Vercel installs the pnpm workspace from the repo root)
+   - Build command: `pnpm build:vercel`
+   - Output directory: leave empty (the build writes `.vercel/output`, which Vercel deploys as is)
+   - Functions → Fluid compute: on (the default for new projects). Function region: the one closest to the Supabase project (e.g. `sin1` for Singapore)
+3. Environment variables (Production): every variable under "API" in `.env.example`, with production values, including the commented-out `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` (the cloud project's), `WEB_ORIGINS` = the web project's URL(s), `NODE_ENV=production` and a real `IP_HASH_SALT`. Leave `RATE_LIMIT_STORE` unset: production counts the burst limit in Supabase (`database`), shared by every instance. Also `ENABLE_EXPERIMENTAL_COREPACK=1`. Nothing under "Local only".
+4. Deploy, then check `GET https://<api-domain>/health` returns `{ ok: true }`.
 
-### Keep-alive
-- External pinger (cron-job.org or UptimeRobot) → `GET https://<render-service>/health` every 10 minutes.
-- The web app also calls `/health` on load, so the API starts waking as soon as someone opens the site.
-- An ad or tracker blocker may block that `/health` call. That's harmless: the app shows nothing for a failed `/health`, the external pinger keeps the API awake, and each feature reports its own failed calls.
+Limits on Hobby: 300s per request (a rules question stops at 30s, and the function's `maxDuration` is 60s), 4.5MB request and response bodies (the API takes 1MB of JSON at most). Hobby is for non-commercial use only; a paid plan is needed if Tablekeeper ever charges or shows ads.
 
 ## 4. Vercel (web)
 
 1. Import the repo; Framework: Next.js; Root directory: `apps/web`. "Include files outside the root directory" is on by default (Project Settings → Build and Deployment); the app needs `packages/core` and `packages/cv`.
 2. Install command: the default. Vercel detects the pnpm workspace and installs from the repo root.
 3. Build command: the default (`next build`, Turbopack); no override. `pnpm test:build` runs the same build locally and starts the CV worker in it.
-4. Environment variables: every variable under "Web" in `.env.example`: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the cloud project's), `NEXT_PUBLIC_API_URL` = the Render URL, `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=false`, `NEXT_PUBLIC_ENABLE_PHOTO_SCORING=true` (D-055). Nothing under "Local only". Also `ENABLE_EXPERIMENTAL_COREPACK=1`, so Vercel uses the pnpm version pinned in `package.json` (`packageManager`), which wrote the lockfile.
-5. Deploy; copy the production URL back into Supabase (Site URL, redirects), Google (origins) and Render (`WEB_ORIGINS`), then redeploy the API.
+4. Environment variables: every variable under "Web" in `.env.example`: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the cloud project's), `NEXT_PUBLIC_API_URL` = the API project's URL, `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=false`, `NEXT_PUBLIC_ENABLE_PHOTO_SCORING=true` (D-055). Nothing under "Local only". Also `ENABLE_EXPERIMENTAL_COREPACK=1`, so Vercel uses the pnpm version pinned in `package.json` (`packageManager`), which wrote the lockfile.
+5. Deploy; copy the production URL back into Supabase (Site URL, redirects), Google (origins) and the API project (`WEB_ORIGINS`), then redeploy the API.
 
 ## 5. Anthropic
 
@@ -72,7 +71,8 @@ Web on Vercel, API on Render, database and auth on Supabase cloud. Local develop
 ## Smoke test after each deploy
 
 - [ ] Home loads on a phone and on desktop (QR side note visible)
-- [ ] `GET /health` returns `{ ok: true }`
+- [ ] `GET https://<api-domain>/health` returns `{ ok: true }`
+- [ ] No "Waking up the server." line on load; the home page shows no status line while online
 - [ ] Rules: ask a question for each game, citations open the official PDF
 - [ ] "Try Sample Photo" works for each photo game
 - [ ] Sign in with Google, save a score, see it in history
@@ -80,10 +80,21 @@ Web on Vercel, API on Render, database and auth on Supabase cloud. Local develop
 
 ## Local development after deploying
 
-Nothing changes: `pnpm db:start && pnpm dev` uses `.env.local` and detects the local Supabase keys. Hosted environments (Render, Vercel) always set the Supabase variables explicitly; detection only fills values that are missing. Production secrets never go in `.env.local`. New migrations: create locally, test, then `supabase db push` before (or with) the deploy that needs them.
+Nothing changes: `pnpm db:start && pnpm dev` uses `.env.local` and detects the local Supabase keys. Hosted environments (both Vercel projects) always set the Supabase variables explicitly; detection only fills values that are missing. Production secrets never go in `.env.local`. New migrations: create locally, test, then `supabase db push` before (or with) the deploy that needs them.
 
 ## Rollback
 
-- Vercel and Render: redeploy the previous successful build from their dashboards.
+- Web or API: in that Vercel project, Deployments → the previous good deployment → Promote to Production (Instant Rollback).
 - Database: migrations are forward-only; write a new migration to undo a change.
-- Emergency: set `LLM_ENABLED=false` on Render to stop all LLM spend immediately.
+- Emergency: set `LLM_ENABLED=false` in the API project's environment variables and redeploy it to stop all LLM spend.
+
+## Cutover from Render
+
+One time, for a deployment that still runs the API on Render. Players see no downtime: Render keeps serving until the web app points elsewhere.
+
+1. `supabase db push` (adds `rate_limit_hits` and its functions).
+2. Create the API project (section 3) with the same values as the Render service's environment, plus `ENABLE_EXPERIMENTAL_COREPACK=1`. Deploy and check `/health`.
+3. In the API project, set `WEB_ORIGINS` to the web URL(s) if it isn't already; redeploy.
+4. In the web project, set `NEXT_PUBLIC_API_URL` to the API project's URL and redeploy (the value is built into the page).
+5. Run the smoke test above.
+6. Delete the external pinger (cron-job.org or UptimeRobot), then delete the Render service.
