@@ -135,9 +135,14 @@ describe('patchwork detector on synthetic photos', () => {
       expect(draft.confidence[BOARD_KEY]).toBeGreaterThan(0.9);
       // The board is upside down, so the photo's top-left space is the board's bottom-right.
       expect(draft.state.grid).toEqual(grid.slice().reverse());
-      expect(Object.keys(draft.confidence)).toHaveLength(82);
+      // 81 spaces, the board color, 4 chit counts and the special tile.
+      expect(Object.keys(draft.confidence)).toHaveLength(87);
+      expect(draft.confidence['tokens.five']).toBe(1);
+      expect(draft.confidence['specialTile']).toBe(1);
       expect(cornerError(draft.corners, rotateQuad(corners, 2))).toBeLessThan(0.02);
+      // Nothing lies beside the board.
       expect(draft.state.tokens).toEqual({ one: 0, five: 0, ten: 0, twenty: 0 });
+      expect(draft.state.specialTile).toBe(false);
       expect(draft.warnings).toEqual([]);
     },
   );
@@ -187,6 +192,13 @@ describe('patchwork detector on synthetic photos', () => {
     controller.abort();
     await expect(game.detector.detect(image, { signal: controller.signal })).rejects.toThrow(
       'aborted',
+    );
+  });
+
+  it('a calibration without chit reference crops keeps the committed chit templates', () => {
+    expect(game.chits).toBe(cvGame.chits);
+    expect(new Set(cvGame.chits.templates.map((t) => t.kind))).toEqual(
+      new Set(['five', 'ten', 'twenty', 'special']),
     );
   });
 

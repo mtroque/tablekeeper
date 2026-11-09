@@ -199,7 +199,7 @@ export function boardMask(
   return { mask, width, height, scale };
 }
 
-function toLab(mat: Mat): Float32Array {
+export function toLab(mat: Mat): Float32Array {
   const data = mat.data;
   const channels = mat.channels();
   const n = mat.cols * mat.rows;
@@ -218,7 +218,7 @@ function toLab(mat: Mat): Float32Array {
 }
 
 /** The table's main colors: k-means over the border pixels, keeping clusters big enough to be table. */
-function tableColors(
+export function tableColors(
   lab: Float32Array,
   width: number,
   height: number,
@@ -279,7 +279,7 @@ function nearest(p: readonly number[], centers: ReadonlyArray<readonly number[]>
 }
 
 /** How far table pixels stray from the table colors: the border's 90th percentile distance. */
-function borderNoise(distance: Float32Array, width: number, height: number): number {
+export function borderNoise(distance: Float32Array, width: number, height: number): number {
   const band = Math.max(2, Math.round(Math.min(width, height) * BORDER));
   const values: number[] = [];
   for (let y = 0; y < height; y++) {
@@ -293,7 +293,7 @@ function borderNoise(distance: Float32Array, width: number, height: number): num
 }
 
 /** Otsu's threshold over a float map, in 256 bins up to its maximum. */
-function otsu(values: Float32Array): number {
+export function otsu(values: Float32Array): number {
   let max = 0;
   for (const v of values) if (v > max) max = v;
   if (max === 0) return 0;
@@ -326,11 +326,16 @@ function otsu(values: Float32Array): number {
 }
 
 /** Square-kernel dilation of a 0/1 mask, separably. */
-function dilate(mask: Uint8Array, width: number, height: number, radius: number): Uint8Array {
+export function dilate(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  radius: number,
+): Uint8Array {
   return morph(mask, width, height, radius, 1);
 }
 
-function erode(mask: Uint8Array, width: number, height: number, radius: number): Uint8Array {
+export function erode(mask: Uint8Array, width: number, height: number, radius: number): Uint8Array {
   return morph(mask, width, height, radius, 0);
 }
 

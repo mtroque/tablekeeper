@@ -58,6 +58,11 @@ export type MeasureOptions = {
   orientation?: number;
   /** Called once the board is found, before the spaces are measured. */
   onFound?: () => void;
+  /**
+   * Called with the loaded RGB image and the board in its pixels, after the spaces are measured;
+   * the image is deleted afterwards.
+   */
+  onImage?: (mat: Mat, quad: Quad) => void;
 };
 
 /** Finds (or takes) the board, warps it, and measures every space and the frame. */
@@ -92,6 +97,7 @@ export function measureBoxBoard(image: ImageInput, opts: MeasureOptions = {}): B
       const cells = sampleCells(warped, PATCHWORK_LAYOUT, { inset: CELL_INSET }).map((region) =>
         measureCell(region, frame[0] + GLARE_ABOVE_FRAME),
       );
+      opts.onImage?.(loaded.mat, quad);
       return {
         corners: scaleQuad(quad, 1 / loaded.scale),
         found,
