@@ -2,7 +2,7 @@
 
 **Status:** ⏸ · **Depends on:** S0, S3, S5
 
-**Paused:** everything is built and tested locally; the first two unchecked criteria need the API deployed to the owner's Vercel account (`docs/DEPLOYMENT.md` → Cutover from Render), which an agent shouldn't do unasked. Once deployed and the smoke test passes, check them and set ✅.
+**Paused:** deployed and cut over on 9 November 2026. Left: the hand-run smoke test steps in the last criterion, then delete the Render service and the external pinger, then set ✅.
 
 **Goal:** Run the existing Express API as its own Vercel project on the Hobby plan instead of Render, so players never wait up to a minute for a sleeping server, and the keep-alive setup goes away.
 
@@ -29,7 +29,7 @@ The API stays an Express app (D-005 keeps its boundary; only the host changes).
 None new. The waking state is removed from `docs/UX.md` → Screen states.
 
 ## Acceptance criteria
-- [ ] The API deploys to Vercel from the repo with the documented settings, and `GET /health` returns `{ ok: true }` there. Not yet deployed. Locally verified: `apps/api/src/vercel.test.ts` builds the function with `build:vercel`, loads it in plain Node from a folder with no `node_modules` (the way the Nodejs launcher loads it), and gets `{ ok: true }` from `/health` and 200 from `/v1/games` with `NODE_ENV=production` and the database burst store
+- [x] The API deploys to Vercel from the repo with the documented settings, and `GET /health` returns `{ ok: true }` there. Project `tablekeeper-api` (root `apps/api`, `pnpm build:vercel`, Node 24, Fluid compute, `sin1`), deployed from GitHub on push to `main` (commit `6395667`); `https://tablekeeper-api.vercel.app/health` answered `{ ok: true }` in 0.58s on a cold instance. Locally, `apps/api/src/vercel.test.ts` loads the same build in plain Node
 - [x] The burst limit is shared across instances: a test with two app instances on one store hits `RATE_LIMITED` at the configured total (`middleware/rate-limit.test.ts`: 3 allowed, the 4th on the other instance is 429; 16 concurrent requests over two instances give exactly 10 × 200 and 6 × 429)
 - [x] Per-IP guest quotas use the real client IP behind Vercel's proxy (test with a forwarded header): two forwarded IPs get separate guest quotas and separate burst counts, and the stored burst key is the salted hash of the forwarded IP, never the IP itself
 - [x] The slowest rules question finishes within the function limit (measured, numbers recorded here). Four multi-part questions with the real model, on 9 November 2026:
@@ -45,7 +45,7 @@ None new. The waking state is removed from `docs/UX.md` → Screen states.
 - [x] The server status line never shows "Waking up the server."; "You're offline." still shows offline (`server-status.test.ts`; `tests/e2e/X2.spec.ts` watches the page for 3s with no status line and no `/health` request, then goes offline and back)
 - [x] `pnpm dev`, `pnpm test` and `pnpm test:e2e` run the API locally exactly as before (`server.ts` unchanged; outside production the burst limit stays in memory; `pnpm dev` served `/health` and `/v1/games` with the usual 60 a minute policy; full test and e2e suites pass)
 - [x] No doc, env comment or UI text names Render; the privacy page lists the current services ("Vercel hosts the website and the server.", dated 9 November 2026). The only remaining mentions are the one-time Cutover from Render steps in `docs/DEPLOYMENT.md`, which this spec asks for, and past entries in `docs/DECISIONS.md`
-- [ ] The deploy smoke test in `docs/DEPLOYMENT.md` passes on the Vercel API. Needs the deploy above
+- [ ] The deploy smoke test in `docs/DEPLOYMENT.md` passes on the Vercel API. Passed on 9 November 2026: `/health`; requests served from `sin1`; two instances shared one burst window (59, then 58 left); CORS allows only the web origin; one guest question per game answered in 6.9s to 8.7s, each with 2 citations opening the publisher PDF at a page; after the cutover the live site's bundle calls only `tablekeeper-api.vercel.app`, with no status line and no page errors. Still to check by hand: home on a phone and desktop (QR side note), Try Sample Photo per photo game, sign in, save a score and see it in history, sign out
 
 ## Tests
 Integration test for the shared burst store (two app instances, one count; separate IPs, separate counts); forwarded-IP tests for the burst key and the guest quota; unit test for the status line without the waking state; a check that the built Vercel function answers `/health`; `tests/e2e/X2.spec.ts` covers the home page with the server status line silent.
