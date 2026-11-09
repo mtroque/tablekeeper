@@ -29,7 +29,7 @@ Web on Vercel, API on Render, database and auth on Supabase cloud. Local develop
 
 ## 2. Google OAuth
 
-1. Google Cloud Console → APIs & Services → OAuth consent screen: app name Tablekeeper, support email, scopes `email`, `profile`, `openid`.
+1. Google Cloud Console → APIs & Services → OAuth consent screen: app name Tablekeeper, support email, scopes `email`, `profile`, `openid`, privacy policy URL `https://<vercel-domain>/privacy` (check it loads once the web app is deployed).
 2. **Publishing status: In production.** In "Testing", only listed test users can sign in.
 3. Credentials → Create OAuth client ID → Web application.
    - Authorized JavaScript origins: the Vercel URL, `http://localhost:3000`.

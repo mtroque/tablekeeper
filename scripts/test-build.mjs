@@ -1,4 +1,4 @@
-// `pnpm test:build`: the production check from docs/slices/S4-cv-worker-detectors.md. Builds
+// `pnpm test:build`: the production check for the CV worker (D-060). Builds
 // apps/web with the default bundler (Turbopack) and fails if that takes too long, which is how an
 // import loop through the CV worker shows up. Then runs tests/e2e/S4.spec.ts against `next start`.
 import { spawn } from 'node:child_process';

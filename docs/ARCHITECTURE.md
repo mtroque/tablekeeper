@@ -161,6 +161,9 @@ REST under `/v1`, JSON. Every request and response is a Zod schema in `packages/
 - **Errors:** `{ "error": { "code", "message", "details"? } }` with a matching status. Codes: `VALIDATION`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `QUOTA_EXCEEDED`, `LLM_DISABLED`, `RATE_LIMITED`, `INTERNAL`.
 - **Auth:** `Authorization: Bearer <Supabase access token>`, verified by middleware. Database calls use a per-request client carrying that token, so RLS applies.
 - **CORS:** configured web origins only. `trust proxy` is on (Render).
+- **History:** 20 per page, newest first (`played_at`, then `id`); the cursor is opaque base64 of the last row's `played_at` and `id`. `best` and `average` cover all the user's completed sessions of that game.
+- **Saving:** an unknown game is `NOT_FOUND`; a game without a scorer is 422 `VALIDATION`. State is parsed with `parseState` (upgrade, then validate), and a client-sent `scoreTotal` or `breakdown` is stripped (D-038). `detection_meta` holds the state paths that differ between the photo draft and the saved board and the number of detected values (D-037).
+- **Rules:** `ask` takes `{ question (1 to 500 chars, trimmed), history? }` (at most the last 6 turns) and returns `{ answer, notCovered, citations, quota }`; `NOT_FOUND` when the game has no ingested rulebook. `quota` and `GET /v1/me/quota` are `{ enabled, subject: 'guest' | 'user', limit, used, remaining, resetsAt }`. The global budget answers `QUOTA_EXCEEDED` with `details.scope = 'global'`.
 
 ## Client state and storage
 
@@ -172,9 +175,11 @@ REST under `/v1`, JSON. Every request and response is a Zod schema in `packages/
 
 **Ingestion** (`pnpm ingest <gameId>`, run locally):
 1. Extract text per page from `data/rulebooks/<gameId>.pdf`, recording the PDF page each piece of text comes from.
-2. Split into sections: the PDF outline if present, else headings by font size/weight, else one section per page; keep parent/child structure. Each section gets `pdf_page_start` and `pdf_page_end`, and `printed_pages` filled from the page-numbers note in `docs/games/<gameId>.md`.
-3. Write `data/rulebooks/<gameId>.sections.json` (gitignored) for a human to review; the reviewer can correct any section's pages there.
-4. `pnpm ingest <gameId> --load` replaces that rulebook's sections in one transaction (idempotent).
+2. Split into sections by heading size (none of the four PDFs has an outline), with per-game settings in `scripts/lib/rulebook-layouts.ts`: heading fonts and sizes, columns per page for reading order, skipped pages (D-035). Keep parent/child structure. Each section gets `pdf_page_start` and `pdf_page_end`, and `printed_pages` filled from the page-numbers note in `docs/games/<gameId>.md`.
+3. Write `data/rulebooks/<gameId>.sections.json` (gitignored) for a human to review; the reviewer can correct any section's pages there. An existing review file is never overwritten without `--force`.
+4. `pnpm ingest <gameId> --load` validates the review file and replaces that rulebook's sections in one transaction (`replace_rulebook`, idempotent).
+
+`pnpm rules:smoke <gameId> "<question>"` runs one question through the API's own gateway, quotas and service (as a guest subject named `rules-smoke`); it's the only real model call outside the app.
 
 **Answering** (`apps/api/src/rules`): an agent loop scoped to one rulebook, with tools whose arguments are validated with Zod:
 
@@ -184,25 +189,27 @@ REST under `/v1`, JSON. Every request and response is a Zod schema in `packages/
 | `read_section({ id })` | `{ id, title, printedPages, pdfPages, body }` |
 | `search_rulebook({ query })` | top 5 by `ts_rank` (`websearch_to_tsquery`), each `{ id, title, printedPages, pdfPages, snippet }` |
 
-- The final answer comes through a forced `answer` tool: `{ answer, citedSectionIds, notCovered }`. Citations to sections the agent didn't read in this run are dropped; the rest become `{ sectionId, title, printedPages, pdfPage, url }`: `printedPages` is the section's `printed_pages` (null when none is printed), `pdfPage` its `pdf_page_start`, and `url` the publisher PDF plus `#page=<pdfPage>`.
+- The final answer comes through an `answer` tool, `{ answer, citedSectionIds, notCovered }`, required by the prompt rather than a forced `tool_choice` (D-031). A text reply gets one reminder, then "Couldn't find an answer in the rulebook." An answer citing nothing it read is `notCovered` (D-032). Citations to sections the agent didn't read in this run are dropped; the rest become `{ sectionId, title, printedPages, pdfPage, url }`: `printedPages` is the section's `printed_pages` (null when none is printed), `pdfPage` its `pdf_page_start`, and `url` the publisher PDF plus `#page=<pdfPage>`.
 - The system prompt is versioned: answer only from this rulebook, read before answering, cite what was used, set `notCovered` when the rulebook doesn't settle it, never invent rules, answer in the question's language, keep it short, and write plainly per `docs/UX.md` → Words (no dashes, no preamble such as "Great question", no sign-off). As a backstop the service replaces any em or en dash in the answer with a comma or "to" before returning it.
 - Limits: `RULES_MAX_TOOL_CALLS` tool calls, `RULES_MAX_OUTPUT_TOKENS`, 30s overall, questions up to 500 characters, the last 6 turns as context. Conversations are not stored.
 
 ## LLM gateway and abuse protection
 
-Every model call goes through `gateway.run({ purpose, subject, messages, tools, limits })`:
+Every model call goes through `gateway.run({ purpose, subject, limits }, (model) => ...)`, which runs the checks below once and hands the callback a `model.complete(...)` that records tokens after every call and enforces the overall timeout. One rules question is one request, however many model calls it takes (D-030).
 
 1. **Kill switch:** `LLM_ENABLED=false` → `LLM_DISABLED`.
 2. **Global daily budget:** `LLM_GLOBAL_DAILY_REQUESTS`, `LLM_GLOBAL_DAILY_TOKENS`.
-3. **Per-subject daily quota:** user id (`LLM_USER_DAILY_REQUESTS`) or salted IP hash (`LLM_GUEST_DAILY_REQUESTS`). The check-and-increment is one SQL statement, so concurrent requests can't overshoot.
+3. **Per-subject daily quota:** user id (`LLM_USER_DAILY_REQUESTS`) or salted SHA-256 of `req.ip` (`LLM_GUEST_DAILY_REQUESTS`). The check-and-increment is one SQL function (`llm_consume_request`, locking the global row first, D-034), so concurrent requests can't overshoot.
 4. **Burst limit:** `express-rate-limit` on all `/v1` routes.
-5. **Usage recorded** in `llm_usage` after every call, including failures.
+5. **Usage recorded** in `llm_usage` after every call, including failures (`llm_record_tokens`).
+
+The SQL functions (these two, `search_rulebook_sections` and `replace_rulebook`) are `security definer`, executable by the service role only.
 
 Outside the app, the Anthropic account has a monthly spend limit. Providers: `AnthropicProvider` (model from `LLM_MODEL_RULES`) and `FakeProvider` (scripted, used by all tests and selectable with `LLM_PROVIDER=fake`).
 
 ## Computer vision
 
-`packages/cv` wraps opencv.js. In the browser it runs only inside `cv.worker.ts` (opencv loads once, lazily, only on photo pages); in Node it runs for `pnpm eval:cv`. Every stage is a pure function over `Mat`s that deletes what it allocates.
+`packages/cv` wraps opencv.js (`@techstark/opencv-js`, pinned). In the browser it runs only inside `cv.worker.ts` (opencv loads once, lazily, only on photo pages); in Node it runs for tests and `pnpm eval:cv`. opencv is never imported statically: cv takes a loader (D-025). Mat stages delete everything they allocate and the caller deletes what it receives; `sampleCells` copies cell pixels into typed arrays, so features, classification and calibration are plain TypeScript (D-027). `pipeline/leaks.test.ts` checks that no `Mat` outlives a stage or a full read.
 
 | Stage | Function | Notes |
 |---|---|---|
@@ -213,11 +220,13 @@ Outside the app, the Anthropic account has a monthly spend limit. Providers: `An
 | Normalize | `normalizeLighting(mat)` | gray-world white balance, CLAHE on LAB lightness |
 | Sample | `sampleCells(mat, layout, { inset })` | layout = cell polygons in canonical coordinates; samples only the inset to skip grid lines and neighbors |
 | Features | `cellFeatures(region)` | LAB mean and spread, edge density, optional hue histogram |
-| Classify | `classifyNearest(features, profile, { tolerance })` | nearest calibrated class; confidence from the margin to the runner-up and the distance against tolerance; never exact matching |
+| Classify | `classifyNearest(features, profile, { tolerance })` | nearest calibrated class by spread-scaled distance; confidence is the margin to the runner-up times a falloff once the distance passes the tolerance; never exact matching |
 | Blobs | `findBlobs(mat, mask, opts)` | tokens beside a board: area, circularity, rotated rect |
 | Match | `matchTemplateRotInvariant(crop, refs)` | rotation-invariant comparison against reference crops |
 
 - **Calibration profiles** (`games/<gameId>/profile.json`) hold per-class feature centroids, spreads and tolerance, built from labeled fixtures by `pnpm eval:cv <gameId> --calibrate`. A game whose calibration doesn't fit a profile gives its `CvGame` a `calibrate` instead: the eval passes it the photos in `data/fixtures/<gameId>/references/` and the labeled fixtures, writes the JSON files it returns into `games/<gameId>/`, and evaluates the game it returns.
-- **Detector lookup:** the worker calls `findDetector(id)` (`apps/web/src/games/detectors.ts`), which gathers each game's `detector.ts` loader, plus the `_example` detector outside production builds or when `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=true`. The worker's module graph must never reach React, the DOM, the game UI registry or `cv-client.ts`: that loop hung Turbopack's production build and crashed the webpack build's worker (`docs/slices/S4-cv-worker-detectors.md`). `apps/web/src/workers/cv-worker-imports.test.ts` guards it in `pnpm test`, and `pnpm test:build` builds for production and starts the worker.
-- **Worker API** (`cv-client.ts`): `detectBoard(gameId, image, corners?, { hints? }) => Promise<Result<Draft>>`, with progress events (`loading-opencv`, `finding-board`, `classifying`) and a 20s timeout. `hints` reach the detector as `DetectOptions.hints`, a game-specific reading hint the detector validates. On review, `ReviewStep` gives the Editor `reread(hints)` when the flow has a photo and corners: it reads the photo again at those corners and replaces the board, draft and warnings, resolving false when the reading fails.
-- **Evaluation** (`pnpm eval:cv <gameId>`): runs the detector on `data/fixtures/<gameId>` and reports board-found rate, corner error, per-cell accuracy, confusion matrix, the share of errors flagged low-confidence, and timing; writes `eval-report.md` and fails below the fixture set's threshold.
+- **`CvGame`:** each `packages/cv/src/games/<gameId>/index.ts` exports a `cvGame` (detector, label schema, expected class per cell, calibration inputs). The eval loads it by path, so there is no cv registry; `packages/cv/package.json` exports `./games/*` for the web detector loaders.
+- **Detector lookup:** the worker calls `findDetector(id)` (`apps/web/src/games/detectors.ts`), which gathers each game's `detector.ts` loader, plus the `_example` detector outside production builds or when `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=true`. The worker's module graph must never reach React, the DOM, the game UI registry or `cv-client.ts`: the chain `cv.worker.ts` → `games/registry.ts` → a game's React UI → `cv-client.ts` → `new Worker(...)` hung Turbopack's production build and crashed the webpack build's worker on `document`, while `next dev` looked fine (D-058). `apps/web/src/workers/cv-worker-imports.test.ts` guards it in `pnpm test`, and `pnpm test:build` builds for production and starts the worker.
+- **Worker API** (`cv-client.ts`): `detectBoard(gameId, image, corners?, { hints? }) => Promise<Result<Draft>>`, with progress events (`loading-opencv`, `finding-board`, `classifying`). One worker per page session; the 20s timeout restarts on every progress event and terminates the worker (D-028). No `Worker` or no detector is `unavailable`, a timeout `timeout`, a worker error or abort `failed`. `hints` reach the detector as `DetectOptions.hints`, a game-specific reading hint the detector validates. On review, `ReviewStep` gives the Editor `reread(hints)` when the flow has a photo and corners: it reads the photo again at those corners and replaces the board, draft and warnings, resolving false when the reading fails.
+- **Evaluation** (`pnpm eval:cv <gameId>`): runs the detector on `data/fixtures/<gameId>` and reports board-found rate, corner error (the worst corner's distance over the board's longer side), per-cell accuracy, confusion matrix, the share of errors flagged low-confidence (below 0.6, `LOW_CONFIDENCE`), and timing; writes `eval-report.md` (gitignored) and fails below the fixture set's `accuracyThreshold`.
+- **`_example`:** a synthetic 3×3 board for the S1 example game, rendered by `scripts/make-example-fixtures.ts` (24 seeded photos with rotation, skew, tints and noise); the `/dev/cv` harness page reads one with the real worker.

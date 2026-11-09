@@ -128,3 +128,15 @@ Spaces: `q = 0`: `r` 0 to 3; `q = 1`: `r` 0 to 2; `q = 2`: `r` -1 to 2; `q = 3`:
 | Side A, the rulebook's p. 9 example: 7 water spaces in a chain, `(2,-1)`, `(1,0)`, `(1,1)`, `(0,2)`, `(0,3)`, `(1,3)`, `(2,3)` | water 19 (length 7) |
 | Side B, no water | water 5 (1 island) |
 | Nature's Spirit card worth 14 | Nature's Spirit 14 |
+
+## Photo reading
+
+The detector in `packages/cv/src/games/harmonies/` reads the side and each space's top color. Heights can't be seen from above, so the player sets them.
+
+- **Finding the board** (`board.ts`, `outline-fit.ts`): the curved bottom rules out the shared `findBoardQuad`, so the whole outline (see Board rectangle) is fitted to the photo's Canny edges. Edges are split into 16 signed gradient direction bins, each with a chamfer distance field, so an outline point counts only edges that run its way with one polarity; with unsigned directions the busy middle of the board scored as high as the real outline, and contour or line approaches failed on wooden tables. Search: every center, width and angle (any quarter turn, up to 18 degrees off) at 800px, the best 150 distinct poses polished, then a coarse to fine pattern search (shifts, scale, turn, depth, single corners) on the best 10. The share of the outline on edges is the confidence; under 0.6, the centered fallback and its warning. Corners follow the corners convention above.
+- **Side** (`read.ts`): the median CIELAB a and b (not lightness, which varies with the room) of the board's background, inside the outline and outside every space of either side, against the same measure of the two empty references (`references/side-a.jpg`, `side-b.jpg`). The reference values are constants in `read.ts`; `fixtures.test.ts` recomputes them. The nearer wins; confidence is the margin. The eval reports it as a `side` pseudo-cell.
+- **Top color**: hex centers come from the side's layout and grid placement, never detected. At each center a disc of 0.65 hex sizes; animal cube pixels (hue 50 to 100 degrees, chroma 8 to 45) are dropped; the median L, a, b of the rest, shifted by the difference between the photo's background and the side reference's, goes to `classifyNearest` (classes `W F M T L R empty`). The light shift and the wider disc (0.38 caught too much cube) raised leave-one-out accuracy from 90% to 96.5%. "Occluded" is a rule, not a class: under 10% of the disc left after dropping the cube.
+- **Draft**: each top becomes the shortest valid stack ending in it. Confidence keys: `"q,r"` (color), `"q,r:height"` (0 for `M`, `L`, `T`, `R`, so review counts it until the player sets the height, D-066) and `side`.
+- **Reread as the other side** runs the plain TypeScript reading (`rereadAsSide`, `geometry.ts`) on the main thread at the known corners, with no opencv (D-064).
+- cv imports only types from core, so `packages/cv/src/games/harmonies/layout.ts` repeats the layouts, grid placement, aspect and piece codes; `apps/web/src/games/harmonies/detector.test.ts` fails if they drift (D-065).
+- **Samples**: `01-a-pink-table`, `05-b-wood-table`, `03-a-dark-table` at 1200px. At that size the wood sample misreads one space, flagged as uncertain.

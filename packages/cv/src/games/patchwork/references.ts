@@ -26,7 +26,7 @@ const BoardReferencesSchema = z.object({
 
 /**
  * Patchwork's calibration (`references.json`): the empty references of each board and the
- * thresholds learned from the labeled fixtures (docs/slices/P2-patchwork-board-detection.md).
+ * thresholds learned from the labeled fixtures (docs/games/patchwork.md → Photo reading).
  */
 export const PatchworkReferencesSchema = z.object({
   version: z.literal(1),

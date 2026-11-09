@@ -9,8 +9,7 @@ import { SIDES } from './layout';
 import { outlineModel } from './outline-fit';
 
 // Reads a board at known corners in plain TypeScript (no opencv), so the review screen can
-// reread the photo as the other side on the main thread (docs/slices/H2-harmonies-detection.md
-// → Decisions).
+// reread the photo as the other side on the main thread (D-064).
 
 /** Width the board is flattened to; a hex is then about 44 pixels from center to corner. */
 export const READ_WIDTH = 600;

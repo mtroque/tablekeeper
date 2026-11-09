@@ -3,7 +3,7 @@ import type { HarmoniesSide, Point, Quad } from '@tablekeeper/core';
 import { BOARD_ASPECT, GRID, SPACES } from './layout';
 
 // Plain TypeScript geometry for the flattened board, so a reading with known corners needs no
-// opencv (docs/slices/H2-harmonies-detection.md → Decisions).
+// opencv (D-064).
 
 /** RGB or RGBA pixels, row-major. */
 export type Pixels = {

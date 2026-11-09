@@ -51,6 +51,20 @@ Rules and scoring details: `docs/games/<gameId>.md`. Screens: `docs/UX.md`.
 | Azul game in progress, Dorfromantik campaign | This device only | Synced to the account |
 | History and personal bests | - | ✓ |
 
+## Privacy page
+
+`/privacy` says in plain words what Tablekeeper stores and who processes it. Contact is the GitHub repository's issues, and the page doesn't describe data deletion (D-054). When the code behind a claim changes, update the page and its "Last updated" date.
+
+| Section | Says | Checked against |
+|---|---|---|
+| Without an account | In-progress games and campaigns stay in this browser | `lib/session-store/local-store.ts`, D-041, D-050 |
+| With an account | Google sign-in through Supabase Auth; stores email and name from Google, the display name, saved games and campaigns | `supabase/migrations/*_init.sql`, `components/auth-provider.tsx` |
+| Board photos | Read in the browser, kept in this tab while scoring, never uploaded | `components/score-flow/photo.ts` |
+| Rules questions | Sent to Anthropic; not stored; daily limits count requests per account or per salted IP hash | `services/rules.ts`, `llm/quota-store.ts` |
+| Logs | Method, path, status and timing only; hosts keep their own request logs | `middleware/request-id.ts` |
+| Browser storage | Sign-in session (`tk:auth`) and in-progress games; no cookies, ads or analytics | `lib/supabase.ts` |
+| Services | Vercel, Render, Supabase, Google, Anthropic | `docs/DEPLOYMENT.md` |
+
 ## Out of scope (v1)
 
 - Playing the games digitally.

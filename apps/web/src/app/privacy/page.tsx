@@ -4,7 +4,7 @@ export const metadata: Metadata = { title: 'Privacy' };
 
 const ISSUES_URL = 'https://github.com/mtroque/tablekeeper/issues';
 
-/** What Tablekeeper stores and who processes it. Each claim is checked in docs/slices/X1-privacy-policy.md. */
+/** What Tablekeeper stores and who processes it. Each claim is checked against the code listed in docs/PRODUCT.md → Privacy page. */
 export default function PrivacyPage() {
   return (
     <article className="flex flex-col gap-6 px-4 py-6">

@@ -54,6 +54,12 @@ Every screen implements these, plus any listed in its slice spec.
 | Guest | Persistence features show a sign-in prompt in place of content |
 | Offline | Scorers and CV still work; saving and rules show "You're offline." |
 
+App shell states:
+- Server status line: "Waking up the server." only once `/health` has taken 2500ms (D-056); "You're offline." while the browser is offline; nothing when `/health` fails or is blocked (D-056).
+- Header while the auth session loads: a skeleton in place of the sign-in button. Account sheet: display name from `/v1/me` (skeleton while loading, email if it fails) and "Sign Out".
+- Sign-in callback: "Signing you in." while exchanging the code; on failure "Couldn't finish signing in." with "Try Again".
+- Unknown `gameId`: the not-found page with a link back to the library.
+
 ## Key interactions
 
 ### Photo capture
@@ -77,7 +83,7 @@ Every screen implements these, plus any listed in its slice spec.
 
 ### Board color switch (Patchwork)
 - A "Red" / "Gray" switch above the grid; the grid is drawn in the chosen board's color (boards per `docs/games/patchwork.md` → Boards).
-- Both boards share one layout, so the switch never needs a sheet. Board filled manually: switch immediately. Board from a photo: switch and reread the cells against the other board's references (`docs/slices/P2-patchwork-board-detection.md`).
+- Both boards share one layout, so the switch never needs a sheet. Board filled manually: switch immediately. Board from a photo: switch and reread the cells against the other board's references (`docs/games/patchwork.md` → Photo reading).
 - A low-confidence detected color is outlined like any other uncertain value.
 
 ### Breakdown
@@ -91,6 +97,10 @@ Every screen implements these, plus any listed in its slice spec.
 - Empty chat shows the game's starter questions.
 - Answers render citation chips with the page number printed in the rulebook (`§ Section · p. 4`, or `p. 4 and 5` for a spread), or the PDF page when the rulebook prints none (Patchwork). Tapping a chip opens the official PDF at the citation's `pdfPage` (`docs/ARCHITECTURE.md` → Rules assistant).
 - "Not in the Rulebook" answers use a distinct muted style and suggest the publisher FAQ.
+- Asking: the question appears at once, then a "Reading the rulebook." placeholder; the input is disabled until the answer arrives.
+- Quota used up: a guest sees "No questions left today." with "Sign In with Google" for the larger limit; a signed-in user sees when it resets. The input is disabled.
+- Switched off (`LLM_DISABLED`, or `enabled: false` from `/me/quota`): "Rules answers are switched off right now." with the rulebook link. No rulebook loaded (`NOT_FOUND`): "This rulebook isn't loaded yet." with the rulebook link.
+- Error: the API's message with "Try Again", which resends the same question.
 
 ### Dorfromantik
 - Scoresheet: base fields always, unlocked rows only, each with its hint from the paper sheet (fields in `docs/games/dorfromantik.md`).

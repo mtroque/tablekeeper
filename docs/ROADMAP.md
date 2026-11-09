@@ -1,6 +1,6 @@
 # Tablekeeper: Roadmap
 
-Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This table changes only on `main`; live status is in each spec (`/status` shows it across worktrees).
+Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This table changes only on `main`; live status is in each spec (`/status` shows it across worktrees). A finished slice's spec is removed once it's merged and its lasting facts are in their home docs; git history keeps it.
 
 ## Slices
 
@@ -22,23 +22,9 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | X1 | Privacy policy page | S0 | ✅ |
 | S5 | Quiet server status: drop the false "Couldn't reach the server." line | S0 | ✅ |
 
-## Suggested runs
+## Next
 
-| Step | Command |
-|---|---|
-| 1 | `/build S0` in the main checkout |
-| 2 | `/parallel S1 \| S2 \| S3` |
-| 3 | `/parallel D1 D2 \| P1 P2 P3 \| A1 \| H1 H2` (vision slices wait for S2 to be merged; start step 3 after S1 if S2 is still running, and leave P2+, H2 for later) |
-
-## Priority
-
-Most value first:
-
-1. S0, S1, S3: rules for four games plus saved scores.
-2. D1, P1, A1, H1: every game has a scorer.
-3. S4, X1: production builds with the default bundler; a privacy policy for the Google consent screen.
-4. S2, P2: photo-to-draft shown on one game.
-5. D2, H2, P3.
+P3, then whatever moves up from Later.
 
 ## Later
 

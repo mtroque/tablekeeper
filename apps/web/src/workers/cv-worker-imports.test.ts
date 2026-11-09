@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
-// The CV worker must not reach React or the DOM (docs/slices/S4-cv-worker-detectors.md). When it
+// The CV worker must not reach React or the DOM (docs/ARCHITECTURE.md → Computer vision). When it
 // imported the game UI registry, Turbopack's production build hung and the webpack build's worker
 // crashed on `document`, while `next dev` looked fine. This walks the module graph the bundler
 // sees, with TypeScript's resolution of the web tsconfig.

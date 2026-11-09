@@ -15,7 +15,7 @@ Read the first five before any work. Put each fact in its home and link to it fr
 | `docs/UX.md` | Screens, routes, states, interactions, design tokens |
 | `docs/CONVENTIONS.md` | Code style and patterns |
 | `docs/ROADMAP.md` | Slices, dependencies, status on `main`, priority |
-| `docs/slices/<id>-*.md` | One slice: what it owns, slice-specific scope, acceptance criteria, live status |
+| `docs/slices/<id>-*.md` | One planned or in-progress slice: what it owns, slice-specific scope, acceptance criteria, live status. Removed after merge |
 | `docs/games/<gameId>.md` | A game's rules (with ids), board coordinates, state shape, official rulebook URL |
 | `docs/DATA_ASSETS.md` | Rulebooks, fixtures, photo guidelines, label formats |
 | `docs/DEPLOYMENT.md` | Hosting setup |
