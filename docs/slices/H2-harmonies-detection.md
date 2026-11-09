@@ -67,7 +67,7 @@ None open. Resolved:
 - The eval reports a `side` pseudo-cell, so side errors show in the confusion matrix; top-color accuracy is quoted without it.
 - `test-photos.ts` reads fixtures with `process.getBuiltinModule('node:fs')` (cv has no Node types) and decodes them with the root's `jpeg-js` (no new dependency).
 - Samples: `01-a-pink-table`, `05-b-wood-table`, `03-a-dark-table` at 1200px (both sides, three tables). At that size the wood sample misreads one space, flagged as uncertain.
-- Wiring: none outside owned folders. The worker already loads `GAME_UI.harmonies.detector`.
+- Wiring: none outside owned folders. The CV worker finds the detector through `apps/web/src/games/harmonies/detector.ts` (gathered by `games/detectors.ts`), not the UI module.
 
 ## Shared change requests
 None.
