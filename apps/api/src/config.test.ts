@@ -19,7 +19,7 @@ describe('loadConfig', () => {
       provider: 'anthropic',
       anthropicApiKey: undefined,
     });
-    expect(config.rateLimit).toEqual({ windowMs: 60_000, max: 60 });
+    expect(config.rateLimit).toEqual({ windowMs: 60_000, max: 60, store: 'memory' });
   });
 
   it('treats empty values as unset and splits origins', () => {
@@ -36,7 +36,14 @@ describe('loadConfig', () => {
     expect(config.port).toBe(4002);
   });
 
-  it("prefers Render's PORT", () => {
+  it('counts the burst limit in the database in production unless told otherwise', () => {
+    const prod = { ...base, NODE_ENV: 'production', IP_HASH_SALT: 'real-salt' };
+    expect(loadConfig(prod).rateLimit.store).toBe('database');
+    expect(loadConfig({ ...prod, RATE_LIMIT_STORE: 'memory' }).rateLimit.store).toBe('memory');
+    expect(loadConfig({ ...base, RATE_LIMIT_STORE: 'database' }).rateLimit.store).toBe('database');
+  });
+
+  it("prefers the host's PORT", () => {
     expect(loadConfig({ ...base, PORT: '10000', API_PORT: '4002' }).port).toBe(10000);
   });
 

@@ -41,6 +41,7 @@ const EnvSchema = z.object({
 
   RATE_LIMIT_WINDOW_MS: int(60_000),
   RATE_LIMIT_MAX: int(60),
+  RATE_LIMIT_STORE: z.preprocess(emptyAsUndefined, z.enum(['database', 'memory']).optional()),
 });
 
 export type Config = {
@@ -64,7 +65,8 @@ export type Config = {
     globalDailyTokens: number;
     ipHashSalt: string;
   };
-  rateLimit: { windowMs: number; max: number };
+  /** `database` shares one count across serverless instances; `memory` counts per process. */
+  rateLimit: { windowMs: number; max: number; store: 'database' | 'memory' };
 };
 
 /** The only place that reads `process.env`. Throws with every invalid variable named. */
@@ -107,6 +109,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       globalDailyTokens: e.LLM_GLOBAL_DAILY_TOKENS,
       ipHashSalt: e.IP_HASH_SALT,
     },
-    rateLimit: { windowMs: e.RATE_LIMIT_WINDOW_MS, max: e.RATE_LIMIT_MAX },
+    rateLimit: {
+      windowMs: e.RATE_LIMIT_WINDOW_MS,
+      max: e.RATE_LIMIT_MAX,
+      store: e.RATE_LIMIT_STORE ?? (e.NODE_ENV === 'production' ? 'database' : 'memory'),
+    },
   };
 }
