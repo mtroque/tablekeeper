@@ -48,7 +48,8 @@ The app uses the rulebook's words in every user-facing text.
 
 - Two box boards, red and gray. Both are 9×9 with identical scoring, and both are glossy with a beveled outer frame around the playing grid.
 - The boards aren't uniform: a printed shadow darkens the top row and left column, and the red board also darkens toward the bottom right, so empty spaces look different depending on position.
-- Frame-to-grid inset: about 0.0275 of the board width on each side (so each space is about 0.105 of the board width), the same on both boards within measurement error. Measured on the empty references in `data/fixtures/patchwork/references/` (individual photos and sides range from 0.02 to 0.033); approximate.
+- Frame-to-grid inset: 0.0275 of the board width on each side (so each space is about 0.105 of the board width), the same on both boards within measurement error. Measured on the empty references in `data/fixtures/patchwork/references/` (individual photos and sides range from 0.02 to 0.033) and confirmed on the fixtures: warped at their labeled corners, the grid drawn at 0.0275 falls on the printed grid lines (checked by eye on `02-red-wood-table` and `06-gray-light-wood-glare`), and every space of all 8 fixtures reads correctly with it.
+- Chocolate pieces don't sit exactly on the printed grid, and their banderoles and shadows reach into neighboring spaces. Empty spaces also have a printed shading boundary inside some of them.
 
 ## Board coordinates
 
