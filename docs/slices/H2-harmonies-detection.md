@@ -1,6 +1,6 @@
 # H2: Harmonies photo detection
 
-**Status:** 🟨 · **Depends on:** H1, S2
+**Status:** ✅ · **Depends on:** H1, S2
 
 **Goal:** From a top-down photo, detect the board side and each space's top color, then ask only for the heights that can't be seen.
 
@@ -37,16 +37,16 @@ The `harmonies` game folders (AGENTS.md → Parallel sessions):
 - Capture on a Harmonies photo: the existing tip, progress, corner editing and fallback warning (S1, S2).
 
 ## Acceptance criteria
-- [ ] `pnpm eval:cv harmonies`: the side is right on every fixture; ≥ 95% top-color accuracy.
-- [ ] The board is found on every fixture, including both wooden tables, without given corners.
-- [ ] Spaces with an animal cube are read for their top color, not marked occluded.
-- [ ] Heights are asked only as `HAR-STACK-*` allows, and every draft is a valid state.
-- [ ] "Reread Photo as Side X" rereads with the other layout at the same corners and keeps the cards.
-- [ ] Try Sample Photo → corners → Read Board → review with the draft and height prompts → result (e2e).
+- [x] `pnpm eval:cv harmonies`: the side is right on every fixture; ≥ 95% top-color accuracy. (Eval on 2026-11-09: side 6 of 6; top colors 142 of 144 = 98.6% with the committed profile, both errors flagged low-confidence; cell accuracy with the side row 98.7%. Leave one photo out (calibrate on 5, read the 6th with detected corners): 139 of 144 = 96.5%, 4 of the 5 errors flagged.)
+- [x] The board is found on every fixture, including both wooden tables, without given corners. (Eval: board found 100%, corner error mean 1.4%, worst 2.3% (`05-b-wood-table`); `fixtures.test.ts` checks each fixture under 3%. About 0.9s per photo in Node.)
+- [x] Spaces with an animal cube are read for their top color, not marked occluded. (Eval: none of the 52 cube spaces read as occluded; the 2 errors are a mountain read as empty and a trunk read as a roof, neither under a cube.)
+- [x] Heights are asked only as `HAR-STACK-*` allows, and every draft is a valid state. (`read.test.ts`: height keys only for `M`, `L`, `T`, `R` tops; `detector.test.ts`: a draft with every top passes `HarmoniesStateSchema` on both sides; e2e: no prompt for the water and field spaces.)
+- [x] "Reread Photo as Side X" rereads with the other layout at the same corners and keeps the cards. (e2e, second test: side A draft plus an animal card, switch to B, reread: 25 spaces with tokens, the card still there.)
+- [x] Try Sample Photo → corners → Read Board → review with the draft and height prompts → result (e2e, first test: side A, water, field, mountain under a cube and an empty space read right, mountain set to height 3 changes the total, result shows Mountains.)
 
 ## Tests
-- cv unit: outline fit on a synthetic board photo (found, corners within 2%, turned a quarter); side detection and cube pixels; draft keys and stacks; label schema; reference constants recomputed from the reference photos; every fixture's side and board found (fast, given and detected corners).
-- web: none beyond e2e (the editor logic is small).
+- cv unit: outline fit on a synthetic board photo (found, corners within 2%, turned a quarter, no board, no leaked Mats); side detection and cube pixels; draft keys and stacks; label schema; reference constants recomputed from the reference photos; every fixture's side at labeled corners and board found without them.
+- web: `detector.test.ts` holds the detector's copy of the board to core's, and checks drafts against the state schema.
 - e2e: `tests/e2e/H2.spec.ts`.
 
 ## Out of scope
@@ -57,5 +57,17 @@ None open. Resolved:
 - How often do animal cubes hide a top color completely? On the labeled fixtures, never: 0 of 52 spaces with a cube are `occluded`. So "occluded" is kept as a rule for a disc that is almost all cube, not a profile class.
 
 ## Decisions
+- The board finder fits the whole outline instead of finding lines: contour and line approaches failed on wooden tables, where the grain merges with the board edge and side A is close to the table's color. Signed gradient directions were the key step: with unsigned ones, the busy middle of the board scored as high as the real outline.
+- Side detection uses only CIELAB a and b of the board background; lightness varies with the room. The two references' backgrounds are constants in `read.ts`, measured at corners found by the detector, and `fixtures.test.ts` recomputes them from the photos.
+- Space colors are corrected by the difference between the photo's background and the side reference's background before classifying. With labeled corners this raised leave-one-out accuracy from 90% to 96.5%, together with the wider 0.65 sample disc (0.38 was too much cube).
+- "Occluded" is a rule (under 10% of the disc left after the cube), not a profile class: no fixture has one.
+- A draft stack is the shortest valid stack for its top (`M`, `L`, `T`, `R`), with a `"q,r:height"` confidence of 0 so the review banner counts it until it's set. The prompts stay listed after a choice (the choice is pressed), since the draft's confidence doesn't change when the player edits.
+- cv may import only types from core, so `packages/cv/src/games/harmonies/layout.ts` repeats the layouts, grid placement, aspect and piece codes; `apps/web/src/games/harmonies/detector.test.ts` fails if they drift from core.
+- "Reread Photo as Side X" runs the plain TypeScript reading (`rereadAsSide`) on the main thread, loaded on demand: `DetectOptions` (frozen in `kit/types.ts`) and the worker protocol can't carry a side, and with known corners no opencv is needed. The editor reads the photo and corners from the score flow (`useFlow('harmonies')`) and writes the new state and draft there. The height key format is repeated in the editor so it doesn't load the detector.
+- The eval reports a `side` pseudo-cell, so side errors show in the confusion matrix; top-color accuracy is quoted without it.
+- `test-photos.ts` reads fixtures with `process.getBuiltinModule('node:fs')` (cv has no Node types) and decodes them with the root's `jpeg-js` (no new dependency).
+- Samples: `01-a-pink-table`, `05-b-wood-table`, `03-a-dark-table` at 1200px (both sides, three tables). At that size the wood sample misreads one space, flagged as uncertain.
+- Wiring: none outside owned folders. The worker already loads `GAME_UI.harmonies.detector`.
 
 ## Shared change requests
+None.
