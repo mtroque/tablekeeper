@@ -2,15 +2,15 @@
 // Runs a game's detector on data/fixtures/<gameId> and reports board-found rate, corner error,
 // per-cell accuracy, the confusion matrix, how many errors were flagged low-confidence, and timing
 // (docs/ARCHITECTURE.md → Computer vision). Writes data/fixtures/<gameId>/eval-report.md and exits 1
-// below the fixture set's accuracy threshold. --calibrate rebuilds games/<gameId>/profile.json.
+// below the fixture set's accuracy threshold. --calibrate rebuilds games/<gameId>/profile.json, or
+// runs the game's own `calibrate` when it has one (scripts/lib/game-calibration.ts).
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import jpeg from 'jpeg-js';
 import prettier from 'prettier';
 
-import type { ImageInput, Point, Quad } from '../packages/core/src';
+import type { Point, Quad } from '../packages/core/src';
 import {
   calibrateProfile,
   cornerError,
@@ -20,6 +20,8 @@ import {
 import type { CvGame } from '../packages/cv/src';
 import { loadOpenCvInNode } from '../packages/cv/src/node';
 import { FixtureSetSchema } from '../packages/cv/src/pipeline/fixtures';
+
+import { decodeJpeg, runGameCalibration } from './lib/game-calibration';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -49,14 +51,27 @@ const items = fixtures.items.map((item) => {
   const label = game.labelSchema.parse(item.label);
   return {
     name: item.image,
-    image: decode(bytes),
+    image: decodeJpeg(bytes),
     orientation: readExifOrientation(bytes),
-    corners: item.corners ? toQuad(item.corners) : undefined,
+    ...(item.corners ? { corners: toQuad(item.corners) } : {}),
+    label,
     truth: game.cellTruth(label),
   };
 });
 
-if (calibrate) {
+if (calibrate && game.calibrate) {
+  const calibrated = await runGameCalibration({
+    game,
+    fixturesDir,
+    gameDir,
+    items,
+  });
+  game = calibrated.game;
+  for (const line of calibrated.summary) console.log(line);
+  for (const name of calibrated.written) {
+    console.log(`Wrote packages/cv/src/games/${gameId}/${name}.`);
+  }
+} else if (calibrate) {
   const samples: Array<{ label: string; features: number[] }> = [];
   for (const item of items) {
     if (!item.corners) fail(`${item.name} has no corners; calibration needs labeled corners.`);
@@ -203,15 +218,6 @@ async function loadGame(file: string): Promise<CvGame> {
     fail(`${file} must export cvGame (CvGame in packages/cv/src/pipeline/game.ts).`);
   }
   return game as CvGame;
-}
-
-function decode(bytes: Buffer): ImageInput {
-  const raw = jpeg.decode(bytes, { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 1024 });
-  return {
-    data: new Uint8ClampedArray(raw.data.buffer, raw.data.byteOffset, raw.data.length),
-    width: raw.width,
-    height: raw.height,
-  };
 }
 
 function toQuad(corners: [number, number][]): Quad {

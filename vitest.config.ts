@@ -15,7 +15,12 @@ export default defineConfig({
     projects: [
       { test: { name: 'core', include: ['packages/core/src/**/*.test.ts'] } },
       { test: { name: 'cv', include: ['packages/cv/src/**/*.test.ts'] } },
-      { test: { name: 'tooling', include: ['eslint-rules/**/*.test.js', 'scripts/**/*.test.js'] } },
+      {
+        test: {
+          name: 'tooling',
+          include: ['eslint-rules/**/*.test.js', 'scripts/**/*.test.{js,ts}'],
+        },
+      },
       {
         test: {
           name: 'api',

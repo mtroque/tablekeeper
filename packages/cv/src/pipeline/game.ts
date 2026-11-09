@@ -28,6 +28,23 @@ export interface CvGame<State = unknown, Label = unknown> {
   features: Profile['features'];
   /** The same game with another profile (the eval checks a fresh calibration with it). */
   withProfile(profile: Profile): CvGame<State, Label>;
+  /**
+   * The game's own calibration, for one that doesn't fit `Profile`. When present,
+   * `pnpm eval:cv --calibrate` runs it instead of building profile.json: `references` are the
+   * photos in `data/fixtures/<gameId>/references/`, `items` the labeled fixtures. Each of `files`
+   * is written to `games/<gameId>/<name>` as JSON, `summary` is printed, and the eval then runs
+   * with `game`.
+   */
+  calibrate?(input: {
+    references: Array<{ name: string; image: ImageInput; orientation?: number }>;
+    items: Array<{
+      name: string;
+      image: ImageInput;
+      orientation?: number;
+      corners?: Quad;
+      label: Label;
+    }>;
+  }): Promise<{ files: Record<string, unknown>; summary: string[]; game: CvGame<State, Label> }>;
 }
 
 /**
