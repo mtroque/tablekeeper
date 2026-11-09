@@ -20,15 +20,15 @@ test('a red board photo becomes a draft with every space read', async ({ page })
   await readSample(page, 'Try Sample Photo 1');
   await expect(page.getByRole('button', { name: 'Red', pressed: true })).toBeVisible();
   await expect(page.getByTestId('empty-count')).toHaveText('14 empty spaces');
-  // No chits are read yet (P3), so the score is the empty spaces alone.
-  await expect(page.getByTestId('running-total')).toHaveText('-28 Points');
-  await expect(page.getByText(/to check\.$/)).toHaveCount(0);
+  // The chits beside the board are read too (P3): 2 chits of 1 and 3 of 5.
+  await expect(page.getByTestId('pralines-held')).toHaveText('17 pralines');
+  await expect(page.getByTestId('running-total')).toHaveText('-11 Points');
   await expect(grid(page).locator('[data-low-confidence]')).toHaveCount(0);
 
   // The draft stays editable: covering a space updates the total.
   await page.getByRole('button', { name: 'Row 1, column 1: empty' }).click();
   await expect(page.getByTestId('empty-count')).toHaveText('13 empty spaces');
-  await expect(page.getByTestId('running-total')).toHaveText('-26 Points');
+  await expect(page.getByTestId('running-total')).toHaveText('-9 Points');
 });
 
 test('glare on a gray board photo is outlined for review', async ({ page }) => {
@@ -43,7 +43,8 @@ test('glare on a gray board photo is outlined for review', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: 'Gray', pressed: true })).toBeVisible();
   await expect(page.getByTestId('empty-count')).toHaveText('18 empty spaces');
-  await expect(page.getByRole('status').filter({ hasText: '4 values to check.' })).toBeVisible();
+  // The 4 glare spaces, and the 5 chit values, since a 1 chit lies on a 10 chit in this photo.
+  await expect(page.getByRole('status').filter({ hasText: '9 values to check.' })).toBeVisible();
   const uncertain = grid(page).locator('[data-low-confidence]');
   await expect(uncertain).toHaveCount(4);
   await expect(uncertain.first()).toHaveAccessibleName('Row 1, column 1: empty');
@@ -61,7 +62,7 @@ test('switching the board rereads the photo and keeps the chits and special tile
   await page.getByRole('button', { name: 'Gray', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Gray', pressed: true })).toBeVisible();
   await expect(page.getByTestId('empty-count')).not.toHaveText('14 empty spaces');
-  await expect(page.getByTestId('pralines-held')).toHaveText('5 pralines');
+  await expect(page.getByTestId('pralines-held')).toHaveText('22 pralines');
   await expect(page.getByRole('switch', { name: /Special Tile/ })).toBeChecked();
   // The player chose the board, so the switch isn't outlined.
   await expect(
@@ -72,8 +73,8 @@ test('switching the board rereads the photo and keeps the chits and special tile
   await page.getByRole('button', { name: 'Red', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Red', pressed: true })).toBeVisible();
   await expect(page.getByTestId('empty-count')).toHaveText('14 empty spaces');
-  await expect(page.getByTestId('pralines-held')).toHaveText('5 pralines');
-  await expect(page.getByTestId('running-total')).toHaveText('-16 Points');
+  await expect(page.getByTestId('pralines-held')).toHaveText('22 pralines');
+  await expect(page.getByTestId('running-total')).toHaveText('1 Point');
 });
 
 test('a failed reread keeps the new color and asks the player to check the spaces', async ({
