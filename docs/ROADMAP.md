@@ -21,7 +21,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | S4 | CV worker detectors without UI (production builds) | S2 | ✅ |
 | X1 | Privacy policy page | S0 | ✅ |
 | S5 | Quiet server status: drop the false "Couldn't reach the server." line | S0 | ✅ |
-| X2 | API on Vercel: move the Express API off Render, shared burst limit, no waking state | S0, S3, S5 | ⬜ |
+| X2 | API on Vercel: move the Express API off Render, shared burst limit, no waking state | S0, S3, S5 | ⏸ |
 
 ## Next
 
