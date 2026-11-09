@@ -28,6 +28,8 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | H4 | Harmonies Crescendo: Whispers, and the module switches | H3 | ⬜ |
 | H5 | Harmonies Crescendo: board sides C and D (layouts need verifying) | H4 | ⬜ |
 | H6 | Harmonies Crescendo: Sanctuaries, entered by their 2 colors | H5 | ⬜ |
+| X3 | Database on Neon: SQL driver instead of supabase-js, API-side access checks with RLS backstop, local Postgres | X2 | ⬜ |
+| X4 | Sign-in with Neon Auth: Google via Neon Auth, Supabase removed | X3 | ⬜ |
 
 ## Next
 
