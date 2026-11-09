@@ -1,8 +1,6 @@
 # X2: API on Vercel
 
-**Status:** ⏸ · **Depends on:** S0, S3, S5
-
-**Paused:** deployed and cut over on 9 November 2026. Left: the hand-run smoke test steps in the last criterion, then delete the Render service and the external pinger, then set ✅.
+**Status:** ✅ · **Depends on:** S0, S3, S5
 
 **Goal:** Run the existing Express API as its own Vercel project on the Hobby plan instead of Render, so players never wait up to a minute for a sleeping server, and the keep-alive setup goes away.
 
@@ -45,7 +43,7 @@ None new. The waking state is removed from `docs/UX.md` → Screen states.
 - [x] The server status line never shows "Waking up the server."; "You're offline." still shows offline (`server-status.test.ts`; `tests/e2e/X2.spec.ts` watches the page for 3s with no status line and no `/health` request, then goes offline and back)
 - [x] `pnpm dev`, `pnpm test` and `pnpm test:e2e` run the API locally exactly as before (`server.ts` unchanged; outside production the burst limit stays in memory; `pnpm dev` served `/health` and `/v1/games` with the usual 60 a minute policy; full test and e2e suites pass)
 - [x] No doc, env comment or UI text names Render; the privacy page lists the current services ("Vercel hosts the website and the server.", dated 9 November 2026). The only remaining mentions are the one-time Cutover from Render steps in `docs/DEPLOYMENT.md`, which this spec asks for, and past entries in `docs/DECISIONS.md`
-- [ ] The deploy smoke test in `docs/DEPLOYMENT.md` passes on the Vercel API. Passed on 9 November 2026: `/health`; requests served from `sin1`; two instances shared one burst window (59, then 58 left); CORS allows only the web origin; one guest question per game answered in 6.9s to 8.7s, each with 2 citations opening the publisher PDF at a page; after the cutover the live site's bundle calls only `tablekeeper-api.vercel.app`, with no status line and no page errors. Still to check by hand: home on a phone and desktop (QR side note), Try Sample Photo per photo game, sign in, save a score and see it in history, sign out
+- [x] The deploy smoke test in `docs/DEPLOYMENT.md` passes on the Vercel API. Passed on 9 November 2026: `/health`; requests served from `sin1`; two instances shared one burst window (59, then 58 left); CORS allows only the web origin; one guest question per game answered in 6.9s to 8.7s, each with 2 citations opening the publisher PDF at a page; after the cutover the live site's bundle calls only `tablekeeper-api.vercel.app`, with no status line and no page errors. The owner then ran the hand steps on the live site and they passed: home on a phone and desktop (QR side note), Try Sample Photo per photo game, sign in, save a score and see it in history, sign out
 
 ## Tests
 Integration test for the shared burst store (two app instances, one count; separate IPs, separate counts); forwarded-IP tests for the burst key and the guest quota; unit test for the status line without the waking state; a check that the built Vercel function answers `/health`; `tests/e2e/X2.spec.ts` covers the home page with the server status line silent.
