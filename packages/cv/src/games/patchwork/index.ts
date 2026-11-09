@@ -27,6 +27,9 @@ export const PatchworkLabelSchema = z.object({
 });
 export type PatchworkLabel = z.infer<typeof PatchworkLabelSchema>;
 
+/** `DetectOptions.hints.board`: read the spaces against this board (the editor's board switch). */
+const BoardHintSchema = z.enum(BOARDS);
+
 export const COVERED = 'covered';
 export const EMPTY = 'empty';
 /** Confidence key of the board color (`PATCHWORK_FIELD_KEYS.board` in core). */
@@ -43,13 +46,13 @@ export type BoxBoardReading = BoardReading & {
   boardColorConfidence: number;
 };
 
-export type PatchworkCvGame = Omit<CvGame<PatchworkState, PatchworkLabel>, 'read'> & {
+export type PatchworkCvGame = Omit<CvGame<PatchworkState, PatchworkLabel>, 'read' | 'calibrate'> & {
   /** Reads the board; `board` reads the spaces against that board instead of the detected one. */
   read(image: ImageInput, opts?: PatchworkReadOptions): Promise<BoxBoardReading>;
   references: PatchworkReferences;
   /**
    * Rebuilds `references.json` from the empty references and the labeled photos, and returns the
-   * game using it (the eval hook asked for in P2's shared change requests).
+   * game using it (`pnpm eval:cv patchwork --calibrate`).
    */
   calibrate(input: {
     references: CalibrationImage[];
@@ -76,8 +79,10 @@ export function createPatchworkGame(references: PatchworkReferences): PatchworkC
         throwIfAborted(opts.signal);
       },
     });
-    const color = boardColor(sample.frame, references.frameRed);
-    const board = opts.board ?? color.board;
+    const detected = boardColor(sample.frame, references.frameRed);
+    // A board the player chose is certain; otherwise it is read from the frame.
+    const color = opts.board ? { board: opts.board, confidence: 1 } : detected;
+    const board = color.board;
     const spaces = classifySpaces(sample, references.boards[board]);
     const glare = spaces.filter((space) => space.glare).length;
     const cells: CellReading[] = [
@@ -116,8 +121,8 @@ export function createPatchworkGame(references: PatchworkReferences): PatchworkC
     }),
     read,
     measure() {
-      // Patchwork is calibrated from its empty references with `calibrate`, which the generic
-      // profile (class centroids) can't hold.
+      // Patchwork is calibrated from its empty references with `calibrate` (which
+      // `pnpm eval:cv --calibrate` runs instead); the generic profile can't hold them.
       return Promise.reject(
         new Error('Patchwork calibrates with its own references (cvGame.calibrate).'),
       );
@@ -147,7 +152,11 @@ export function createPatchworkGame(references: PatchworkReferences): PatchworkC
     },
     detector: {
       async detect(image: ImageInput, opts?: DetectOptions): Promise<Draft<PatchworkState>> {
-        const reading = await read(image, opts);
+        const hinted = BoardHintSchema.safeParse(opts?.hints?.board);
+        const reading = await read(image, {
+          ...opts,
+          ...(hinted.success ? { board: hinted.data } : {}),
+        });
         const spaces = reading.cells.filter((cell) => cell.key !== BOARD_KEY);
         return {
           state: {

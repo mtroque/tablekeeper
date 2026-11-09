@@ -152,12 +152,23 @@ describe('patchwork detector on synthetic photos', () => {
     expect(cornerError(draft.corners, corners)).toBeLessThan(1e-6);
   });
 
-  it('can read against the other board, for the board switch', async () => {
+  it('reads against the board in the hint, for the board switch', async () => {
     const grid = gridOf(6, 0.3);
-    const { image } = photo('gray', grid, { seed: 6, rotation: 0 });
-    const reading = await game.read(image, { board: 'red' });
-    expect(reading.board).toBe('red');
-    expect(reading.cells.find((cell) => cell.key === BOARD_KEY)?.label).toBe('red');
+    const { image, corners } = photo('gray', grid, { seed: 6, rotation: 0 });
+    const asRed = await game.detector.detect(image, { corners, hints: { board: 'red' } });
+    expect(asRed.state.board).toBe('red');
+    // The player chose it, so the board isn't outlined.
+    expect(asRed.confidence[BOARD_KEY]).toBe(1);
+    // Switching back reads the gray board's references again, and the spaces right.
+    const asGray = await game.detector.detect(image, { corners, hints: { board: 'gray' } });
+    expect(asGray.state.board).toBe('gray');
+    expect(asGray.state.grid).toEqual(grid);
+  });
+
+  it('ignores a hint that names no board', async () => {
+    const { image, corners } = photo('gray', gridOf(7, 0.3), { seed: 7, rotation: 0 });
+    const draft = await game.detector.detect(image, { corners, hints: { board: 'blue' } });
+    expect(draft.state.board).toBe('gray');
   });
 
   it('falls back to centered corners with a warning when there is no board', async () => {
