@@ -40,6 +40,7 @@ export default tseslint.config(
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/.vercel/**',
       '**/.next/**',
       '**/coverage/**',
       'playwright-report/**',
