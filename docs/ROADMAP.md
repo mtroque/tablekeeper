@@ -13,7 +13,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | D1 | Dorfromantik scoresheet | S1 | ✅ |
 | D2 | Dorfromantik campaign and unlocks | D1 | ✅ |
 | P1 | Patchwork manual scorer | S1 | ✅ |
-| P2 | Patchwork board detection | P1, S2, S4 | ⬜ |
+| P2 | Patchwork board detection | P1, S2, S4 | ✅ |
 | P3 | Patchwork token detection | P2 | ⬜ |
 | A1 | Azul manual round tracker | S1 | ✅ |
 | H1 | Harmonies manual scorer | S1 | ✅ |
