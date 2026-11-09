@@ -17,7 +17,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | P3 | Patchwork token detection | P2 | ⬜ |
 | A1 | Azul manual round tracker | S1 | ✅ |
 | H1 | Harmonies manual scorer | S1 | ✅ |
-| H2 | Harmonies photo detection | H1, S2, S4 | ⬜ |
+| H2 | Harmonies photo detection | H1, S2, S4 | ✅ |
 | S4 | CV worker detectors without UI (production builds) | S2 | ✅ |
 | X1 | Privacy policy page | S0 | ✅ |
 | S5 | Quiet server status: drop the false "Couldn't reach the server." line | S0 | ✅ |
