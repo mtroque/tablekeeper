@@ -17,7 +17,7 @@
 - **Raw colors:** hex, `rgb()` and `hsl()` literals only in the token file and `games/<gameId>/`; theme colors in `layout.tsx` read from tokens.
 - **Game-id branching:** shared code (outside `games/**` and registries) may not compare against a game-id literal.
 - **Disable directives need a reason** (`-- why`), and unused ones are errors (`reportUnusedDisableDirectives`).
-- **Justification comments:** comments containing words like "workaround", "hack", "for now", "temporary", "quick fix" fail, with a message to fix the root cause or record a decision in `docs/DECISIONS.md`.
+- Every rule here enforces a rule already written in `AGENTS.md` or `docs/CONVENTIONS.md`, so none waits for a second logged occurrence (`docs/CORRECTIONS.md`). Rules that aren't written down yet don't belong in this slice.
 - **Baseline ratchet:** a rule can list existing violations by file and count; lint fails on new ones and when a count goes up, and prints a reminder when it can shrink. Used only where cleanup is bigger than this slice.
 - Each error message says what to do instead, in one line, and links the doc section.
 
@@ -29,6 +29,7 @@
 
 ## Out of scope
 - `useEffect` (W6). Repo-level checks (W3).
+- A lint rule against comments that justify workarounds: not seen here yet; log it in `docs/CORRECTIONS.md` as `workaround-comment` if it happens.
 
 ## Open questions
 - `eslint-plugin-eslint-comments` for directive descriptions, or a few-line local rule? (Prefer local unless the plugin is clearly smaller.)

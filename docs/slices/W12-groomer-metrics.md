@@ -8,7 +8,7 @@
 - `scripts/metrics.ts`, `.claude/commands/groom.md`, the schedule definition (how it runs is recorded here), `docs/AUTOMATION.md` (metrics section)
 
 ## Scope (must cover)
-- **Metrics:** from git and `gh`: PRs merged per week, revert rate (`revert` commits and reverted PRs over merged PRs), CI pass rate on first push, open baseline counts. Printed as a short table.
+- **Metrics:** from git and `gh`: PRs merged per week, revert rate (`revert` commits and reverted PRs over merged PRs), CI pass rate on first push, open baseline counts, and `docs/CORRECTIONS.md` patterns by count (flagging those at two or more that aren't promoted or dismissed). Printed as a short table.
 - **Groomer:** picks the baseline entry with the fewest occurrences left, fixes it on a branch, opens a PR labeled `groomer`. One PR per run, capped per week.
 - Runs on the cheapest pool that does the job well (see `docs/AUTOMATION.md` → Agents and budget); decide and record.
 

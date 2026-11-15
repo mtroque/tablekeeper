@@ -11,7 +11,7 @@
 - **Claude:** `anthropics/claude-code-action` with `CLAUDE_CODE_OAUTH_TOKEN`, on the `review:claude` label and on PRs touching shared code, posting inline comments. Never runs on every push.
 - **Antigravity:** a script that lists open PRs without an `agy` review on their head commit, runs `agy -p --output-format json --json-schema <findings schema>` with the prompt and diff, and posts one comment per PR. Batches when it can (each call has about 10k tokens of overhead).
 - **Prompt:** the unchecked rows of the enforcement map, spec fit, and the PR's acceptance list. No restating lint.
-- **Feedback loop:** findings get a label or marker so recurring ones can be counted and sent to `/harden`.
+- **Feedback loop:** findings the author accepts are logged as `review` rows in the spec's `## Corrections`, with a pattern tag, so recurring ones reach `/harden` through `docs/CORRECTIONS.md`.
 
 ## Acceptance criteria
 - [ ] Labeling a PR gets a Claude review; an unlabeled game-only PR does not

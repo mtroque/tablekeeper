@@ -5,7 +5,7 @@ How agent work is checked, reviewed and run: the enforcement map, CI, the PR flo
 ## Principles
 
 1. **Checks over prose.** A rule an agent must remember is a rule that will drift. Prefer, in order: remove the problem by design (types, APIs, folder boundaries), then a lint rule or repo check with an error message that names the fix, then a test, and only then a line in a doc.
-2. **Every correction becomes a check.** When you correct an agent (or a review finds the same thing twice), turn it into one of the above, clean up existing occurrences, and only then move on. `/harden` (W5) does this.
+2. **Repeated corrections become checks.** Every correction is logged by pattern in `docs/CORRECTIONS.md`. When a pattern shows up a second time (or once, if it's high-stakes), turn it into one of the above and clean up existing occurrences. One-offs stay in the log, so the codebase doesn't fill with rules written after a single incident. `/harden` (W5) does the promotion.
 3. **Lint new, then clean old.** A new rule starts as an error for new code, with existing occurrences in a baseline file that may only shrink (W2). Cleanups drain the baseline.
 4. **Review artifacts, not diffs.** CI results, screenshots of every screen state, CV accuracy numbers and property-test results are what a human looks at. A diff gets deep human review only when it touches shared code or a product decision.
 5. **Spend tokens last.** Deterministic checks are free per run (GitHub Actions is free for this public repo); tokens go to building and to judgment no check can make. A sloppy loop automated is just more slop at a higher bill.
@@ -29,7 +29,6 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | No hex colors outside the token file and game modules | local lint rule | W2 |
 | Shared code never branches on game id | local lint rule | W2 |
 | No disabled rule without a reason | require a description on every disable directive | W2 |
-| No comments that justify a workaround | local lint rule on justification words | W2 |
 | `useEffect` only through named hooks | named hooks in `apps/web/src/lib/hooks/`, then a ban elsewhere | W6 |
 | Every game rule id has a test, and every cited id exists | `pnpm check:repo` | W3 |
 | Applied migrations are never edited | `pnpm check:repo` | W3 |
@@ -48,7 +47,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 2. **Build.** An agent builds it on its own branch: a local worktree (`/parallel`), or a cloud agent. Never on `main`.
 3. **PR.** The agent pushes and opens a PR whose body links the spec and lists how each acceptance criterion was verified (W4).
 4. **Checks.** CI runs every deterministic check; `main` requires them (W1, W4, W7).
-5. **Review.** By policy below (W11). Review findings that recur become checks (principle 2).
+5. **Review.** By policy below (W11). Accepted review findings are logged in `docs/CORRECTIONS.md`; patterns that recur become checks (principle 2).
 6. **Merge.** `/merge` rebases, adds the shared-doc commit (`docs/ROADMAP.md` status, `docs/DECISIONS.md`), waits for CI and rebase-merges, one PR at a time (W4).
 7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them.
 

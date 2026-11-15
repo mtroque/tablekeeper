@@ -26,5 +26,8 @@
 ## Decisions
 <Filled while building; copied to docs/DECISIONS.md on main.>
 
+## Corrections
+<Rows for docs/CORRECTIONS.md → Log (same columns), for corrections received while building; /merge moves them there.>
+
 ## Shared change requests
 <Changes needed in code this slice doesn't own: what, where, why.>
