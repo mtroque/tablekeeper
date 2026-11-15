@@ -1,0 +1,92 @@
+# Tablekeeper: Automation
+
+How agent work is checked, reviewed and run: the enforcement map, CI, the PR flow, review policy, agent loops, token budget, and the accounts behind them. The slices that build it are the W rows in `docs/ROADMAP.md`; this doc holds the direction they share.
+
+## Principles
+
+1. **Checks over prose.** A rule an agent must remember is a rule that will drift. Prefer, in order: remove the problem by design (types, APIs, folder boundaries), then a lint rule or repo check with an error message that names the fix, then a test, and only then a line in a doc.
+2. **Every correction becomes a check.** When you correct an agent (or a review finds the same thing twice), turn it into one of the above, clean up existing occurrences, and only then move on. `/harden` (W5) does this.
+3. **Lint new, then clean old.** A new rule starts as an error for new code, with existing occurrences in a baseline file that may only shrink (W2). Cleanups drain the baseline.
+4. **Review artifacts, not diffs.** CI results, screenshots of every screen state, CV accuracy numbers and property-test results are what a human looks at. A diff gets deep human review only when it touches shared code or a product decision.
+5. **Spend tokens last.** Deterministic checks are free per run (GitHub Actions is free for this public repo); tokens go to building and to judgment no check can make. A sloppy loop automated is just more slop at a higher bill.
+
+## Enforcement map
+
+Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what enforces it. A rule with no check is a candidate for one. When a check lands, update its row here in the same slice.
+
+| Rule | Enforced by | Status |
+|---|---|---|
+| TypeScript strict, no `any`, no non-null `!` outside tests | `tsconfig.base.json`, typescript-eslint `strictTypeChecked` | ✅ |
+| Package boundaries | `eslint.config.js` (`boundary()`, `import-x/no-restricted-paths`) | ✅ |
+| UI copy: no dashes, emoji, banned phrases | `eslint-rules/ui-copy.js` | ✅ |
+| Conventional Commits | commit-msg hook, `pnpm lint:commits` | ✅ |
+| CV worker never reaches UI code | `cv-worker-imports.test.ts` (D-060) | ✅ |
+| Every check runs before anything reaches `main` | CI (W1), required checks on `main` (W4) | W1, W4 |
+| Only config reads `process.env` | lint rule (3 existing violations) | W2 |
+| Every LLM call goes through the gateway | restricted imports of the SDK outside `apps/api/src/llm/` | W2 |
+| Scorers are pure | restricted globals (`Date`, `Math.random`, `fetch`, `process`, `console`) in `packages/core/src/games/` | W2 |
+| No `fetch` in components | restricted global outside `lib/api-client.ts` | W2 |
+| No hex colors outside the token file and game modules | local lint rule | W2 |
+| Shared code never branches on game id | local lint rule | W2 |
+| No disabled rule without a reason | require a description on every disable directive | W2 |
+| No comments that justify a workaround | local lint rule on justification words | W2 |
+| `useEffect` only through named hooks | named hooks in `apps/web/src/lib/hooks/`, then a ban elsewhere | W6 |
+| Every game rule id has a test, and every cited id exists | `pnpm check:repo` | W3 |
+| Applied migrations are never edited | `pnpm check:repo` | W3 |
+| No secrets, `.env*`, PDFs, rulebook text or photos over 2MB | pre-commit hook and `pnpm check:repo` | W3 |
+| A slice edits only what its spec owns | `pnpm check:repo` against the spec's `## Owns` | W3 |
+| API integration and e2e tests pass | CI database jobs | W7 |
+| Score invariants (breakdown sums to total, schema round trip, API agrees with UI) | fast-check property tests | W8 |
+| CV accuracy never drops below the recorded numbers | `pnpm eval:cv` gate in CI | W9 |
+| Every screen state renders | screen map and screenshot job | W10 |
+| Validate external input with Zod | review (no general check yet) | |
+| Every detected value is an overridable draft with confidence | types (`Draft<T>`) and review | |
+
+## Target flow
+
+1. **Queue.** Work is a slice spec (product or W) or, later, a GitHub issue labeled `agent-ready` that links one (W14).
+2. **Build.** An agent builds it on its own branch: a local worktree (`/parallel`), or a cloud agent. Never on `main`.
+3. **PR.** The agent pushes and opens a PR whose body links the spec and lists how each acceptance criterion was verified (W4).
+4. **Checks.** CI runs every deterministic check; `main` requires them (W1, W4, W7).
+5. **Review.** By policy below (W11). Review findings that recur become checks (principle 2).
+6. **Merge.** `/merge` rebases, adds the shared-doc commit (`docs/ROADMAP.md` status, `docs/DECISIONS.md`), waits for CI and rebase-merges, one PR at a time (W4).
+7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them.
+
+## Review policy
+
+- **Always:** CI. It is free and catches most problems.
+- **Claude, on request:** the Claude GitHub app via `claude-code-action`, running on the subscription token, triggered by the `review:claude` label or by changes to shared code (anything a game slice doesn't own). Every run costs Pro usage.
+- **Antigravity, locally:** a script runs `agy -p` over open PRs and posts the findings as a comment, on the Google quota (W11).
+- **What reviewers check:** only what no check covers. The review prompt lists the unchecked rows of the enforcement map plus spec fit; it does not restate lint.
+
+## Auto-merge policy (target)
+
+Allowed once CI is green and W12's revert rate stays under 2%: baseline cleanups, dependency patch bumps, docs-only changes, and fixes for bugs found by the QA loop that come with a test that failed before the fix. Product slices and anything touching shared code wait for a human look at the PR's artifacts.
+
+## Agents and budget
+
+| Pool | Tools | Use for |
+|---|---|---|
+| Claude Pro | Claude Code (local and cloud), Claude GitHub app via `CLAUDE_CODE_OAUTH_TOKEN` | Specs, building slices, review on request |
+| Google AI Pro | Antigravity, `agy` CLI (Gemini 4 models, and Claude Opus 5.5 as of 2026-11-15) | Second-opinion review, exploratory QA, groomer cleanups |
+
+- Deterministic first: anything a script can answer never goes to a model.
+- Pick the cheapest model and effort that fits: mechanical cleanups at low effort, specs and reviews higher.
+- Scheduled loops run overnight so they don't compete with interactive use, with a daily cap per loop (set in W14).
+- `agy -p` costs about 10k input tokens per call before any work; batch PRs into one call where possible.
+- The Anthropic API key in production pays for the app's rules assistant only; workflow automation never uses it.
+
+## Accounts and setup
+
+State as of 2026-11-15. No secret values here; only names.
+
+| Item | State |
+|---|---|
+| GitHub CLI | Signed in as the repo owner with `repo` and `workflow` scope |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Repo secret, from `claude setup-token` |
+| Claude GitHub app | Installed on this repo only |
+| Claude cloud agents | GitHub connected at claude.ai/code |
+| Antigravity and `agy` | Installed and signed in with Google AI Pro; headless `agy -p --output-format json` works |
+| Vercel CLI | Signed in |
+| Neon | Not yet; X3 creates it through the Vercel Marketplace |
+| Gemini CLI and Gemini Code Assist on GitHub | Retired for consumer accounts in 2026; don't use |

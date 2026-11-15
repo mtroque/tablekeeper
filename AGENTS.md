@@ -20,6 +20,7 @@ Read the first five before any work. Put each fact in its home and link to it fr
 | `docs/DATA_ASSETS.md` | Rulebooks, fixtures, photo guidelines, label formats |
 | `docs/DEPLOYMENT.md` | Hosting setup |
 | `docs/DECISIONS.md` | Why things are the way they are |
+| `docs/AUTOMATION.md` | How agent work is checked, reviewed and run: enforcement map, CI, PR flow, review policy, agent loops, token budget, accounts. Read it for any W slice |
 | `README.md` | Setup and every `pnpm` command |
 
 ## Workflow
@@ -37,6 +38,8 @@ Work is built in **slices**: one feature end to end (database, core logic, API, 
    6. One Playwright test of the main flow, `tests/e2e/<id>.spec.ts`
 4. **Commit** small Conventional Commits as you go.
 5. **Finish** by meeting the definition of done below.
+
+**Corrections become checks.** When you're corrected, or find a rule broken, prefer fixing it with a type, lint rule, repo check or test over adding a line to a doc (`docs/AUTOMATION.md` → Principles). If that's beyond the slice, note it under `## Decisions` as a candidate check.
 
 **Stop and ask** (after finishing whatever else you can, with the spec set to ⏸ and the reason written in it) only when a rule the slice needs is marked ⚠️ or VERIFY in `docs/games/`, required assets are missing (`docs/DATA_ASSETS.md`), or a needed shared change blocks all remaining work. Never guess game rules.
 
