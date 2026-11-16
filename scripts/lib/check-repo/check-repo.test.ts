@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  checkDecisionIds,
   checkForbiddenFiles,
   checkMigrations,
   checkOwnership,
@@ -186,11 +187,48 @@ The \`patchwork\` game folders (AGENTS.md → Parallel sessions), plus this spec
     ]);
   });
 
+  it('lets every slice edit its roadmap row and append to decisions and corrections', () => {
+    const res = checkOwnership({
+      branch: 'slice/S6',
+      specs: { 'docs/slices/S6-typed-counters.md': S6_SPEC },
+      changedFiles: [
+        { path: 'docs/ROADMAP.md', removedLines: 1 },
+        { path: 'docs/DECISIONS.md', removedLines: 0 },
+        { path: 'docs/CORRECTIONS.md', removedLines: 0 },
+      ],
+    });
+    expect(res).toEqual({ failures: [], notes: [] });
+  });
+
+  it('fails when a slice rewrites decisions or corrections it does not own', () => {
+    const res = checkOwnership({
+      branch: 'slice/S6',
+      specs: { 'docs/slices/S6-typed-counters.md': S6_SPEC },
+      changedFiles: [
+        { path: 'docs/DECISIONS.md', removedLines: 2 },
+        { path: 'docs/CORRECTIONS.md', removedLines: 1 },
+      ],
+    });
+    expect(res.failures).toEqual([
+      'docs/CORRECTIONS.md: shared doc has 1 removed/modified line(s); a slice only appends to it unless docs/slices/S6-typed-counters.md owns it (AGENTS.md → Parallel sessions → Shared docs).',
+      'docs/DECISIONS.md: shared doc has 2 removed/modified line(s); a slice only appends to it unless docs/slices/S6-typed-counters.md owns it (AGENTS.md → Parallel sessions → Shared docs).',
+    ]);
+  });
+
+  it('allows rewriting a shared doc the spec owns', () => {
+    const res = checkOwnership({
+      branch: 'slice/W5',
+      specs: { 'docs/slices/W5-harden.md': '# W5\n\n## Owns\n- `docs/CORRECTIONS.md`\n' },
+      changedFiles: [{ path: 'docs/CORRECTIONS.md', removedLines: 3 }],
+    });
+    expect(res).toEqual({ failures: [], notes: [] });
+  });
+
   it('reports without failing on main or for W slices that touch shared files', () => {
     const onMain = checkOwnership({
       branch: 'main',
       specs: { 'docs/slices/S6-typed-counters.md': S6_SPEC },
-      changedFiles: [{ path: 'docs/ROADMAP.md', removedLines: 1 }],
+      changedFiles: [{ path: 'apps/api/src/server.ts', removedLines: 1 }],
     });
     expect(onMain.failures).toEqual([]);
     expect(onMain.notes).toHaveLength(1);
@@ -198,9 +236,27 @@ The \`patchwork\` game folders (AGENTS.md → Parallel sessions), plus this spec
     const wSlice = checkOwnership({
       branch: 'slice/W3',
       specs: { 'docs/slices/W3-repo-checks.md': '# W3\n\n## Owns\n- `scripts/check-repo.ts`\n' },
-      changedFiles: [{ path: 'docs/ROADMAP.md', removedLines: 1 }],
+      changedFiles: [{ path: 'apps/api/src/server.ts', removedLines: 1 }],
     });
     expect(wSlice.failures).toEqual([]);
     expect(wSlice.notes).toHaveLength(1);
+  });
+});
+
+describe('checkDecisionIds', () => {
+  const table = (...ids: string[]) =>
+    ['| ID | Decision | Why |', '|---|---|---|', ...ids.map((id) => `| ${id} | x | y |`)].join(
+      '\n',
+    );
+
+  it('passes unique increasing ids, gaps included', () => {
+    expect(checkDecisionIds(table('D-001', 'D-002', 'D-007', 'D-088'))).toEqual([]);
+  });
+
+  it('fails on a reused id and on an id out of order', () => {
+    expect(checkDecisionIds(table('D-087', 'D-088', 'D-088', 'D-050'))).toEqual([
+      'docs/DECISIONS.md: D-088 is used twice. After rebasing, renumber your new entries after the last id on main (AGENTS.md → Parallel sessions → Shared docs).',
+      'docs/DECISIONS.md: D-050 comes after D-088. Append new decisions at the end with the next id (AGENTS.md → Parallel sessions → Shared docs).',
+    ]);
   });
 });
