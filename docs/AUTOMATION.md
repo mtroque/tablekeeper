@@ -44,35 +44,35 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 
 ## Target flow
 
-1. **Queue.** Work is a slice spec (product or W) or, later, a GitHub issue labeled `agent-ready` that links one (W14).
-2. **Build.** An agent builds it on its own branch: a local worktree (`/parallel`), or a cloud agent. Never on `main`.
+1. **Queue.** Work is a slice spec (product or W). For the factory (W14), it's a GitHub issue labeled `agent-ready` that links a spec or carries its own acceptance list, taken in the order of the "Factory" Project.
+2. **Build.** An agent builds it on its own branch: a local worktree (`/parallel`), or the factory's headless Claude Code run on GitHub Actions every 5 hours (W14). Never on `main`.
 3. **PR.** The agent pushes and opens a PR whose body links the spec and lists how each acceptance criterion was verified (W4).
 4. **Checks.** CI runs every deterministic check; `main` requires them (`Checks` status check, PR required, linear history, rebase-only merge, `enforce_admins: true` so local sessions sharing the owner's GitHub credentials cannot push to `main` or merge a failing PR; emergency owner bypass is `gh api -X DELETE repos/mtroque/tablekeeper/branches/main/protection/enforce_admins` and `-X POST` to restore).
-5. **Review.** By policy below (W11). Accepted review findings are logged in `docs/CORRECTIONS.md`; patterns that recur become checks (principle 2).
-6. **Merge.** `/merge` rebases, adds the shared-doc commit (`docs/ROADMAP.md` status, `docs/DECISIONS.md`), waits for CI and rebase-merges, one PR at a time (W4).
+5. **Review.** By policy below (W11). Findings on a factory PR go back to the session that built it (`claude --resume`), which fixes them with its full context. Accepted review findings are logged in `docs/CORRECTIONS.md`; patterns that recur become checks (principle 2).
+6. **Merge.** `/merge` rebases, adds the shared-doc commit (`docs/ROADMAP.md` status, `docs/DECISIONS.md`), waits for CI and rebase-merges, one PR at a time (W4). For factory PRs, the merge-authority policy decides merge or escalate (W19).
 7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them. Session transcripts are graded for silent failures (W16), and findings become `trace` rows in `docs/CORRECTIONS.md`.
 
 ## Review policy
 
 - **Always:** CI. It is free and catches most problems.
-- **Claude, on request:** the Claude GitHub app via `claude-code-action`, running on the subscription token, triggered by the `review:claude` label or by changes to shared code (anything a game slice doesn't own). Every run costs Pro usage.
-- **Antigravity, locally:** a script runs `agy -p` over open PRs and posts the findings as a comment, on the Google quota (W11).
+- **Every factory PR:** a separate reviewer session (agent, model and effort in `.github/factory/config.json`) posts findings as a PR review; findings above the threshold are resumed into the builder's session for up to two fix rounds, then `needs-human` (W11). Other PRs get a review only with the `review` label. Every run costs Pro usage.
+- **Antigravity and Codex:** later, through the same config, once their CLIs can sign in on a runner.
 - **What reviewers check:** only what no check covers. The review prompt lists the unchecked rows of the enforcement map plus spec fit and user-facing notes (`README.md` notes stay concise, self-contained, and free of contradictions or overstated claims); it does not restate lint.
 
 ## Auto-merge policy (target)
 
-Allowed once CI is green and W12's revert rate stays under 2%: baseline cleanups, dependency patch bumps, docs-only changes, and fixes for bugs found by the QA loop that come with a test that failed before the fix. Product slices and anything touching shared code wait for a human look at the PR's artifacts.
+Set per area in `.github/factory/merge-policy.json` (W19): each path group (docs, game folders, shared code, scorers, LLM gateway, migrations, auth, workflow) is `shadow`, `auto` or `escalate`, with thresholds for size, reviewer confidence and risk, and W12's revert rate under 2%. Everything starts in `shadow`: the decision is recorded and the owner merges. An area moves to `auto` by changing its value once the shadow record agrees with the owner's own calls. A PR that changes the policy, the review prompt, workflows, settings or `scripts/factory/` always escalates.
 
 ## Agents and budget
 
 | Pool | Tools | Use for |
 |---|---|---|
-| Claude Pro | Claude Code (local and cloud), Claude GitHub app via `CLAUDE_CODE_OAUTH_TOKEN` | Specs, building slices, review on request |
+| Claude Pro | Claude Code (local and cloud), Claude GitHub app via `CLAUDE_CODE_OAUTH_TOKEN` | Specs, building slices, factory builds and reviews (W14, W11) |
 | Google AI Pro | Antigravity, `agy` CLI (Gemini 4 models, and Claude Opus 5.5 as of 2026-11-15) | Second-opinion review, exploratory QA, groomer cleanups, session grading (W16, to be measured) |
 
 - Deterministic first: anything a script can answer never goes to a model.
 - Pick the cheapest model and effort that fits: mechanical cleanups at low effort, specs and reviews higher.
-- Scheduled loops run overnight so they don't compete with interactive use, with a daily cap per loop (set in W14).
+- The factory runs on GitHub Actions on a fixed 5-hour schedule, one task per run to start (W14); other scheduled loops keep a cap per run set in their slice.
 - `agy -p` costs about 10k input tokens per call before any work; batch PRs into one call where possible.
 - The Anthropic API key in production pays for the app's rules assistant only; workflow automation never uses it.
 
