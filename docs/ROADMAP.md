@@ -39,11 +39,13 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | W7 | CI database jobs: API integration and e2e tests in CI | W1, X3 | ⬜ |
 | W8 | Property-based tests for scorers and contracts | W1 | ⬜ |
 | W9 | CV accuracy gate in CI | W1 | ⬜ |
-| W10 | Screen map and screenshots on every PR | W7 | ⬜ |
+| W10 | Screen map and screenshots on every PR | W7, W15 | ⬜ |
 | W11 | Review bots: Claude on request, Antigravity from a local script | W4 | ⬜ |
 | W12 | Groomer loop and workflow metrics | W2, W4 | ⬜ |
 | W13 | Exploratory QA on previews, filing issues | W4, W10 | ⬜ |
-| W14 | Nightly factory: issues to PRs, auto-merge by policy | W7, W11, W12 | ⬜ |
+| W14 | Nightly factory: issues to PRs, auto-merge by policy | W7, W11, W12, W16 | ⬜ |
+| W15 | Local screenshots: `pnpm shot` for agents checking screen states | - | ⬜ |
+| W16 | Session grading: silent failures in transcripts become `trace` corrections and metrics | W4, W12 | ⬜ |
 
 ## Next
 
@@ -52,9 +54,9 @@ Workflow before features; direction in `docs/AUTOMATION.md`.
 1. W1.
 2. W2 and W3 in parallel.
 3. W4, so everything after goes through PRs.
-4. W5, W6, W8, W9 and X3, in any order.
+4. W5, W6, W8, W9, W15 and X3, in any order.
 5. W7, then W10 and W11.
-6. W12, W13, then W14.
+6. W12, then W13 and W16, then W14.
 
 Product slices can run alongside from step 3 on; they then get the new checks for free.
 

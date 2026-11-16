@@ -14,7 +14,9 @@
 - **`/build`** in the main checkout creates a branch (`slice/<id>`) instead of committing to `main`; in a worktree it keeps `worktree-<name>`. It ends by pushing and opening a PR (`gh pr create`) whose body links the spec and lists each acceptance criterion with how it was verified.
 - **`/merge`** works on PRs: rebase on `main`, add the shared-doc commit (`docs/ROADMAP.md` status, `docs/DECISIONS.md` entries, spec cleanup) on the branch, `git push --force-with-lease`, wait for checks (`gh pr checks --watch`), then `gh pr merge --rebase`. One at a time; stops on the first failure.
 - **`/status`** also shows open PRs and their check state.
-- **Settings:** allow `git push`, `git push --force-with-lease`, `gh pr *`; keep `git push --force` denied.
+- **Session link:** the PR body records the runner (Claude Code local or cloud, `agy`) and session id(s) that built it, so W16 can grade the transcript behind each merged PR.
+- **Preflight:** `/build` starts with `pnpm preflight`, as `/parallel` already does.
+- **Settings:** allow `git push`, `git push --force-with-lease`, `gh pr *` and `pnpm preflight` (so far only in the owner's user settings; cloud agents read only the repo's); keep `git push --force` denied.
 - **Merge method:** rebase merge, so every Conventional Commit lands on `main` as written.
 - The docs-only exception (if any) for the owner working on `main` is decided and written down.
 
@@ -28,7 +30,7 @@
 - Bot reviews (W11). Auto-merge (W14).
 
 ## Open questions
-- Keep `docs/ROADMAP.md` hand-edited at merge time, or generate its status column from specs so PRs never conflict on it?
+- Keep `docs/ROADMAP.md` hand-edited at merge time, or generate its status column from specs so PRs never conflict on it? Evidence for generating: the 2026-11-16 transcript pass found one session misled by a ⏸ that was no longer true, and one that couldn't start D2 because D1 was ✅ only on an unmerged branch.
 
 ## Decisions
 

@@ -50,7 +50,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 4. **Checks.** CI runs every deterministic check; `main` requires them (W1, W4, W7).
 5. **Review.** By policy below (W11). Accepted review findings are logged in `docs/CORRECTIONS.md`; patterns that recur become checks (principle 2).
 6. **Merge.** `/merge` rebases, adds the shared-doc commit (`docs/ROADMAP.md` status, `docs/DECISIONS.md`), waits for CI and rebase-merges, one PR at a time (W4).
-7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them.
+7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them. Session transcripts are graded for silent failures (W16), and findings become `trace` rows in `docs/CORRECTIONS.md`.
 
 ## Review policy
 
@@ -68,7 +68,7 @@ Allowed once CI is green and W12's revert rate stays under 2%: baseline cleanups
 | Pool | Tools | Use for |
 |---|---|---|
 | Claude Pro | Claude Code (local and cloud), Claude GitHub app via `CLAUDE_CODE_OAUTH_TOKEN` | Specs, building slices, review on request |
-| Google AI Pro | Antigravity, `agy` CLI (Gemini 4 models, and Claude Opus 5.5 as of 2026-11-15) | Second-opinion review, exploratory QA, groomer cleanups |
+| Google AI Pro | Antigravity, `agy` CLI (Gemini 4 models, and Claude Opus 5.5 as of 2026-11-15) | Second-opinion review, exploratory QA, groomer cleanups, session grading (W16, to be measured) |
 
 - Deterministic first: anything a script can answer never goes to a model.
 - Pick the cheapest model and effort that fits: mechanical cleanups at low effort, specs and reviews higher.

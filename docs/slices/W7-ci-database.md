@@ -20,6 +20,7 @@
 ## Out of scope
 
 ## Open questions
+- Shared limits: full e2e runs failed in different slices on each run until `playwright.config.ts` lifted the API burst limit (transcript pass, 2026-11-16). Local auth still allows `sign_in_sign_ups = 30` per window (`supabase/config.toml`), shared by every worktree. Does that, or X3's replacement, fail a full or parallel run? Lift it for tests if so.
 - If X3 slips: run `supabase start` in CI now (Docker is available on GitHub runners) and switch to plain Postgres after X3?
 
 ## Decisions
