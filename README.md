@@ -22,7 +22,7 @@ Everything except saving works without signing in.
 
 What's built and what's next: [`docs/ROADMAP.md`](docs/ROADMAP.md). What the app does and for whom: [`docs/PRODUCT.md`](docs/PRODUCT.md).
 
-TypeScript throughout: Next.js + Tailwind + shadcn/ui (Vercel), Express 5 (Vercel), Supabase (Postgres, Google sign-in), opencv.js in a Web Worker, and the Anthropic API.
+TypeScript throughout: Next.js + Tailwind + shadcn/ui (Vercel), Express 5 (Vercel), Neon (Postgres), Supabase Auth (Google sign-in), opencv.js in a Web Worker, and the Anthropic API.
 
 ## Run locally
 
@@ -30,9 +30,9 @@ Needs Node LTS (`.nvmrc`), pnpm, Docker and the Supabase CLI.
 
 ```bash
 pnpm install
-cp .env.example .env.local      # fill in Google OAuth, Anthropic and IP_HASH_SALT; Supabase keys are detected
-pnpm db:start                   # local Supabase in Docker
-pnpm db:reset                   # migrations + seed
+cp .env.example .env.local      # fill in Google OAuth, Anthropic and IP_HASH_SALT; local DB and Auth keys are detected
+pnpm db:start                   # local Postgres + Auth in Docker
+pnpm db:reset                   # migrations (db/migrations/) + seed (db/seed.sql) + local rulebooks
 pnpm dev                        # web + API on the first free ports from 3000 / 4000; prints the URLs
 ```
 
@@ -56,10 +56,10 @@ pnpm lint:commits               # Conventional Commits check for this branch
 pnpm check:repo                 # rule ids, immutable migrations, forbidden files, spec ownership
 pnpm preflight                  # branch, clean tree, node_modules, .env.local present, local Supabase up
 pnpm test:unit                  # unit tests (no database needed)
-pnpm test                       # unit + API integration (needs local Supabase)
+pnpm test                       # unit + API integration (needs local Postgres + Auth)
 pnpm test:e2e                   # Playwright
 pnpm test:build                 # production build of the web app, then S4's e2e test against it
-pnpm db:types                   # regenerate Supabase types after a migration
+pnpm db:types                   # regenerate row types (apps/api/src/db/types.ts) after a migration
 pnpm eval:cv <gameId>           # board-reading accuracy on labeled photos (--calibrate to rebuild the profile)
 pnpm rules:smoke <gameId> "<question>"   # one real rules-assistant call
 scripts/worktrees.sh status|sync|clean|launch   # parallel Claude Code sessions (AGENTS.md)

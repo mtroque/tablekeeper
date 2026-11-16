@@ -58,12 +58,12 @@ Rules and scoring details: `docs/games/<gameId>.md`. Screens: `docs/UX.md`.
 | Section | Says | Checked against |
 |---|---|---|
 | Without an account | In-progress games and campaigns stay in this browser | `lib/session-store/local-store.ts`, D-041, D-050 |
-| With an account | Google sign-in through Supabase Auth; stores email and name from Google, the display name, saved games and campaigns | `supabase/migrations/*_init.sql`, `components/auth-provider.tsx` |
+| With an account | Google sign-in through Supabase Auth; stores email and name from Google, the display name, saved games and campaigns | `db/migrations/*_init.sql`, `middleware/auth.ts`, `components/auth-provider.tsx` |
 | Board photos | Read in the browser, kept in this tab while scoring, never uploaded | `components/score-flow/photo.ts` |
 | Rules questions | Sent to Anthropic; not stored; daily limits count requests per account or per salted IP hash | `services/rules.ts`, `llm/quota-store.ts` |
 | Logs | Method, path, status and timing only; hosts keep their own request logs | `middleware/request-id.ts` |
 | Browser storage | Sign-in session (`tk:auth`) and in-progress games; no cookies, ads or analytics | `lib/supabase.ts` |
-| Services | Vercel (website and server), Supabase, Google, Anthropic | `docs/DEPLOYMENT.md` |
+| Services | Vercel (website and server), Neon (database), Supabase (sign-in), Google, Anthropic | `docs/DEPLOYMENT.md` |
 
 ## Out of scope (v1)
 

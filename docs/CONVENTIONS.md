@@ -47,7 +47,7 @@ Barrel `index.ts` files only at package roots and game-module roots.
 
 ## Database
 
-- Every change is a new migration (`supabase migration new <name>`); never edit an applied one. Then `pnpm db:reset && pnpm db:types` and commit the generated types.
+- Every change is a new migration under `db/migrations/`; never edit an applied one. Then `pnpm db:reset && pnpm db:types` and commit the generated types (`apps/api/src/db/types.ts`).
 - RLS policies are named `<table>_<action>_<who>`, e.g. `play_sessions_select_owner`.
 
 ## LLM code
