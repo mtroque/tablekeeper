@@ -15,6 +15,7 @@ export const NOT_RUNNING = "Local Supabase isn't running. Run pnpm db:start.";
 
 /** Which `supabase status -o env` keys fill which variables, first match wins. */
 const SUPABASE_SOURCES = {
+  DATABASE_URL: ['DB_URL'],
   SUPABASE_URL: ['API_URL'],
   SUPABASE_ANON_KEY: ['ANON_KEY', 'PUBLISHABLE_KEY'],
   SUPABASE_SERVICE_ROLE_KEY: ['SERVICE_ROLE_KEY', 'SECRET_KEY'],
@@ -53,9 +54,9 @@ export function fillSupabase(env = process.env, readStatus = readSupabaseStatus)
   const status = readStatus();
   if (!status?.API_URL) throw new LocalEnvError(NOT_RUNNING);
   for (const key of missing) {
-    const value = SUPABASE_SOURCES[key].map((source) => status[source]).find(Boolean);
-    if (!value) throw new LocalEnvError(NOT_RUNNING);
-    env[key] = value;
+    const raw = SUPABASE_SOURCES[key].map((source) => status[source]).find(Boolean);
+    if (!raw) throw new LocalEnvError(NOT_RUNNING);
+    env[key] = key === 'DATABASE_URL' ? raw.replace(/\/postgres$/, '/tablekeeper') : raw;
   }
 }
 

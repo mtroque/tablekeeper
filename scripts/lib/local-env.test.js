@@ -4,13 +4,19 @@ import { describe, expect, it } from 'vitest';
 
 import { fillSupabase, findFreePort, LocalEnvError, NOT_RUNNING, pickPorts } from './local-env.mjs';
 
-const status = { API_URL: 'http://127.0.0.1:54321', PUBLISHABLE_KEY: 'pub', SECRET_KEY: 'secret' };
+const status = {
+  DB_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+  API_URL: 'http://127.0.0.1:54321',
+  PUBLISHABLE_KEY: 'pub',
+  SECRET_KEY: 'secret',
+};
 
 describe('fillSupabase', () => {
   it('fills missing values from supabase status', () => {
     const env = {};
     fillSupabase(env, () => status);
     expect(env).toEqual({
+      DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/tablekeeper',
       SUPABASE_URL: 'http://127.0.0.1:54321',
       SUPABASE_ANON_KEY: 'pub',
       SUPABASE_SERVICE_ROLE_KEY: 'secret',
@@ -27,14 +33,19 @@ describe('fillSupabase', () => {
   });
 
   it('keeps explicit values', () => {
-    const env = { SUPABASE_URL: 'https://example.supabase.co' };
+    const env = {
+      DATABASE_URL: 'postgresql://neondb_owner:pw@ep-test.neon.tech/neondb',
+      SUPABASE_URL: 'https://example.supabase.co',
+    };
     fillSupabase(env, () => status);
+    expect(env.DATABASE_URL).toBe('postgresql://neondb_owner:pw@ep-test.neon.tech/neondb');
     expect(env.SUPABASE_URL).toBe('https://example.supabase.co');
     expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe('http://127.0.0.1:54321');
   });
 
   it('never asks Supabase when everything is set', () => {
     const env = {
+      DATABASE_URL: 'db',
       SUPABASE_URL: 'a',
       SUPABASE_ANON_KEY: 'b',
       SUPABASE_SERVICE_ROLE_KEY: 'c',
