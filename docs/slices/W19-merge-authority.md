@@ -6,7 +6,7 @@
 
 ## Owns
 - `.github/factory/merge-policy.json`, `scripts/factory/merge-policy.ts` (schema and decision), `scripts/factory/merge.ts` (acting on it) with tests
-- `.github/workflows/merge.yml`, `.agents/skills/merge/SKILL.md` (a headless shared-docs step the workflow can call), `scripts/lib/metrics/` (the shadow agreement column)
+- `.github/workflows/merge.yml`, `scripts/lib/metrics/` (the shadow agreement column)
 - `docs/AUTOMATION.md` → Auto-merge policy
 
 ## Scope
@@ -36,14 +36,14 @@
 - **Decision:** `decide(policy, pr, checks, verdict, revertRate)` is a pure function returning `merge`, `wait` or `escalate`, with every reason that applied. Unit tested rule by rule.
 - **`merge.yml`:** runs when W11's review workflow completes (`workflow_run`) and on check-suite completion for factory PRs. It computes the decision and acts:
   - **shadow:** a comment with the decision and reasons, and the label `shadow:merge` or `shadow:escalate`. The owner merges as usual.
-  - **auto:** the headless shared-docs step of `/merge` (roadmap status, decisions, corrections, spec cleanup) committed with the factory token, wait for checks, then `gh pr merge --rebase`.
+  - **auto:** if the PR is behind `main`, ask the builder's session to rebase (W11's resume path) and wait for checks again; then `gh pr merge --rebase` with the factory token. The shared docs are already in the PR's finish commit (AGENTS.md → Definition of done).
   - **escalate:** label `needs-human` and a comment with the reasons that mentions the owner, so it reaches them through GitHub notifications.
 - **Agreement:** a W12 column comparing each shadow decision with what happened (owner merged, changed it, or closed it), per group. It's the evidence for moving a group to `auto`.
 - **Widening authority:** change a group's mode in the policy file in a PR; by the rule above, that PR always escalates.
 
 ## Acceptance criteria
 - [ ] Over the first 20 factory PRs every decision is recorded in shadow mode, and the agreement rate shows in W12's table
-- [ ] With the docs group set to `auto`, a docs-only factory PR merges itself, with the shared-docs commit; one that also touches shared code escalates
+- [ ] With the docs group set to `auto`, a docs-only factory PR merges itself; one that also touches shared code escalates
 - [ ] A PR changing the policy file escalates even with every group set to `auto`
 - [ ] A PR with a disputed finding or a red required check never merges, in any mode
 

@@ -1,4 +1,4 @@
-// Conventional Commits (docs/CONVENTIONS.md → Git). Scope is required (except `/merge` commits: `docs: merge <branch>`), and must be a game id or an area.
+// Conventional Commits (docs/CONVENTIONS.md → Git). Scope is required (except `docs: merge <branch>` commits from the retired `/merge`, kept for old history), and must be a game id or an area.
 export function requireScopeExceptMerge({ type, scope, subject }) {
   if (scope) return [true];
   if (type === 'docs' && typeof subject === 'string' && subject.startsWith('merge ')) {
