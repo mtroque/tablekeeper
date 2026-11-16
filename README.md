@@ -54,6 +54,7 @@ pnpm typecheck
 pnpm lint                       # includes the UI copy rules
 pnpm lint:commits               # Conventional Commits check for this branch
 pnpm check:repo                 # rule ids, immutable migrations, forbidden files, spec ownership
+pnpm preflight                  # branch, clean tree, node_modules, .env.local present, local Supabase up
 pnpm test:unit                  # unit tests (no database needed)
 pnpm test                       # unit + API integration (needs local Supabase)
 pnpm test:e2e                   # Playwright

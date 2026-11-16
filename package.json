@@ -16,6 +16,7 @@
     "format": "prettier --write .",
     "lint:commits": "node scripts/lint-commits.mjs",
     "check:repo": "tsx scripts/check-repo.ts",
+    "preflight": "node scripts/preflight.mjs",
     "test": "vitest run",
     "test:unit": "vitest run --project core --project cv --project tooling --project web",
     "test:e2e": "playwright test",
