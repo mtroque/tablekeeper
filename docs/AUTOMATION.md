@@ -21,7 +21,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | UI copy: no dashes, emoji, banned phrases | `eslint-rules/ui-copy.js` | ✅ |
 | Conventional Commits | commit-msg hook, `pnpm lint:commits` | ✅ |
 | CV worker never reaches UI code | `cv-worker-imports.test.ts` (D-060) | ✅ |
-| Every check runs before anything reaches `main` | CI (W1), required checks on `main` (W4) | W1, W4 |
+| Every check runs before anything reaches `main` | `.github/workflows/ci.yml` (W1 ✅), required checks on `main` (W4) | W4 |
 | Only config reads `process.env` | lint rule (3 existing violations) | W2 |
 | Every LLM call goes through the gateway | restricted imports of the SDK outside `apps/api/src/llm/` | W2 |
 | Scorers are pure | restricted globals (`Date`, `Math.random`, `fetch`, `process`, `console`) in `packages/core/src/games/` | W2 |

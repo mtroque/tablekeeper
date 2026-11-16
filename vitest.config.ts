@@ -2,10 +2,12 @@ import { fileURLToPath } from 'node:url';
 
 import { defineConfig } from 'vitest/config';
 
-import { loadLocalEnv } from './scripts/lib/local-env.mjs';
+import { LocalEnvError, loadLocalEnv } from './scripts/lib/local-env.mjs';
 
-// API integration tests run against local Supabase; this fills its URL and keys.
-await loadLocalEnv();
+// API integration tests run against local Supabase; this fills its URL and keys when running.
+await loadLocalEnv({ exitOnError: false }).catch((error: unknown) => {
+  if (!(error instanceof LocalEnvError)) throw error;
+});
 
 const webSrc = fileURLToPath(new URL('./apps/web/src', import.meta.url));
 

@@ -16,6 +16,7 @@
     "format": "prettier --write .",
     "lint:commits": "node scripts/lint-commits.mjs",
     "test": "vitest run",
+    "test:unit": "vitest run --project core --project cv --project tooling --project web",
     "test:e2e": "playwright test",
     "test:build": "node scripts/test-build.mjs",
     "db:start": "node scripts/db.mjs start",

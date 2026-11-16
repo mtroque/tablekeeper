@@ -53,6 +53,7 @@ pnpm ingest <gameId> --load     # load the reviewed sections
 pnpm typecheck
 pnpm lint                       # includes the UI copy rules
 pnpm lint:commits               # Conventional Commits check for this branch
+pnpm test:unit                  # unit tests (no database needed)
 pnpm test                       # unit + API integration (needs local Supabase)
 pnpm test:e2e                   # Playwright
 pnpm test:build                 # production build of the web app, then S4's e2e test against it
