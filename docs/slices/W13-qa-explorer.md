@@ -5,7 +5,7 @@
 **Goal:** An agent uses the app like a player, walking the screen map on a preview deployment, and files GitHub issues for what it finds, each with steps and a screenshot. It doesn't fix anything yet.
 
 ## Owns
-- `.claude/commands/qa.md` (or an `agy` prompt and script), issue template `.github/ISSUE_TEMPLATE/qa.md`, `docs/AUTOMATION.md`
+- `.agents/skills/qa/SKILL.md` (or an `agy` prompt and script), issue template `.github/ISSUE_TEMPLATE/qa.md`, `docs/AUTOMATION.md`
 
 ## Scope (must cover)
 - Target: a Vercel preview URL for a PR, or production read-only. Uses guest mode and seeded test users only; never real accounts.

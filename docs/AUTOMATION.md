@@ -75,6 +75,8 @@ Allowed once CI is green and W12's revert rate stays under 2%: baseline cleanups
 - `agy -p` costs about 10k input tokens per call before any work; batch PRs into one call where possible.
 - The Anthropic API key in production pays for the app's rules assistant only; workflow automation never uses it.
 
+**Commands** (`/build`, `/merge`, `/parallel`, `/plan`, `/status` and any new ones) are Agent Skills with one copy each, at `.agents/skills/<name>/SKILL.md`. Antigravity reads that folder directly; `.claude/skills` is a symlink to it, so Claude Code reads the same files. To add one, create the folder there, never under `.claude/`. Keep them tool-neutral: frontmatter `name` and `description` (plus Claude's optional `argument-hint` and `disable-model-invocation: true`, which Antigravity ignores), and refer to "the ids given with this command" rather than `$ARGUMENTS`, which only Claude Code substitutes. `/parallel` and `scripts/worktrees.sh launch` still start Claude Code sessions.
+
 ## Accounts and setup
 
 State as of 2026-11-15. No secret values here; only names.

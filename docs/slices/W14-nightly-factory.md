@@ -5,7 +5,7 @@
 **Goal:** Work moves without anyone at the keyboard: scheduled cloud agents take `agent-ready` issues, build each on a branch, open PRs, and auto-merge the categories `docs/AUTOMATION.md` → Auto-merge policy allows.
 
 ## Owns
-- Schedules (Claude cloud routines and/or a local `agy` cron), `.claude/commands/` (an issue-to-PR command), GitHub labels and the auto-merge workflow, `docs/AUTOMATION.md` (policy and caps)
+- Schedules (Claude cloud routines and/or a local `agy` cron), `.agents/skills/` (an issue-to-PR command), GitHub labels and the auto-merge workflow, `docs/AUTOMATION.md` (policy and caps)
 
 ## Scope (must cover)
 - Issue labels: `agent-ready`, `auto-merge-ok`, `needs-human`. An issue links a spec or carries its own acceptance list.

@@ -6,7 +6,7 @@
 
 ## Owns
 - `AGENTS.md` (Workflow, Definition of done, Parallel sessions), `docs/CONVENTIONS.md` → Git, `docs/DECISIONS.md` (D-013 and a new entry)
-- `.claude/commands/` (`build.md`, `merge.md`, `parallel.md`, `status.md`), `.claude/settings.json`, `scripts/worktrees.sh`
+- `.agents/skills/` (`build`, `merge`, `parallel`, `status`), `.claude/settings.json`, `scripts/worktrees.sh`
 - `.github/pull_request_template.md`, GitHub settings for `main` (applied with `gh api`, recorded here)
 
 ## Scope (must cover)

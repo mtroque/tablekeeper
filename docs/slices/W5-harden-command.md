@@ -5,7 +5,7 @@
 **Goal:** A command that promotes a repeated correction to a check: given a pattern from `docs/CORRECTIONS.md`, it adds the lint rule or repo check that prevents it, cleans up existing occurrences (or baselines them), and updates the enforcement map and the log. This is principle 2 of `docs/AUTOMATION.md`, as one step.
 
 ## Owns
-- `.claude/commands/harden.md`, `docs/CORRECTIONS.md` (statuses), `AGENTS.md` (point promotion at `/harden`), `docs/AUTOMATION.md` (mention in Principles)
+- `.agents/skills/harden/SKILL.md`, `docs/CORRECTIONS.md` (statuses), `AGENTS.md` (point promotion at `/harden`), `docs/AUTOMATION.md` (mention in Principles)
 
 ## Scope (must cover)
 - Input: a pattern tag from the log; with no argument, list patterns logged twice or more that aren't promoted or dismissed, and wait.

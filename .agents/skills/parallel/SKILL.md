@@ -1,8 +1,10 @@
 ---
+name: parallel
 description: Run groups of slices at the same time, one worktree session per group
 argument-hint: [<ids> | <ids> | …]   e.g. "S1 | S2 | S3"; empty = suggest groups
+disable-model-invocation: true
 ---
-Start parallel work for: $ARGUMENTS
+Start parallel work for the groups given with this command.
 
 1. **Preflight** (main checkout): on `main`, clean tree, `.env.local` present, local Supabase running (`supabase status`, else `pnpm db:start`).
 2. **Groups** are separated by `|`; one session builds each group's ids in order. With no argument, propose groups from docs/ROADMAP.md (unstarted slices whose dependencies are ✅ on main or earlier in the same group; dependent slices chained into one group) and wait for my OK.

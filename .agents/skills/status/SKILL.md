@@ -1,5 +1,7 @@
 ---
+name: status
 description: What every worktree is doing and what needs me (read-only)
+disable-model-invocation: true
 ---
 From the main checkout, without changing files:
 

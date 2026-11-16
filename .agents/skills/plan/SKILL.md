@@ -1,8 +1,10 @@
 ---
+name: plan
 description: Turn an idea into a planned slice (spec stub + roadmap row)
 argument-hint: <what you want to build>
+disable-model-invocation: true
 ---
-Plan a new slice for: $ARGUMENTS
+Plan a new slice for the idea given with this command.
 
 1. Read docs/PRODUCT.md, docs/ARCHITECTURE.md, docs/ROADMAP.md and the specs it might touch. Check it fits the product and the existing patterns; if it needs shared-code changes, consider splitting off a shared slice.
 2. Ask me at most 3 questions, only if the scope is genuinely unclear.

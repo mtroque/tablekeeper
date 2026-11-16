@@ -1,8 +1,10 @@
 ---
+name: merge
 description: Merge finished worktrees into main, update shared docs, sync and clean up
 argument-hint: [worktree name or branch]; empty = every ready one
+disable-model-invocation: true
 ---
-Merge $ARGUMENTS (or, if empty, every ready branch, oldest finished first, stopping at the first failure). Run from the main checkout, clean, on `main`.
+Merge the worktree or branch given with this command (or, if none, every ready branch, oldest finished first, stopping at the first failure). Run from the main checkout, clean, on `main`.
 
 1. **Ready** = commits ahead of main, clean worktree, and every slice spec it changed is ✅ or still ⬜ (none 🟨 or ⏸).
 2. **Rebase** in its worktree (`git worktree list`): `git rebase main`. Resolve trivial conflicts; if one is in code the branch doesn't own, `git rebase --abort` and report.
