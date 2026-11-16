@@ -1,6 +1,6 @@
 # W4: PR workflow
 
-**Status:** 🟨 · **Depends on:** W1, W3
+**Status:** ✅ · **Depends on:** W1, W3
 
 **Goal:** All work reaches `main` through a pull request with green CI, instead of local fast-forward merges and direct pushes. Agents build on branches, open PRs that show how they verified their work, and `/merge` merges them one at a time. See `docs/AUTOMATION.md` → Target flow.
 
@@ -39,13 +39,15 @@
 None.
 
 ## Acceptance criteria
-- [ ] A direct push to `main` is rejected; a PR with failing checks can't be merged (show both)
-- [ ] `/build` of a small slice ends with an open PR with the verification list filled in
-- [ ] `/merge` merges two PRs in a row, each with its shared-doc commit, and `main` passes CI after each
-- [ ] `AGENTS.md` and `docs/CONVENTIONS.md` → Git describe only the new flow
+- [x] A direct push to `main` is rejected; a PR with failing checks can't be merged (show both):
+  - Direct push (`git push origin HEAD:refs/heads/main`): rejected with `remote: error: GH006: Protected branch update failed for refs/heads/main. - Changes must be made through a pull request. - Required status check "Checks" is expected. ! [remote rejected] HEAD -> main (protected branch hook declined)`.
+  - Failing PR ([PR #3](https://github.com/mtroque/tablekeeper/pull/3), `test/w4-failing-pr`, failed `Commits` in [run 43868221953](https://github.com/mtroque/tablekeeper/actions/runs/43868221953)): `gh pr merge 3 --rebase` failed with `X Pull request mtroque/tablekeeper#3 is not mergeable: the base branch policy prohibits the merge`, and `gh pr merge 3 --rebase --admin` failed with `GraphQL: Required status check "Checks" is failing. (mergePullRequest)` (PR #3 closed and branch deleted).
+- [x] `/build` of a small slice ends with an open PR with the verification list filled in: verified on [PR #4](https://github.com/mtroque/tablekeeper/pull/4) (`slice/W4`) and [PR #5](https://github.com/mtroque/tablekeeper/pull/5) (`slice/W4-finish`), both opened with `.github/pull_request_template.md` (`## Slice`, `## Verification` checklist, and `## Session` with `Runner: agy` and `Session: 34668bad-1d7e-4c5b-ac16-5945464b9bfd`).
+- [x] `/merge` merges two PRs in a row, each with its shared-doc commit, and `main` passes CI after each: verified by merging [PR #4](https://github.com/mtroque/tablekeeper/pull/4) (`docs: merge slice/W4` updating `D-013` in `docs/DECISIONS.md`; `main` passed in [run 43869751331](https://github.com/mtroque/tablekeeper/actions/runs/43869751331)) and [PR #5](https://github.com/mtroque/tablekeeper/pull/5) (`docs: merge slice/W4-finish` updating `docs/ROADMAP.md` and `D-083` in `docs/DECISIONS.md`) sequentially with `git rebase main`, `git push --force-with-lease`, `gh pr checks --watch`, and `gh pr merge --rebase`.
+- [x] `AGENTS.md` and `docs/CONVENTIONS.md` → Git describe only the new flow: updated `AGENTS.md` (Workflow, Definition of done, Parallel sessions) and `docs/CONVENTIONS.md` → Git so all work branches to `slice/<id>` or `worktree-<name>`, opens a PR, and merges through `/merge`.
 
 ## Tests
-Live verification against GitHub branch protection and Actions: rejected direct push to `main`, rejected merge of a failing PR, PR creation with verification list and session metadata, and two sequential PR merges through `/merge` with green `Checks` on `main`.
+Live verification against GitHub branch protection and Actions: rejected direct push to `main`, rejected merge of a failing PR (#3), PR creation with verification list and session metadata (#4 and #5), and two sequential PR merges through `/merge` with green `Checks` on `main`.
 
 ## Out of scope
 - Bot reviews (W11). Auto-merge (W14).
@@ -55,8 +57,11 @@ Resolved:
 - **Keep `docs/ROADMAP.md` hand-edited in `/merge`'s shared-doc commit rather than generated from specs:** finished specs are deleted on merge (`AGENTS.md` → Docs), so `docs/ROADMAP.md` is the lasting record on `main`. Because `/build` never edits `docs/ROADMAP.md` on a branch and `/merge` adds `docs: merge <branch>` to one rebased PR at a time right before merging, open PRs never conflict on it. To prevent the two 2026-11-16 transcript-pass issues: `docs/ROADMAP.md` on `main` only ever holds `⬜` or `✅` (live `🟨`/`⏸` stay in `docs/slices/<id>-*.md`), and dependency checks read `docs/slices/<dep>-*.md` on the current branch before `docs/ROADMAP.md`.
 
 ## Decisions
+- **D-013 (updated):** Single-slice work runs on `slice/<id>` and parallel work uses Claude Code's built-in worktrees (`worktree-<name>`), automatic ports and the shared Agent Skills commands; every slice opens a PR and `/merge` rebase-merges it.
+- **D-083:** `main` is protected (PR required, `Checks` required, linear history, rebase-only merge, no force pushes, `enforce_admins: true`, no docs-only exception); `/build` opens a PR on `slice/<id>` or `worktree-<name>` with verification and session metadata (`.github/pull_request_template.md`), and `/merge` rebases, adds `docs: merge <branch>` (updating `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/CORRECTIONS.md` and cleaning up finished specs), waits for CI, and rebase-merges one PR at a time.
 
 ## Corrections
+None.
 
 ## Shared change requests
 None.
