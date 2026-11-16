@@ -16,7 +16,7 @@
 - **`/status`** also shows open PRs and their check state.
 - **Session link:** the PR body records the runner (Claude Code local or cloud, `agy`) and session id(s) that built it, so W16 can grade the transcript behind each merged PR.
 - **Preflight:** `/build` starts with `pnpm preflight`, as `/parallel` already does.
-- **Settings:** allow `git push`, `git push --force-with-lease`, `gh pr *` and `pnpm preflight` (so far only in the owner's user settings; cloud agents read only the repo's); keep `git push --force` denied.
+- **Settings:** allow `git push`, `git push --force-with-lease`, `gh pr *`; keep `git push --force` denied.
 - **Merge method:** rebase merge, so every Conventional Commit lands on `main` as written.
 - The docs-only exception (if any) for the owner working on `main` is decided and written down.
 

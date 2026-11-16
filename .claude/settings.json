@@ -28,7 +28,8 @@
       "Bash(supabase migration new:*)",
       "Bash(scripts/worktrees.sh status:*)",
       "Bash(git -C .claude/worktrees/:*)",
-      "Bash(tmux list-windows:*)"
+      "Bash(tmux list-windows:*)",
+      "Bash(pnpm preflight:*)"
     ],
     "deny": [
       "Bash(git push --force:*)",
