@@ -1,6 +1,6 @@
 # W5: /harden
 
-**Status:** 🟨 · **Depends on:** W2
+**Status:** ✅ · **Depends on:** W2
 
 **Goal:** A command that promotes a repeated correction to a check: given a pattern from `docs/CORRECTIONS.md`, it adds the lint rule or repo check that prevents it, cleans up existing occurrences (or baselines them), and updates the enforcement map and the log. This is principle 2 of `docs/AUTOMATION.md`, as one step.
 
@@ -23,14 +23,16 @@
 - **Docs:** update `AGENTS.md` (point repeated-correction promotion at `/harden`) and `docs/AUTOMATION.md` (link `/harden` in Principles).
 - **Initial `/harden` runs** on the two open 2-occurrence patterns in `docs/CORRECTIONS.md`:
   - `commit-msg-recovery`: add `docs` to `scope-enum` in `commitlint.config.js`, enforce `require-scope-except-merge` so agents cannot silently drop the scope when a hook rejects a bad scope, add `scripts/lint-commits.test.ts`, update `docs/CONVENTIONS.md` → Git and `docs/AUTOMATION.md` → Enforcement map, and promote both rows.
-  - `overstated-user-notes`: no deterministic check can judge semantic contradictions or over-explanation in prose; add a concise prose rule to `docs/CONVENTIONS.md` and `docs/AUTOMATION.md` → Review policy (for W11 reviewers), and promote both rows with the prose-only reason.
+  - `overstated-user-notes`: no deterministic check can judge semantic contradictions or over-explanation in prose; add a concise prose rule to `docs/AUTOMATION.md` → Review policy (for W11 reviewers), and promote both rows with the prose-only reason.
 
 ## UI states
 None.
 
 ## Acceptance criteria
-- [ ] Run on two real patterns logged twice (`commit-msg-recovery` is one); both end with a passing check that would have caught them and promoted log rows
-- [ ] Run on a single-occurrence pattern; it declines and explains
+- [x] Run on two real patterns logged twice (`commit-msg-recovery` is one); both end with a passing check that would have caught them and promoted log rows:
+  - `commit-msg-recovery`: added `docs` scope and `require-scope-except-merge` to `commitlint.config.js` with 5 passing tests in `scripts/lint-commits.test.ts`, updated `docs/CONVENTIONS.md` → Git and `docs/AUTOMATION.md` → Enforcement map, and promoted both log rows in `docs/CORRECTIONS.md`.
+  - `overstated-user-notes`: confirmed no deterministic check can evaluate semantic contradictions or over-explanation in prose; added the rule to `docs/AUTOMATION.md` → Review policy and promoted both log rows in `docs/CORRECTIONS.md` with the prose-only reason.
+- [x] Run on a single-occurrence pattern; it declines and explains: `.agents/skills/harden/SKILL.md` step 2 refuses any 1-occurrence pattern (unless it meets the high-stakes rule, where it asks first) and explains that single corrections stay in `docs/CORRECTIONS.md` to avoid one-off rules. Verified against `docs/CORRECTIONS.md` single-occurrence rows (`env-outside-config`, `disable-without-reason`, `scratch-files-in-repo`, `worktree-command-refused`, `preflight-reads-denied-file`), all of which have count 1 and are declined by step 1/2.
 
 ## Tests
 - `scripts/lint-commits.test.ts` testing `commitlint.config.js` (`docs` scope, `require-scope-except-merge`, `header-max-length`, and `docs: merge <branch>` exemption).
@@ -40,11 +42,13 @@ None.
 
 ## Open questions
 Resolved:
-- **`overstated-user-notes` has no deterministic check:** `docs/CORRECTIONS.md` already notes `(no check possible)`. Per the skill's prose-only fallback, it promotes to `docs/CONVENTIONS.md` + `docs/AUTOMATION.md` → Review policy with the reason recorded in the log row.
+- **`overstated-user-notes` has no deterministic check:** `docs/CORRECTIONS.md` already notes `(no check possible)`. Per the skill's prose-only fallback, it promotes to `docs/AUTOMATION.md` → Review policy with the reason recorded in the log row.
 
 ## Decisions
+- Added `docs` to `scope-enum` and `require-scope-except-merge` to `commitlint.config.js` so agents committing `README.md` or doc changes have an explicit scope and cannot silently drop scopes when a hook rejects an unlisted scope (while preserving `/merge`'s `docs: merge <branch>` format).
 
 ## Corrections
+None.
 
 ## Shared change requests
 None.
