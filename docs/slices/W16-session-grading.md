@@ -14,7 +14,7 @@
 - **Judge a sample:** only flagged or sampled sessions go to a model, batched (see `docs/AUTOMATION.md` → Agents and budget), as condensed traces, never raw JSONL. Start with two short rubrics, each with a criterion, labels and a pass line: efficiency (reaching the result without spinning) and unlogged corrections (did the user correct the agent, and is it in the log?). Add rubrics only when a finding needs one.
 - **Report:** proposed `trace` rows (pattern tag, where, what was wrong, likely fix: environment, docs, skill or check), reusing existing tags. A human or `/harden` decides what gets promoted; the grader never edits skills or rules itself.
 - **Metrics:** per week, failed tool calls per session and refusals by cause, added to W12's table.
-- **Privacy:** the repo is public. Never commit transcript text; reports hold counts, tags and short paraphrases only. Raw and condensed traces stay in the run's own `.scratch/<session>/` or CI artifacts.
+- **Privacy:** the repo is public. Never commit transcript text; reports hold counts, tags and short paraphrases only. Raw and condensed traces stay in the run's own `.scratch/<session>/` or in W14's encrypted session artifacts, never in plain artifacts (anyone signed in can download those on a public repo).
 
 ## Acceptance criteria
 - [ ] Run over the 2026-10-23 to 2026-11-16 sessions, it finds the patterns logged as `trace` on 2026-11-16 (show the output)
