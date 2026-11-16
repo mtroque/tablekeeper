@@ -21,10 +21,6 @@ data/rulebooks/*
 !data/rulebooks/.gitkeep
 data/fixtures/*/eval-report.md
 
-# supabase local
-supabase/.branches/
-supabase/.temp/
-
 # agent scratch files (AGENTS.md → Parallel sessions)
 .scratch/
 

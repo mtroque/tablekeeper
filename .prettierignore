@@ -1,7 +1,6 @@
 pnpm-lock.yaml
 docs/
 data/
-supabase/
 *.md
 apps/web/next-env.d.ts
 .claude/

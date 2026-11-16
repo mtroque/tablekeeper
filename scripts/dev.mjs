@@ -1,4 +1,4 @@
-// `pnpm dev`: web and API on the first free ports from 3000 / 4000, wired to local Supabase.
+// `pnpm dev`: web and API on the first free ports from 3000 / 4000, wired to local Postgres.
 import { spawn } from 'node:child_process';
 
 import { loadLocalEnv, ROOT } from './lib/local-env.mjs';

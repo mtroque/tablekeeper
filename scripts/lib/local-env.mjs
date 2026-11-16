@@ -1,8 +1,7 @@
 // Local environment for `pnpm dev`, the test configs and every script that talks to the database.
 //  - Loads .env.local at the repo root (values already in the environment win).
-//  - Fills missing Supabase values from `supabase status -o env`. Never prints keys.
+//  - Fills missing local database and test-auth defaults. Never prints secrets.
 //  - Optionally picks free ports from 3000 / 4000 and points the web and API at each other.
-import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import net from 'node:net';
 import { dirname, join } from 'node:path';
@@ -11,16 +10,16 @@ import { parseEnv } from 'node:util';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-export const NOT_RUNNING = "Local Supabase isn't running. Run pnpm db:start.";
+export const NOT_RUNNING = "Local Postgres isn't running. Run pnpm db:start.";
+export const LOCAL_DATABASE_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/tablekeeper';
+export const LOCAL_AUTH_URL = 'http://127.0.0.1:9/auth';
+export const LOCAL_AUTH_TEST_SECRET = 'tablekeeper-local-test-secret';
 
-/** Which `supabase status -o env` keys fill which variables, first match wins. */
-const SUPABASE_SOURCES = {
-  DATABASE_URL: ['DB_URL'],
-  SUPABASE_URL: ['API_URL'],
-  SUPABASE_ANON_KEY: ['ANON_KEY', 'PUBLISHABLE_KEY'],
-  SUPABASE_SERVICE_ROLE_KEY: ['SERVICE_ROLE_KEY', 'SECRET_KEY'],
-  NEXT_PUBLIC_SUPABASE_URL: ['API_URL'],
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: ['ANON_KEY', 'PUBLISHABLE_KEY'],
+const LOCAL_DEFAULTS = {
+  DATABASE_URL: LOCAL_DATABASE_URL,
+  NEON_AUTH_BASE_URL: LOCAL_AUTH_URL,
+  NEXT_PUBLIC_NEON_AUTH_URL: LOCAL_AUTH_URL,
+  AUTH_TEST_SECRET: LOCAL_AUTH_TEST_SECRET,
 };
 
 export class LocalEnvError extends Error {}
@@ -33,30 +32,10 @@ export function loadEnvFile(env = process.env, file = join(ROOT, '.env.local')) 
   }
 }
 
-function readSupabaseStatus() {
-  try {
-    const out = execFileSync('supabase', ['status', '-o', 'env'], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 30_000,
-    });
-    return parseEnv(out);
-  } catch {
-    return undefined;
-  }
-}
-
-/** Fills every missing Supabase variable; explicit values always win. */
-export function fillSupabase(env = process.env, readStatus = readSupabaseStatus) {
-  const missing = Object.keys(SUPABASE_SOURCES).filter((key) => !env[key]);
-  if (missing.length === 0) return;
-  const status = readStatus();
-  if (!status?.API_URL) throw new LocalEnvError(NOT_RUNNING);
-  for (const key of missing) {
-    const raw = SUPABASE_SOURCES[key].map((source) => status[source]).find(Boolean);
-    if (!raw) throw new LocalEnvError(NOT_RUNNING);
-    env[key] = key === 'DATABASE_URL' ? raw.replace(/\/postgres$/, '/tablekeeper') : raw;
+/** Fills missing local defaults; explicit values always win. */
+export function fillLocalDefaults(env = process.env) {
+  for (const [key, value] of Object.entries(LOCAL_DEFAULTS)) {
+    if (!env[key]) env[key] = value;
   }
 }
 
@@ -95,7 +74,7 @@ export async function pickPorts(env = process.env) {
 export async function loadLocalEnv({ ports = false, exitOnError = true } = {}) {
   try {
     loadEnvFile();
-    fillSupabase();
+    fillLocalDefaults();
     return ports ? await pickPorts() : undefined;
   } catch (error) {
     if (exitOnError && error instanceof LocalEnvError) {
