@@ -56,9 +56,7 @@ export function AccountMenu() {
   }
 
   const email = auth.session.user.email ?? null;
-  const metaName: unknown = auth.session.user.user_metadata.full_name;
-  const fallbackName =
-    typeof metaName === 'string' && metaName ? metaName : (email ?? 'Your Account');
+  const fallbackName = auth.session.user.name || email || 'Your Account';
   const name = me.data?.displayName ?? fallbackName;
 
   return (

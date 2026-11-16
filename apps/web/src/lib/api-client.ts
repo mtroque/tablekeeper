@@ -27,7 +27,7 @@ export class ApiError extends Error {
 
 export type ApiClientOptions = {
   baseUrl: string;
-  /** The current Supabase access token, or null for a guest. */
+  /** The current access token, or null for a guest. */
   getToken: () => Promise<string | null>;
   fetch?: typeof fetch;
   /** Wait before the single cold-start retry. */

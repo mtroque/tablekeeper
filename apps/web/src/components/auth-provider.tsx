@@ -1,10 +1,14 @@
 'use client';
 
-import type { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { supabase } from '@/lib/supabase';
+import {
+  getAuthSession,
+  signInWithGoogle as startGoogleSignIn,
+  signOutUser,
+  type AuthSession,
+} from '@/lib/auth';
 
 /** Where to go after the OAuth round trip (sessionStorage survives the redirect). */
 export const RETURN_TO_KEY = 'tk:v1:auth-return-to';
@@ -12,11 +16,12 @@ export const RETURN_TO_KEY = 'tk:v1:auth-return-to';
 export type AuthState =
   | { status: 'loading'; session: null }
   | { status: 'guest'; session: null }
-  | { status: 'signed-in'; session: Session };
+  | { status: 'signed-in'; session: AuthSession };
 
 type AuthContextValue = AuthState & {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refresh: () => Promise<AuthSession | null>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -25,44 +30,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [state, setState] = useState<AuthState>({ status: 'loading', session: null });
 
+  const refresh = useCallback(async (): Promise<AuthSession | null> => {
+    const session = await getAuthSession();
+    setState(session ? { status: 'signed-in', session } : { status: 'guest', session: null });
+    return session;
+  }, []);
+
   useEffect(() => {
-    const client = supabase();
-    const apply = (session: Session | null) => {
-      setState(session ? { status: 'signed-in', session } : { status: 'guest', session: null });
-    };
-    void client.auth.getSession().then(({ data }) => {
-      apply(data.session);
-    });
-    const { data } = client.auth.onAuthStateChange((event, session) => {
-      apply(session);
-      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN')
-        queryClient.removeQueries({ queryKey: ['me'] });
+    let cancelled = false;
+    void getAuthSession().then((session) => {
+      if (!cancelled) {
+        setState(session ? { status: 'signed-in', session } : { status: 'guest', session: null });
+      }
     });
     return () => {
-      data.subscription.unsubscribe();
+      cancelled = true;
     };
-  }, [queryClient]);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       ...state,
+      refresh,
       signInWithGoogle: async () => {
         try {
           sessionStorage.setItem(RETURN_TO_KEY, window.location.pathname + window.location.search);
         } catch {
           // Storage can be unavailable (private mode); sign-in then returns to the library.
         }
-        const { error } = await supabase().auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: `${window.location.origin}/auth/callback` },
-        });
-        if (error) throw error;
+        await startGoogleSignIn();
       },
       signOut: async () => {
-        await supabase().auth.signOut();
+        await signOutUser();
+        setState({ status: 'guest', session: null });
+        queryClient.removeQueries({ queryKey: ['me'] });
       },
     }),
-    [state],
+    [state, refresh, queryClient],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -4,27 +4,27 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { RETURN_TO_KEY } from '@/components/auth-provider';
+import { RETURN_TO_KEY, useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { resumePendingSave } from '@/lib/session-store/use-session-store';
-import { supabase } from '@/lib/supabase';
 
 /** Only same-site paths, so the return address can't send anyone elsewhere. */
 function safeReturnTo(value: string | null): string {
   return value?.startsWith('/') && !value.startsWith('//') ? value : '/';
 }
 
-/** OAuth return. The Supabase client exchanges the code on load; then we go back where sign-in started. */
+/** OAuth return. Neon Auth exchanges the session verifier on load; then we go back where sign-in started. */
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const { refresh } = useAuth();
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     const finish = async () => {
       if (new URLSearchParams(window.location.search).has('error')) return false;
-      const { data, error } = await supabase().auth.getSession();
-      if (error || !data.session) return false;
+      const session = await refresh();
+      if (!session) return false;
       let returnTo: string | null = null;
       try {
         returnTo = sessionStorage.getItem(RETURN_TO_KEY);
@@ -44,7 +44,7 @@ export default function AuthCallbackPage() {
     void finish().then((ok) => {
       if (!ok) setFailed(true);
     });
-  }, [router]);
+  }, [router, refresh]);
 
   if (failed) {
     return (

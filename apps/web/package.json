@@ -9,7 +9,7 @@
     "typecheck": "node ../../scripts/clean.mjs apps/web/.next/dev/types && next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
+    "@neondatabase/auth": "0.7.0-beta",
     "@tablekeeper/core": "workspace:*",
     "@tablekeeper/cv": "workspace:*",
     "@tanstack/react-query": "^5.104.5",

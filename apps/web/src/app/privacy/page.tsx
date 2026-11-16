@@ -22,9 +22,9 @@ export default function PrivacyPage() {
 
       <Section title="With an Account">
         <p>
-          You sign in with Google. Tablekeeper receives your email address and name from Google and
-          stores them with the games and campaigns you save, so you can see your history on any
-          device. Other players can&apos;t see your saved games.
+          You sign in with Google through Neon Auth. Tablekeeper receives your email address and
+          name from Google and stores them with the games and campaigns you save, so you can see
+          your history on any device. Other players can&apos;t see your saved games.
         </p>
       </Section>
 
@@ -58,8 +58,7 @@ export default function PrivacyPage() {
       <Section title="Services Used">
         <ul className="flex list-disc flex-col gap-1 pl-5">
           <li>Vercel hosts the website and the server.</li>
-          <li>Neon holds the database.</li>
-          <li>Supabase handles sign-in.</li>
+          <li>Neon holds the database and handles sign-in.</li>
           <li>Google provides the sign-in.</li>
           <li>Anthropic writes rules answers.</li>
         </ul>
