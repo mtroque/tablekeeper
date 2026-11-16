@@ -37,7 +37,7 @@ afterAll(async () => {
 });
 
 describe('dorfromantik sessions and campaign', () => {
-  it('saves a scored game linked to the campaign and raises its game count', async () => {
+  it('DOR-G: saves a scored game with playedAt date linked to the campaign and raises its game count', async () => {
     const created = await request(app)
       .put('/v1/campaigns/dorfromantik')
       .set('authorization', bearer())

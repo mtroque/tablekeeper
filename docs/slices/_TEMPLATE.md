@@ -5,7 +5,7 @@
 **Goal:** <who gets what, and why it matters, in one or two sentences>
 
 ## Owns
-<Files and folders this slice may edit. Must not overlap with slices running at the same time.>
+<Repo-relative paths, folder prefixes ending in `/`, or globs in backticks (e.g. `` `apps/web/src/components/counter.tsx` ``, `` `packages/core/src/games/<gameId>/` ``), or "The `<gameId>` game folders". Checked by `pnpm check:repo`. Must not overlap with slices running at the same time.>
 
 ## Scope
 <What to build that isn't already described in ARCHITECTURE, UX or a game doc; link to those instead of restating. A stub has a "must cover" list.>

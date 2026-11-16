@@ -15,6 +15,7 @@
     "lint": "node eslint-rules/baseline.js && prettier --check .",
     "format": "prettier --write .",
     "lint:commits": "node scripts/lint-commits.mjs",
+    "check:repo": "tsx scripts/check-repo.ts",
     "test": "vitest run",
     "test:unit": "vitest run --project core --project cv --project tooling --project web",
     "test:e2e": "playwright test",
@@ -27,6 +28,7 @@
     "rules:smoke": "tsx scripts/rules-smoke.ts"
   },
   "simple-git-hooks": {
+    "pre-commit": "pnpm check:repo --staged",
     "commit-msg": "pnpm exec commitlint --edit \"$1\""
   },
   "devDependencies": {

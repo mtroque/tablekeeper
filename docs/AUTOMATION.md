@@ -30,10 +30,10 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | Shared code never branches on game id | `eslint-rules/rules.js` (`rules/no-game-id-branching`) | ✅ |
 | No disabled rule without a reason | `eslint-rules/rules.js` (`rules/require-disable-reason`) and `reportUnusedDisableDirectives` | ✅ |
 | `useEffect` only through named hooks | named hooks in `apps/web/src/lib/hooks/`, then a ban elsewhere | W6 |
-| Every game rule id has a test, and every cited id exists | `pnpm check:repo` | W3 |
-| Applied migrations are never edited | `pnpm check:repo` | W3 |
-| No secrets, `.env*`, PDFs, rulebook text or photos over 2MB | pre-commit hook and `pnpm check:repo` | W3 |
-| A slice edits only what its spec owns | `pnpm check:repo` against the spec's `## Owns` | W3 |
+| Every game rule id has a test, and every cited id exists | `pnpm check:repo` (`scripts/lib/check-repo/rule-ids.ts`) | ✅ |
+| Applied migrations are never edited | `pnpm check:repo` (`scripts/lib/check-repo/migrations.ts`) | ✅ |
+| No secrets, `.env*`, PDFs, rulebook text or photos over 2MB | pre-commit hook (`pnpm check:repo --staged`) and `pnpm check:repo` (`scripts/lib/check-repo/forbidden-files.ts`) | ✅ |
+| A slice edits only what its spec owns | `pnpm check:repo` against the spec's `## Owns` (`scripts/lib/check-repo/ownership.ts`) | ✅ |
 | API integration and e2e tests pass | CI database jobs | W7 |
 | Score invariants (breakdown sums to total, schema round trip, API agrees with UI) | fast-check property tests | W8 |
 | CV accuracy never drops below the recorded numbers | `pnpm eval:cv` gate in CI | W9 |

@@ -18,7 +18,41 @@ function unlocked(result: ReturnType<typeof addUnlocks>): DorfromantikCampaign {
 }
 
 describe('dorfromantik unlocks', () => {
-  it('DOR-U: logs each unlock with its game and adds its row', () => {
+  it.each([
+    'DOR-U-BOX1',
+    'DOR-U-BOX2',
+    'DOR-U-CASTLE',
+    'DOR-U-CIRCUS',
+    'DOR-U-CLOUDS',
+    'DOR-U-DEER',
+    'DOR-U-FARM',
+    'DOR-U-FTUNNEL',
+    'DOR-U-GTUNNEL',
+    'DOR-U-HILL',
+    'DOR-U-SHEPHERDESS',
+    'DOR-U-SIGNALMAN',
+    'DOR-U-VTUNNEL',
+    'DOR-U-WAREHOUSE',
+    'DOR-U-BALLOON',
+    'DOR-U-CONSTRUCTION',
+    'DOR-U-FLAGFEST',
+    'DOR-U-CABIN',
+    'DOR-U-GOLDHEART',
+    'DOR-U-HARBOR',
+    'DOR-U-HARVEST',
+    'DOR-U-HEARTSDESIRE',
+    'DOR-U-LOCOMOTIVE',
+    'DOR-U-ROAD',
+    'DOR-U-SHIP',
+    'DOR-U-TRAINSTATION',
+    'DOR-U-WATCHTOWER',
+  ] as const)('%s: unlocks and logs its game number', (id) => {
+    const campaign = unlocked(addUnlocks(initialCampaign(), { ids: [id], redHearts: 0 }, 2));
+    expect(campaign.unlocked).toEqual([id]);
+    expect(campaign.unlockLog).toEqual([{ id, gameNumber: 2 }]);
+  });
+
+  it('DOR-U-BOX1, DOR-U-CIRCUS: logs each unlock with its game and adds its row', () => {
     const campaign = unlocked(
       addUnlocks(initialCampaign(), { ids: ['DOR-U-BOX1', 'DOR-U-CIRCUS'], redHearts: 0 }, 3),
     );
@@ -30,7 +64,7 @@ describe('dorfromantik unlocks', () => {
     expect(visibleRows(campaign).map((row) => row.id)).toEqual(['DOR-E-CIRCUS']);
   });
 
-  it('DOR-U: an item can be unlocked only once', () => {
+  it('DOR-U-HILL: an item can be unlocked only once', () => {
     const campaign = unlocked(
       addUnlocks(initialCampaign(), { ids: ['DOR-U-HILL'], redHearts: 0 }, 1),
     );

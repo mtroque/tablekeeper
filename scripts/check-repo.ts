@@ -1,0 +1,164 @@
+// `pnpm check:repo` (and `pnpm check:repo --staged` from the pre-commit hook):
+// deterministic repository checks (docs/AUTOMATION.md → Enforcement map, W3).
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
+
+import {
+  checkForbiddenFiles,
+  checkMigrations,
+  checkOwnership,
+  checkRuleIds,
+  MIGRATIONS_DIR,
+  type ChangedFile,
+  type FileEntry,
+  type MigrationDiffEntry,
+} from './lib/check-repo';
+import { ROOT } from './lib/local-env.mjs';
+
+const git = (...args: string[]) =>
+  execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+const refExists = (ref: string | undefined): ref is string =>
+  ref !== undefined &&
+  ref !== '' &&
+  !/^0+$/.test(ref) &&
+  spawnSync('git', ['rev-parse', '--verify', '--quiet', ref], { cwd: ROOT }).status === 0;
+
+function resolveBaseRef(): string | undefined {
+  const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
+  if (refExists(process.env.COMMITLINT_FROM)) return process.env.COMMITLINT_FROM;
+  if (branch !== 'main' && refExists('origin/main')) {
+    return git('merge-base', 'origin/main', 'HEAD');
+  }
+  if (branch !== 'main' && refExists('main')) {
+    return git('merge-base', 'main', 'HEAD');
+  }
+  if (refExists('origin/main') && git('rev-parse', 'origin/main') !== git('rev-parse', 'HEAD')) {
+    return 'origin/main';
+  }
+  return undefined;
+}
+
+function listFiles(stagedOnly: boolean): FileEntry[] {
+  const raw = stagedOnly
+    ? git('diff', '--cached', '--name-only', '--diff-filter=ACMR')
+    : git('ls-files');
+  const paths = raw
+    .split(/\r?\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const entries: FileEntry[] = [];
+  for (const path of paths) {
+    const abs = join(ROOT, path);
+    if (!existsSync(abs)) continue;
+    const stat = statSync(abs);
+    if (!stat.isFile()) continue;
+    entries.push({ path, sizeBytes: stat.size });
+  }
+  return entries;
+}
+
+function loadGameDocs(): Record<string, string> {
+  const dir = join(ROOT, 'docs/games');
+  const docs: Record<string, string> = {};
+  for (const name of readdirSync(dir)) {
+    if (!name.endsWith('.md')) continue;
+    const rel = `docs/games/${name}`;
+    docs[rel] = readFileSync(join(ROOT, rel), 'utf8');
+  }
+  return docs;
+}
+
+function loadTestFiles(): Record<string, string> {
+  const files: Record<string, string> = {};
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (
+        entry.name === 'node_modules' ||
+        entry.name === '.next' ||
+        entry.name === '.vercel' ||
+        entry.name === 'dist' ||
+        entry.name === '.git'
+      ) {
+        continue;
+      }
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (/\.(?:test|spec)\.(?:ts|tsx|js)$/.test(entry.name)) {
+        const rel = relative(ROOT, full).replaceAll('\\', '/');
+        files[rel] = readFileSync(full, 'utf8');
+      }
+    }
+  };
+  walk(ROOT);
+  return files;
+}
+
+function countRemovedLines(baseRef: string, path: string): number {
+  const diff = git('diff', '-U0', `${baseRef}..HEAD`, '--', path);
+  let removed = 0;
+  for (const line of diff.split(/\r?\n/)) {
+    if (line.startsWith('-') && !line.startsWith('---')) removed += 1;
+  }
+  return removed;
+}
+
+function diffSinceBase(baseRef: string): {
+  migrationEntries: MigrationDiffEntry[];
+  changedFiles: ChangedFile[];
+  specs: Record<string, string>;
+} {
+  const raw = git('diff', '--name-status', `${baseRef}..HEAD`);
+  const migrationEntries: MigrationDiffEntry[] = [];
+  const changedFiles: ChangedFile[] = [];
+  const specs: Record<string, string> = {};
+
+  for (const line of raw.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const parts = line.split('\t');
+    const status = parts[0] ?? '';
+    const firstPath = parts[1] ?? '';
+    const lastPath = parts.at(-1) ?? firstPath;
+
+    migrationEntries.push({ status, path: firstPath });
+    if (status.startsWith('D')) continue;
+
+    changedFiles.push({
+      path: lastPath,
+      removedLines: status.startsWith('A') ? 0 : countRemovedLines(baseRef, lastPath),
+    });
+
+    if (/^docs\/slices\/[A-Z0-9]+-.*\.md$/.test(lastPath) && existsSync(join(ROOT, lastPath))) {
+      specs[lastPath] = readFileSync(join(ROOT, lastPath), 'utf8');
+    }
+  }
+
+  return { migrationEntries, changedFiles, specs };
+}
+
+const stagedOnly = process.argv.includes('--staged');
+const failures: string[] = [];
+const notes: string[] = [];
+
+failures.push(...checkForbiddenFiles(listFiles(stagedOnly)));
+
+if (!stagedOnly) {
+  failures.push(...checkRuleIds(loadGameDocs(), loadTestFiles()));
+
+  const baseRef = resolveBaseRef();
+  if (baseRef) {
+    const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
+    const { migrationEntries, changedFiles, specs } = diffSinceBase(baseRef);
+    failures.push(...checkMigrations(migrationEntries, MIGRATIONS_DIR));
+    const ownership = checkOwnership({ branch, changedFiles, specs });
+    failures.push(...ownership.failures);
+    notes.push(...ownership.notes);
+  }
+}
+
+for (const note of notes) console.log(`note ${note}`);
+if (failures.length > 0) {
+  for (const failure of failures) console.error(failure);
+  process.exit(1);
+}

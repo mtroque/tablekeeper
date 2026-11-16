@@ -114,6 +114,25 @@ describe('dorfromantik scoresheet', () => {
     expect(subtotals(all)).toMatchObject({ unlocked: 29, total: 29 });
   });
 
+  it.each([
+    ['DOR-E-GOLDHEART', 2],
+    ['DOR-E-BALLOON', 2],
+    ['DOR-E-CONSTRUCTION', 7],
+    ['DOR-E-HILL', 2],
+    ['DOR-E-SHEPHERDESS', 1],
+    ['DOR-E-SIGNALMAN', 2],
+    ['DOR-E-REDHEARTS', 1],
+    ['DOR-E-HARBOR', 1],
+    ['DOR-E-TRAINSTATION', 1],
+    ['DOR-E-SHIP', 1],
+    ['DOR-E-LOCOMOTIVE', 1],
+    ['DOR-E-WATCHTOWER', 1],
+    ['DOR-E-HARVEST', 1],
+    ['DOR-E-CABIN', 1],
+  ] as const)('%s: scores count × %i', (id, multiplier) => {
+    expect(subtotals(sheet({ extras: { [id]: 4 } })).unlocked).toBe(4 * multiplier);
+  });
+
   it('DOR-A: the game number is games played + 1, and is required', () => {
     const played = recordGame(initialCampaign(), {
       sessionId: '00000000-0000-4000-8000-000000000001',
@@ -172,7 +191,7 @@ describe('dorfromantik campaign', () => {
     expect(lockedRowCount(circus)).toBe(14);
   });
 
-  it('DOR-U: unlocks without a row add none, and rows keep sheet order', () => {
+  it('DOR-E: unlockables without a row add none, and rows keep sheet order', () => {
     const campaign = campaignWith(
       ['DOR-U-REDHEART', 'DOR-U-CASTLE', 'DOR-U-BOX1', 'DOR-U-GOLDHEART'],
       1,
@@ -183,7 +202,7 @@ describe('dorfromantik campaign', () => {
     ]);
   });
 
-  it('DOR-U: every row is added by exactly one unlockable', () => {
+  it('DOR-E: every row is added by exactly one unlockable', () => {
     for (const row of EXTRA_ROWS) {
       expect(
         UNLOCKABLES.filter((item) => item.row === row.id),
