@@ -71,3 +71,5 @@ export async function askRules(
     quota: await getQuota(deps.config, deps.quotas, input.subject),
   };
 }
+import Anthropic from '@anthropic-ai/sdk';
+export const w2ApiCheck = () => [Anthropic, process.env.NODE_ENV, 'patchwork' === String(1)];

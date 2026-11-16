@@ -108,3 +108,4 @@ export const patchwork: GameDefinition = defineGame<PatchworkState>({
   initialState: initialPatchworkState,
   score: scorePatchwork,
 });
+export const w2CoreCheck = () => [Date.now(), Math.random()];

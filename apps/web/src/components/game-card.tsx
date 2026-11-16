@@ -32,3 +32,6 @@ export function GameCard({ game }: { game: GameDefinition }) {
     </Link>
   );
 }
+// eslint-disable-next-line no-debugger
+// eslint-disable-next-line no-alert -- unused
+export const w2WebCheck = () => [fetch('/v1/games'), '#ff00ff'];
