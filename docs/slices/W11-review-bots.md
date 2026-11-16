@@ -1,27 +1,33 @@
-# W11: Review bots
+# W11: Review loop
 
-**Status:** ⬜ · **Depends on:** W4
+**Status:** ⬜ · **Depends on:** W14
 
-**Goal:** PRs get a model review where it's worth the tokens, following `docs/AUTOMATION.md` → Review policy: Claude on request through the GitHub app, and Antigravity from a local script on the Google quota.
+**Goal:** Every factory PR gets a model review, and the findings go back to the session that built it, so the fix is made with the builder's full context instead of by a fresh agent reading the diff cold.
 
 ## Owns
-- `.github/workflows/claude-review.yml`, `scripts/review-prs.sh` (or `.ts`), a shared review prompt (e.g. `.github/review-prompt.md`), `README.md`, `docs/AUTOMATION.md` → Review policy
+- `.github/workflows/review.yml`, `.agents/skills/review/SKILL.md` (the review prompt), `scripts/review/` (findings schema, posting, fix-round driver) with tests, `README.md`, `docs/AUTOMATION.md` → Review policy
 
 ## Scope (must cover)
-- **Claude:** `anthropics/claude-code-action` with `CLAUDE_CODE_OAUTH_TOKEN`, on the `review:claude` label and on PRs touching shared code, posting inline comments. Never runs on every push.
-- **Antigravity:** a script that lists open PRs without an `agy` review on their head commit, runs `agy -p --output-format json --json-schema <findings schema>` with the prompt and diff, and posts one comment per PR. Batches when it can (each call has about 10k tokens of overhead).
-- **Prompt:** the unchecked rows of the enforcement map, spec fit, and the PR's acceptance list. No restating lint. Also user-facing prose (README, notes, UI copy): no overclaiming or over-explaining, which no check can catch (`overstated-user-notes` in `docs/CORRECTIONS.md`, logged twice).
-- **Feedback loop:** findings the author accepts are logged as `review` rows in the spec's `## Corrections`, with a pattern tag, so recurring ones reach `/harden` through `docs/CORRECTIONS.md`.
+- **Trigger:** `pull_request` (opened, synchronize) on `factory/*` branches. Other PRs only with the `review` label. One review per head commit; a `concurrency` group per PR.
+- **Reviewer:** a separate headless session with the `reviewer` agent, model and effort from `.github/factory/config.json` (W14), by default a different model or effort from the builder. The prompt is `.agents/skills/review/SKILL.md`: the unchecked rows of the enforcement map, spec fit, the PR's verification list, and user-facing prose (no overclaiming or over-explaining). No restating lint.
+- **Output:** structured findings (file, line, severity, summary, failure scenario) plus the verdict W19 uses (risk, confidence, recommendation, reasons), validated with Zod. Posted as a PR review with inline comments, which is the durable record.
+- **Fix rounds:** when a finding meets the severity threshold, restore the builder's session from W14's session store and run `claude --resume <session> -p` with the findings. The builder answers each one as fixed or disputed (with a reason), pushes with the factory token, and its session is saved again; the push triggers the next review. At most `review.maxRounds` (config, default 2); after that, label `needs-human`.
+- **PRs without a session** (human PRs, sessions past retention): findings are posted only.
+- **Corrections:** accepted findings become `review` rows in the spec's `## Corrections`, so recurring ones reach `/harden`.
 
 ## Acceptance criteria
-- [ ] Labeling a PR gets a Claude review; an unlabeled game-only PR does not
-- [ ] The script reviews every open PR once per head commit, run twice in a row without duplicate comments
+- [ ] A factory PR with a planted bug gets a finding; the resumed builder session (same session id) fixes it and the next review is clean
+- [ ] A PR still failing review after `maxRounds` gets `needs-human`
+- [ ] Re-running the workflow on the same head commit posts no duplicate review
 
 ## Out of scope
+- Merging or escalating on the verdict (W19). Codex and Antigravity reviewers (later, through the same config, once their CLIs can sign in on a runner).
 
 ## Open questions
-- Which `agy` model and effort for review (try Gemini 4 at medium against Claude Opus 5.5 through `agy` on two real PRs, record)?
+- Reviewer model and effort: compare two settings on the first five factory PRs and record.
 
 ## Decisions
+
+## Corrections
 
 ## Shared change requests
