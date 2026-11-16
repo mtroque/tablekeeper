@@ -59,7 +59,7 @@ describe('checkMigrations', () => {
   it('allows newly added migrations and files outside the migrations folder', () => {
     expect(
       checkMigrations([
-        { status: 'A', path: 'supabase/migrations/20261116000000_new.sql' },
+        { status: 'A', path: 'db/migrations/20261116000000_new.sql' },
         { status: 'M', path: 'packages/core/src/index.ts' },
       ]),
     ).toEqual([]);
@@ -68,12 +68,12 @@ describe('checkMigrations', () => {
   it('fails when an existing migration is modified, deleted or renamed', () => {
     expect(
       checkMigrations([
-        { status: 'M', path: 'supabase/migrations/20261025103141_init.sql' },
-        { status: 'D', path: 'supabase/migrations/20261025200000_rules_assistant.sql' },
+        { status: 'M', path: 'db/migrations/20261025103141_init.sql' },
+        { status: 'D', path: 'db/migrations/20261025200000_rules_assistant.sql' },
       ]),
     ).toEqual([
-      'supabase/migrations/20261025103141_init.sql: applied migration was modified (M). Never edit an existing migration; create a new one with supabase migration new <name> (docs/CONVENTIONS.md → Database).',
-      'supabase/migrations/20261025200000_rules_assistant.sql: applied migration was deleted (D). Never edit an existing migration; create a new one with supabase migration new <name> (docs/CONVENTIONS.md → Database).',
+      'db/migrations/20261025103141_init.sql: applied migration was modified (M). Never edit an existing migration; create a new one under db/migrations/ (docs/CONVENTIONS.md → Database).',
+      'db/migrations/20261025200000_rules_assistant.sql: applied migration was deleted (D). Never edit an existing migration; create a new one under db/migrations/ (docs/CONVENTIONS.md → Database).',
     ]);
   });
 });

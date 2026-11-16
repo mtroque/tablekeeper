@@ -1,5 +1,5 @@
 /** Migrations directory (single constant so X3's move needs one edit). */
-export const MIGRATIONS_DIR = 'supabase/migrations';
+export const MIGRATIONS_DIR = 'db/migrations';
 
 export type MigrationDiffEntry = {
   /** Git diff status letter (`A`, `M`, `D`, `R`, `C`, etc.). */
@@ -23,7 +23,7 @@ export function checkMigrations(
     const code = status[0];
     if (code !== 'A') {
       failures.push(
-        `${path}: applied migration was ${code === 'D' ? 'deleted' : 'modified'} (${status}). Never edit an existing migration; create a new one with supabase migration new <name> (docs/CONVENTIONS.md → Database).`,
+        `${path}: applied migration was ${code === 'D' ? 'deleted' : 'modified'} (${status}). Never edit an existing migration; create a new one under ${migrationsDir}/ (docs/CONVENTIONS.md → Database).`,
       );
     }
   }

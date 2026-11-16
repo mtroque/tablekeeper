@@ -6,3 +6,11 @@ export const TEST_USERS: {
   harmonies: string;
   dorfromantik: string;
 };
+export type TestUserDetail = { id: string; email: string; name: string };
+export const TEST_USER_DETAILS: {
+  default: TestUserDetail;
+  patchwork: TestUserDetail;
+  azul: TestUserDetail;
+  harmonies: TestUserDetail;
+  dorfromantik: TestUserDetail;
+};

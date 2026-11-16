@@ -3,6 +3,5 @@ docs/
 data/
 supabase/
 *.md
-apps/api/src/db/database.types.ts
 apps/web/next-env.d.ts
 .claude/
