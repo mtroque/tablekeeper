@@ -1,6 +1,6 @@
 # W18: Factory plan
 
-**Status:** 🟨 · **Depends on:** none
+**Status:** ✅ · **Depends on:** none
 
 **Goal:** Replan the factory slices around what the owner wants and what a test showed works: a Claude Code runner on GitHub Actions every 5 hours, a queue of GitHub issues ordered in a Project, a review on every factory PR whose findings go back to the session that built it, and merge authority that starts in shadow mode and widens by config.
 
@@ -24,9 +24,9 @@
 - Known GitHub behavior, not tested here: a PR opened with the workflow's `GITHUB_TOKEN` doesn't trigger other workflows, so the factory opens PRs with a GitHub App or fine-grained token. Artifacts on a public repo can be downloaded by signed-in users, so session files are encrypted before upload.
 
 ## Acceptance criteria
-- [ ] W14, W11 and W19 specs describe the runner, the review loop and merge authority as above, with dependencies that form no cycle
-- [ ] `docs/AUTOMATION.md` matches them, and W16 stores traces only encrypted
-- [ ] The roadmap changes `/merge` must make are listed under Decisions
+- [x] W14, W11 and W19 specs describe the runner, the review loop and merge authority as above, with dependencies that form no cycle
+- [x] `docs/AUTOMATION.md` matches them, and W16 stores traces only encrypted
+- [x] The roadmap changes `/merge` must make are listed under Decisions
 
 ## Out of scope
 - Building any of it. Codex and Antigravity runners (later, behind the same config).
