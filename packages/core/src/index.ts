@@ -19,3 +19,4 @@ export * from './games/patchwork';
 export * from './games/harmonies';
 export * from './games/azul';
 export * from './games/dorfromantik';
+export const w1Clean = 1;
