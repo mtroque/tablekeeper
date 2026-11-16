@@ -41,7 +41,7 @@ Work is built in **slices**: one feature end to end (database, core logic, API, 
 5. **Commit** small Conventional Commits as you go.
 6. **Finish** by meeting the definition of done below.
 
-**Log corrections; repeats become checks.** When you're corrected, or find a rule broken, fix it and log it in your spec's `## Corrections` (`/merge` moves it to `docs/CORRECTIONS.md`). Turn it into a check only when its pattern has been logged before, or when it's high-stakes, and then propose it first (`docs/CORRECTIONS.md` → When a pattern becomes a check).
+**Log corrections; repeats become checks.** When you're corrected, or find a rule broken, fix it and log it in your spec's `## Corrections` (`/merge` moves it to `docs/CORRECTIONS.md`). Promote a repeated pattern (or a proposed high-stakes one) to a check with `/harden` (`docs/CORRECTIONS.md` → When a pattern becomes a check).
 
 **Stop and ask** (after finishing whatever else you can, with the spec set to ⏸ and the reason written in it) only when a rule the slice needs is marked ⚠️ or VERIFY in `docs/games/`, required assets are missing (`docs/DATA_ASSETS.md`), or a needed shared change blocks all remaining work. Never guess game rules.
 
