@@ -57,7 +57,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 - **Always:** CI. It is free and catches most problems.
 - **Claude, on request:** the Claude GitHub app via `claude-code-action`, running on the subscription token, triggered by the `review:claude` label or by changes to shared code (anything a game slice doesn't own). Every run costs Pro usage.
 - **Antigravity, locally:** a script runs `agy -p` over open PRs and posts the findings as a comment, on the Google quota (W11).
-- **What reviewers check:** only what no check covers. The review prompt lists the unchecked rows of the enforcement map plus spec fit; it does not restate lint.
+- **What reviewers check:** only what no check covers. The review prompt lists the unchecked rows of the enforcement map plus spec fit and user-facing notes (`README.md` notes stay concise, self-contained, and free of contradictions or overstated claims); it does not restate lint.
 
 ## Auto-merge policy (target)
 
