@@ -29,7 +29,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-[398px] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-sheet border border-line bg-surface p-5 shadow-[0_8px_24px_rgb(0_0_0/0.14)] duration-150 ease-calm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+          'fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-[398px] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-sheet border border-line bg-surface p-5 shadow-float duration-150 ease-calm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
           className,
         )}
         {...props}

@@ -12,7 +12,7 @@
     "build": "pnpm -r build",
     "clean": "node scripts/clean.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r typecheck",
-    "lint": "eslint . && prettier --check .",
+    "lint": "node eslint-rules/baseline.js && prettier --check .",
     "format": "prettier --write .",
     "lint:commits": "node scripts/lint-commits.mjs",
     "test": "vitest run",

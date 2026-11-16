@@ -1,4 +1,4 @@
-import type { GameId, Session, SessionInput } from '@tablekeeper/core';
+import { enableExampleGame, type GameId, type Session, type SessionInput } from '@tablekeeper/core';
 import { describe, expect, it } from 'vitest';
 
 import { detectionMeta } from './detection-meta';
@@ -6,6 +6,8 @@ import { clearFlow, readFlow, writeFlow, type FlowState } from './flow-state';
 import { LocalStore, type KeyValue } from './local-store';
 import { resumePendingSaveWith, setPendingSave } from './pending-save';
 import type { SessionStore } from './session-store';
+
+enableExampleGame(true);
 
 function memory(): KeyValue & { data: Map<string, string> } {
   const data = new Map<string, string>();

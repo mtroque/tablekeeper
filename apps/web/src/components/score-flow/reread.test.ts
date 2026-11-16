@@ -1,4 +1,4 @@
-import type { Draft, ImageInput, Quad } from '@tablekeeper/core';
+import { enableExampleGame, type Draft, type ImageInput, type Quad } from '@tablekeeper/core';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { CvError, DetectBoardOptions } from '@/lib/cv-client';
@@ -7,6 +7,7 @@ import type { FlowState } from '@/lib/session-store/flow-state';
 import { rereadFlow } from './reread';
 import { manualFlow, requireGame } from './use-flow';
 
+enableExampleGame(true);
 const game = requireGame('_example');
 const PIXELS: ImageInput = { data: new Uint8ClampedArray(16), width: 2, height: 2 };
 const CORNERS: Quad = [

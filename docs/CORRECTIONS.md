@@ -20,5 +20,5 @@ Every time an agent is corrected (by you, by a review, or by noticing a broken r
 
 | Date | Pattern | Where | What was wrong | Correction | Source | Status |
 |---|---|---|---|---|---|---|
-| 2026-11-15 | `env-outside-config` | main | `process.env` read in `packages/core/src/games/_example/index.ts`, `apps/web/src/games/detectors.ts`, `apps/web/src/app/dev/cv/page.tsx` despite "only config reads env" | Planned as a lint rule | self | promoted: W2 |
-| 2026-11-15 | `disable-without-reason` | main | `eslint-disable-next-line` without a reason in `apps/web/src/components/corner-editor.tsx` | Planned as a lint rule | self | promoted: W2 |
+| 2026-11-15 | `env-outside-config` | main | `process.env` read in `packages/core/src/games/_example/index.ts`, `apps/web/src/games/detectors.ts`, `apps/web/src/app/dev/cv/page.tsx` despite "only config reads env" | Fixed and enforced by `rules/no-env-outside-config` | self | promoted: `rules/no-env-outside-config` (W2) |
+| 2026-11-15 | `disable-without-reason` | main | `eslint-disable-next-line` without a reason in `apps/web/src/components/corner-editor.tsx` | Fixed and enforced by `rules/require-disable-reason` | self | promoted: `rules/require-disable-reason` (W2) |

@@ -30,22 +30,15 @@ export function exampleCellKey(index: number): string {
   return squareKey(Math.floor(index / 3), index % 3);
 }
 
-// Core has no Node types; this is the one place it reads the environment.
-declare const process: { env: Record<string, string | undefined> };
+let enabled = false;
 
-/**
- * Only in tests or with `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=true`. Each variable is read by its
- * full name so Next.js inlines it in browser bundles.
- */
+/** Enables or disables the `_example` test game in the core registry (D-040). */
+export function enableExampleGame(value = true): void {
+  enabled = value;
+}
+
 export function isExampleGameEnabled(): boolean {
-  try {
-    return (
-      process.env.NODE_ENV === 'test' || process.env.NEXT_PUBLIC_ENABLE_EXAMPLE_GAME === 'true'
-    );
-  } catch {
-    // No `process` at all (a bare worker): not enabled.
-    return false;
-  }
+  return enabled;
 }
 
 export const exampleGame: GameDefinition = defineGame<ExampleState>({

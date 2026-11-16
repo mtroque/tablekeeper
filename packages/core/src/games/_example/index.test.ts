@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { parseState } from '../../kit/state';
 import { GAMES, getGame, isGameId } from '../registry';
 
-import { exampleGame, isExampleGameEnabled, scoreExample } from '.';
+import { enableExampleGame, exampleGame, isExampleGameEnabled, scoreExample } from '.';
 
 describe('example game', () => {
   it('scores one point per covered cell and highlights them', () => {
@@ -22,7 +22,11 @@ describe('example game', () => {
     expect(parseState(exampleGame, { cells: [true] }, 1).ok).toBe(false);
   });
 
-  it('is enabled under test and found by the registry, but not listed in the library', () => {
+  it('is found by the registry when enabled, and not listed in the library', () => {
+    enableExampleGame(false);
+    expect(isExampleGameEnabled()).toBe(false);
+    expect(getGame('_example')).toBeUndefined();
+    enableExampleGame(true);
     expect(isExampleGameEnabled()).toBe(true);
     expect(getGame('_example')).toBe(exampleGame);
     expect(isGameId('_example')).toBe(true);

@@ -3,6 +3,7 @@ import { Atkinson_Hyperlegible, Fraunces } from 'next/font/google';
 
 import { AppShell } from '@/components/app-shell';
 import { Providers } from '@/components/providers';
+import { THEME_COLORS } from '@/lib/tokens';
 
 import './globals.css';
 
@@ -23,8 +24,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f6f1e9' },
-    { media: '(prefers-color-scheme: dark)', color: '#171311' },
+    { media: '(prefers-color-scheme: light)', color: THEME_COLORS.light },
+    { media: '(prefers-color-scheme: dark)', color: THEME_COLORS.dark },
   ],
 };
 

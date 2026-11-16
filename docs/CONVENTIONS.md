@@ -6,7 +6,7 @@ Code style and patterns. The hard rules in `AGENTS.md` and the boundaries in `do
 
 - pnpm workspaces; packages `@tablekeeper/{web,api,core,cv}`; Node LTS pinned in `.nvmrc` and `engines`.
 - TypeScript: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, shared `tsconfig.base.json`.
-- ESLint (typescript-eslint, react-hooks, import order, restricted paths) + Prettier. No disabled rule without a comment.
+- ESLint + Prettier (`eslint.config.js`, `eslint-rules/`; see `docs/AUTOMATION.md` → Enforcement map).
 - Vitest everywhere, Supertest for the API, Playwright end to end.
 
 ## Naming
@@ -36,14 +36,14 @@ Barrel `index.ts` files only at package roots and game-module roots.
 - Per resource: `routes/` (router + `validate({ params, query, body })`) → `services/` (logic) → `db/` (queries). Handlers stay thin.
 - Throw `AppError(code, status, message, details?)`; one error middleware formats it. Unknown errors become `INTERNAL` with the request id and are logged.
 - Log with `pino` and the request id; never log tokens, photos or rulebook text.
-- Only `config.ts` reads `process.env`.
+- Only `config.ts` (and `lib/env.ts` in web) reads `process.env` (lint).
 
 ## Web (Next.js App Router)
 
 - Server components for static shells; interactive screens are client components.
-- Server data through TanStack Query and `lib/api-client.ts` (query keys like `['sessions', gameId]`); no `fetch` in components.
-- Tailwind with the tokens from `docs/UX.md`; no hex colors outside the token file and game modules. shadcn components in `components/ui` are restyled per `docs/UX.md` → Look and voice.
-- **Copy lint:** a local ESLint rule (`eslint-rules/ui-copy.js`) checks string literals and JSX text in every package's `src` (tests excluded) and fails on em or en dashes, emoji, and the banned phrases in `docs/UX.md` → Words. User-facing strings include scorer labels and notes in `packages/core` and API error messages.
+- Server data through TanStack Query and `lib/api-client.ts` (query keys like `['sessions', gameId]`); no `fetch` in components (lint).
+- Tailwind with the tokens from `docs/UX.md`; no raw color literals outside the token files and game modules (lint). shadcn components in `components/ui` are restyled per `docs/UX.md` → Look and voice.
+- **Copy lint:** `eslint-rules/ui-copy.js` checks string literals and JSX text in `src` (tests excluded) for em/en dashes, emoji, and the banned phrases in `docs/UX.md` → Words.
 
 ## Database
 

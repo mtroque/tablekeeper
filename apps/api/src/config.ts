@@ -1,3 +1,4 @@
+import { enableExampleGame } from '@tablekeeper/core';
 import { z } from 'zod';
 
 const emptyAsUndefined = (value: unknown) => (value === '' ? undefined : value);
@@ -82,6 +83,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (e.NODE_ENV === 'production' && e.IP_HASH_SALT === 'change-me') {
     throw new Error('Invalid API environment:\n  IP_HASH_SALT: set a real salt in production');
   }
+  enableExampleGame(e.NODE_ENV === 'test' || env.NEXT_PUBLIC_ENABLE_EXAMPLE_GAME === 'true');
   return {
     env: e.NODE_ENV,
     port: e.PORT ?? e.API_PORT ?? 4000,

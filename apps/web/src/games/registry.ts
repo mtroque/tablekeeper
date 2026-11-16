@@ -1,5 +1,7 @@
 import type { GameId } from '@tablekeeper/core';
-import { exampleGame, isExampleGameEnabled } from '@tablekeeper/core';
+import { enableExampleGame, exampleGame } from '@tablekeeper/core';
+
+import { isExampleGameEnabled } from '@/lib/env';
 
 import { exampleUi } from './_example';
 import { azulUi } from './azul';
@@ -18,4 +20,7 @@ export const GAME_UI: Record<GameId, GameUiModule> = {
 
 // The S1 test game, only when enabled. It isn't a GameId (kit/types.ts is frozen), so it's
 // added through a widened view of the record.
-if (isExampleGameEnabled()) (GAME_UI as Record<string, GameUiModule>)[exampleGame.id] = exampleUi;
+if (isExampleGameEnabled()) {
+  enableExampleGame(true);
+  (GAME_UI as Record<string, GameUiModule>)[exampleGame.id] = exampleUi;
+}

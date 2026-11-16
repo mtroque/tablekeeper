@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import {
   cvStats,
   detectWith,
-  imageInputFromBlob,
+  imageInputFromUrl,
   type CvError,
   type CvStats,
 } from '@/lib/cv-client';
@@ -40,7 +40,7 @@ export function CvHarness() {
 
   async function read() {
     setStatus({ kind: 'reading' });
-    const image = await imageInputFromBlob(await (await fetch(SAMPLE)).blob());
+    const image = await imageInputFromUrl(SAMPLE);
     // How long the main thread went without running a 16ms timer while the worker read.
     let last = performance.now();
     let longestPause = 0;

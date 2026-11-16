@@ -206,3 +206,8 @@ export async function imageInputFromBlob(blob: Blob): Promise<ImageInput> {
   const { data, width, height } = context.getImageData(0, 0, canvas.width, canvas.height);
   return { data, width, height };
 }
+
+/** Fetches a local image asset and decodes it into pixels. */
+export async function imageInputFromUrl(url: string): Promise<ImageInput> {
+  return imageInputFromBlob(await (await fetch(url)).blob());
+}

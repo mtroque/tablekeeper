@@ -2,6 +2,8 @@
 // game's detector.ts, never a UI module, so the worker stays free of React and the DOM.
 import { isGameId, type Detector, type GameId } from '@tablekeeper/core';
 
+import { isExampleGameEnabled } from '@/lib/env';
+
 import { loadDetector as example } from './_example/detector';
 import { loadDetector as azul } from './azul/detector';
 import { loadDetector as dorfromantik } from './dorfromantik/detector';
@@ -19,15 +21,9 @@ const DETECTORS: Record<GameId, DetectorLoader | undefined> = {
   dorfromantik,
 };
 
-function exampleEnabled(): boolean {
-  return (
-    process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_ENABLE_EXAMPLE_GAME === 'true'
-  );
-}
-
 /** A game's loader, or the S1 example game's outside production; `undefined` when there's none. */
 export function findDetector(id: string): DetectorLoader | undefined {
   // Before isGameId, which also accepts the example game's id when it's enabled (D-040).
-  if (id === '_example') return exampleEnabled() ? example : undefined;
+  if (id === '_example') return isExampleGameEnabled() ? example : undefined;
   return isGameId(id) ? DETECTORS[id] : undefined;
 }

@@ -23,3 +23,10 @@ export function publicEnv(): PublicEnv {
   });
   return cached;
 }
+
+/** True outside production builds or when `NEXT_PUBLIC_ENABLE_EXAMPLE_GAME=true` (D-040). */
+export function isExampleGameEnabled(): boolean {
+  return (
+    process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_ENABLE_EXAMPLE_GAME === 'true'
+  );
+}

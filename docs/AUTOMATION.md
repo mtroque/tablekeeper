@@ -22,13 +22,13 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | Conventional Commits | commit-msg hook, `pnpm lint:commits` | ✅ |
 | CV worker never reaches UI code | `cv-worker-imports.test.ts` (D-060) | ✅ |
 | Every check runs before anything reaches `main` | `.github/workflows/ci.yml` (W1 ✅), required checks on `main` (W4) | W4 |
-| Only config reads `process.env` | lint rule (3 existing violations) | W2 |
-| Every LLM call goes through the gateway | restricted imports of the SDK outside `apps/api/src/llm/` | W2 |
-| Scorers are pure | restricted globals (`Date`, `Math.random`, `fetch`, `process`, `console`) in `packages/core/src/games/` | W2 |
-| No `fetch` in components | restricted global outside `lib/api-client.ts` | W2 |
-| No hex colors outside the token file and game modules | local lint rule | W2 |
-| Shared code never branches on game id | local lint rule | W2 |
-| No disabled rule without a reason | require a description on every disable directive | W2 |
+| Only config reads `process.env` | `eslint-rules/rules.js` (`rules/no-env-outside-config`) | ✅ |
+| Every LLM call goes through the gateway | `eslint.config.js` (`@typescript-eslint/no-restricted-imports` for `@anthropic-ai/sdk` outside `apps/api/src/llm/`) | ✅ |
+| Scorers are pure | `eslint.config.js` (`no-restricted-globals` and `no-restricted-properties` in `packages/core/src/games/`) | ✅ |
+| No `fetch` in components | `eslint.config.js` (`no-restricted-globals` and `no-restricted-properties` in `apps/web/src/{components,app,games}/`) | ✅ |
+| No hex colors outside the token file and game modules | `eslint-rules/rules.js` (`rules/no-raw-colors`) | ✅ |
+| Shared code never branches on game id | `eslint-rules/rules.js` (`rules/no-game-id-branching`) | ✅ |
+| No disabled rule without a reason | `eslint-rules/rules.js` (`rules/require-disable-reason`) and `reportUnusedDisableDirectives` | ✅ |
 | `useEffect` only through named hooks | named hooks in `apps/web/src/lib/hooks/`, then a ban elsewhere | W6 |
 | Every game rule id has a test, and every cited id exists | `pnpm check:repo` | W3 |
 | Applied migrations are never edited | `pnpm check:repo` | W3 |

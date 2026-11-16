@@ -60,8 +60,7 @@ export function CornerEditor({
       className="relative w-full touch-none select-none"
       style={{ aspectRatio: `${size.width} / ${size.height}` }}
     >
-      {/* A user photo as an object URL: next/image can't optimize it. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- user photo as a data URL, next/image can't optimize it */}
       <img
         src={src}
         alt="Your board photo"
