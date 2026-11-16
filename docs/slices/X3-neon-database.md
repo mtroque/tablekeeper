@@ -1,6 +1,6 @@
 # X3: Database on Neon
 
-**Status:** 🟨 · **Depends on:** X2
+**Status:** ✅ · **Depends on:** X2
 
 **Goal:** Move Postgres from Supabase to Neon (Vercel Marketplace), with the API using a plain SQL driver instead of supabase-js and PostgREST, so the database sits next to the Vercel-hosted API and one fewer platform is needed. Sign-in stays on Supabase Auth until X4.
 
@@ -31,7 +31,7 @@ None new. `/privacy` updates its "Services Used" list and "Last updated" date to
 - [x] `pnpm db:reset` builds the local database from migrations and seed (ran it: 5 migrations applied, profiles seeded, local rulebooks loaded); the worktree guard in `scripts/db.mjs` runs before any command, unchanged
 - [x] Every existing API integration test passes against the new layer (`pnpm test`: 61 files, 518 passed, 1 skipped), and `rls.test.ts` shows cross-user reads and writes fail at the database (`app_user` with another `app.user_id` sees nothing, insert as someone else is `42501`, shared tables are `42501`) and in the API (404 on another user's session and campaign)
 - [x] A signed-in user's first request creates their profile; saving a play and a campaign works end to end (`tests/e2e/X3.spec.ts`; full `pnpm test:e2e`: 37 passed)
-- [ ] Production API on Vercel talks to Neon. Done on 16 November 2026: Neon `tablekeeper-db` (`sin1`, free) connected to `tablekeeper-api`, migrations applied, all four rulebooks loaded (9, 13, 17, 10 sections), API deployed. `/health` 1240ms cold, 508ms warm; guest Azul question 200 in 10.4s with 1 citation; a pooled `createUserDb` check on Neon created a profile and another user read null. **Left:** a signed-in save through the live site (sign in with Google, save a score, see it in history); the smoke script couldn't sign in because `SUPABASE_URL` and the keys are Sensitive on Vercel and pull as empty
+- [x] Production API on Vercel talks to Neon. Done on 16 November 2026: Neon `tablekeeper-db` (`sin1`, free) connected to `tablekeeper-api`, migrations applied, all four rulebooks loaded (9, 13, 17, 10 sections), API deployed. `/health` 1240ms cold, 508ms warm; guest Azul question 200 in 10.4s with 1 citation; a pooled `createUserDb` check on Neon created a profile and another user read null; owner verified a signed-in save on the live site
 - [x] Docs and the privacy page name Neon instead of Supabase for the database (`docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md`, `docs/PRODUCT.md`, `README.md`, `.env.example`, `/privacy` dated 16 November 2026)
 
 ## Tests
