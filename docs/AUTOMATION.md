@@ -32,6 +32,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | `useEffect` only through named hooks | named hooks in `apps/web/src/lib/hooks/`, then a ban elsewhere | W6 |
 | Every game rule id has a test, and every cited id exists | `pnpm check:repo` (`scripts/lib/check-repo/rule-ids.ts`) | ✅ |
 | Applied migrations are never edited | `pnpm check:repo` (`scripts/lib/check-repo/migrations.ts`) | ✅ |
+| Shared docs: a slice edits only its roadmap row and appends to decisions and corrections; decision ids unique and increasing | `pnpm check:repo` (`scripts/lib/check-repo/ownership.ts`, `decisions.ts`) | ✅ |
 | No secrets, `.env*`, PDFs, rulebook text or photos over 2MB | pre-commit hook (`pnpm check:repo --staged`) and `pnpm check:repo` (`scripts/lib/check-repo/forbidden-files.ts`) | ✅ |
 | Agent scratch files stay in `.scratch/<session or slice>/` | `.gitignore`, and `pnpm check:repo` rejects `zz-*` e2e specs and `scripts/_*`, `scripts/.*` (`scripts/lib/check-repo/forbidden-files.ts`) | ✅ |
 | A slice edits only what its spec owns | `pnpm check:repo` against the spec's `## Owns` (`scripts/lib/check-repo/ownership.ts`) | ✅ |
@@ -49,7 +50,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 3. **PR.** The agent pushes and opens a PR whose body links the spec and lists how each acceptance criterion was verified (W4).
 4. **Checks.** CI runs every deterministic check; `main` requires them (`Checks` status check, PR required, linear history, rebase-only merge, `enforce_admins: true` so local sessions sharing the owner's GitHub credentials cannot push to `main` or merge a failing PR; emergency owner bypass is `gh api -X DELETE repos/mtroque/tablekeeper/branches/main/protection/enforce_admins` and `-X POST` to restore).
 5. **Review.** By policy below (W11). Findings on a factory PR go back to the session that built it (`claude --resume`), which fixes them with its full context. Accepted review findings are logged in `docs/CORRECTIONS.md`; patterns that recur become checks (principle 2).
-6. **Merge.** `/merge` rebases, adds the shared-doc commit (`docs/ROADMAP.md` status, `docs/DECISIONS.md`), waits for CI and rebase-merges, one PR at a time (W4). For factory PRs, the merge-authority policy decides merge or escalate (W19).
+6. **Merge.** The PR already carries its shared-doc updates (its finish commit sets the roadmap row, appends decisions and corrections, and removes the spec), so merging is a rebase merge in GitHub by the owner. A PR behind `main` rebases first; `pnpm check:repo` catches clashing decision ids. For factory PRs, the merge-authority policy decides merge or escalate (W19).
 7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them. Session transcripts are graded for silent failures (W16), and findings become `trace` rows in `docs/CORRECTIONS.md`.
 
 ## Review policy
@@ -76,7 +77,7 @@ Set per area in `.github/factory/merge-policy.json` (W19): each path group (docs
 - `agy -p` costs about 10k input tokens per call before any work; batch PRs into one call where possible.
 - The Anthropic API key in production pays for the app's rules assistant only; workflow automation never uses it.
 
-**Commands** (`/build`, `/merge`, `/parallel`, `/plan`, `/status` and any new ones) are Agent Skills with one copy each, at `.agents/skills/<name>/SKILL.md`. Antigravity reads that folder directly; `.claude/skills` is a symlink to it, so Claude Code reads the same files. To add one, create the folder there, never under `.claude/`. Keep them tool-neutral: frontmatter `name` and `description` (plus Claude's optional `argument-hint` and `disable-model-invocation: true`, which Antigravity ignores), and refer to "the ids given with this command" rather than `$ARGUMENTS`, which only Claude Code substitutes. `/parallel` and `scripts/worktrees.sh launch` still start Claude Code sessions.
+**Commands** (`/build`, `/harden`, `/parallel`, `/plan`, `/status` and any new ones) are Agent Skills with one copy each, at `.agents/skills/<name>/SKILL.md`. Antigravity reads that folder directly; `.claude/skills` is a symlink to it, so Claude Code reads the same files. To add one, create the folder there, never under `.claude/`. Keep them tool-neutral: frontmatter `name` and `description` (plus Claude's optional `argument-hint` and `disable-model-invocation: true`, which Antigravity ignores), and refer to "the ids given with this command" rather than `$ARGUMENTS`, which only Claude Code substitutes. `/parallel` and `scripts/worktrees.sh launch` still start Claude Code sessions.
 
 ## Accounts and setup
 

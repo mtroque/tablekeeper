@@ -4,7 +4,7 @@ Every time an agent is corrected (by you, by a review, or by noticing a broken r
 
 ## How to log
 
-- **On `main`:** append a row below. **On any other branch:** add the row under `## Corrections` in your slice spec; `/merge` moves it here. Don't edit this file on a branch.
+- **While building a slice:** add the row under `## Corrections` in your slice spec; your finish commit appends it here (AGENTS.md → Parallel sessions → Shared docs). **Outside a slice:** append it here directly, on your branch. Only append; changing an existing row's status is for a slice that owns this file, such as `/harden`.
 - **Pattern** is a short kebab-case tag naming the kind of mistake, not the instance (`env-outside-config`, not `detectors-ts-reads-env`). Reuse an existing tag when it fits; search this file first.
 - **Source:** `user`, `review` (PR or bot review), `self` (the agent found it), or `trace` (found by grading session transcripts afterwards, including failures nobody corrected at the time).
 - Log the correction even when it's fixed on the spot. Log what was wrong, not who.

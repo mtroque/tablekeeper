@@ -11,6 +11,7 @@
 - `docs/slices/W16-session-grading.md` (Privacy line)
 - `docs/AUTOMATION.md` (Target flow, Review policy, Auto-merge policy, Agents and budget, Accounts and setup)
 - The other W stubs, expanded into full specs: `docs/slices/W6-effect-hooks.md`, `docs/slices/W7-ci-database.md`, `docs/slices/W8-property-tests.md`, `docs/slices/W9-cv-accuracy-gate.md`, `docs/slices/W10-screen-map.md`, `docs/slices/W12-groomer-metrics.md`, `docs/slices/W13-qa-explorer.md`, `docs/slices/W15-local-screenshots.md`
+- Dropping `/merge` (asked for during the cleanup): `AGENTS.md` (Workflow, Definition of done, Parallel sessions → Shared docs), `docs/CONVENTIONS.md` → Git, `docs/slices/_TEMPLATE.md`, `.agents/skills/` (`build`, `parallel`, `status`, and `merge` removed), `commitlint.config.js` (comment), `scripts/check-repo.ts`, `scripts/lib/check-repo/` (shared docs, deleted specs, decision ids) with tests, `docs/slices/W19-merge-authority.md`
 - Docs cleanup the owner asked for: `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/CORRECTIONS.md`, and the finished specs folded and removed (`docs/slices/W1-ci-checks.md`, `docs/slices/W2-prose-to-lint.md`, `docs/slices/W3-repo-checks.md`, `docs/slices/W4-pr-workflow.md`, `docs/slices/W5-harden-command.md`, `docs/slices/W17-trace-followups.md`, `docs/slices/P3-patchwork-token-detection.md`, `docs/slices/X2-api-on-vercel.md`, `docs/slices/X3-neon-database.md`, `docs/slices/X4-neon-auth.md`)
 
 ## Scope

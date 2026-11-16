@@ -1,6 +1,6 @@
 # Tablekeeper: Roadmap
 
-Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This table changes only on `main`; live status is in each spec (`/status` shows it across worktrees). A finished slice's spec is removed once it's merged and its lasting facts are in their home docs; git history keeps it.
+Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each slice sets its own row to ✅ in its finish commit, on its branch, so this table changes on `main` when its PR merges; live status before then is in the spec (`/status` shows it across worktrees). The same commit moves the spec's lasting facts to their home docs and removes it; git history keeps it.
 
 ## Slices
 
@@ -33,7 +33,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | W1 | CI checks: typecheck, lint, commits, unit tests and build on every push and PR | - | ✅ |
 | W2 | Prose rules become lint rules, with a baseline that only shrinks | W1 | ✅ |
 | W3 | Repo checks: rule ids have tests, migrations immutable, forbidden files, spec ownership | W1 | ✅ |
-| W4 | PR workflow: protected `main`, `/build` opens PRs, `/merge` merges them | W1, W3 | ✅ |
+| W4 | PR workflow: protected `main`, `/build` opens PRs, merged in GitHub | W1, W3 | ✅ |
 | W5 | `/harden`: turn a correction into a check | W2 | ✅ |
 | W6 | Effects only through named hooks; raw `useEffect` banned | W2 | ⬜ |
 | W7 | CI database jobs: API integration and e2e tests in CI | W1, X3 | ⬜ |
