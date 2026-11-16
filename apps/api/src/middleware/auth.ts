@@ -27,8 +27,9 @@ function displayNameFor(payload: JWTPayload, email: string | null): string {
  * A missing token means a guest; an invalid or expired one is a 401.
  */
 export function optionalAuth(clients: Clients): RequestHandler {
-  const issuer = clients.auth.baseUrl.replace(/\/$/, '');
-  const jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
+  const baseUrl = clients.auth.baseUrl.replace(/\/$/, '');
+  const issuer = new URL(baseUrl).origin;
+  const jwks = createRemoteJWKSet(new URL(`${baseUrl}/.well-known/jwks.json`));
   const testKey = clients.auth.testSecret
     ? new TextEncoder().encode(clients.auth.testSecret)
     : undefined;

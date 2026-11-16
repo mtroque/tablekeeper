@@ -27,7 +27,7 @@ export async function signTestSession(user: E2eUser): Promise<string> {
   const token = await new SignJWT({ email: user.email, name: user.name })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(user.id)
-    .setIssuer(issuer)
+    .setIssuer(new URL(issuer).origin)
     .setIssuedAt()
     .setExpirationTime('1h')
     .sign(new TextEncoder().encode(secret));

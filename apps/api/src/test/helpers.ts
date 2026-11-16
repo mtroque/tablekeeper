@@ -36,7 +36,7 @@ export async function signTestToken(
   return new SignJWT({ email: user.email, name: user.name })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(user.id)
-    .setIssuer(opts.issuer ?? config.auth.baseUrl)
+    .setIssuer(opts.issuer ?? new URL(config.auth.baseUrl).origin)
     .setIssuedAt()
     .setExpirationTime(opts.expiresIn ?? '1h')
     .sign(new TextEncoder().encode(secret));
