@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { Db } from './client';
+import type { LlmUsageRow } from './types';
 
 export type SubjectType = 'user' | 'ip';
 export type Subject = { type: SubjectType; key: string };
@@ -21,15 +22,16 @@ export async function consumeRequest(
   subject: Subject,
   limits: { subject: number; globalRequests: number; globalTokens: number },
 ): Promise<ConsumeResult> {
-  const { data, error } = await db.rpc('llm_consume_request', {
-    p_subject_type: subject.type,
-    p_subject_key: subject.key,
-    p_subject_limit: limits.subject,
-    p_global_requests: limits.globalRequests,
-    p_global_tokens: limits.globalTokens,
-  });
-  if (error) throw error;
-  return ConsumeResultSchema.parse(data);
+  const [row] = await db<{ result: string | null }>`
+    select public.llm_consume_request(
+      ${subject.type},
+      ${subject.key},
+      ${limits.subject},
+      ${limits.globalRequests},
+      ${limits.globalTokens}
+    ) as result
+  `;
+  return ConsumeResultSchema.parse(row?.result ?? null);
 }
 
 export async function recordTokens(
@@ -37,24 +39,24 @@ export async function recordTokens(
   subject: Subject,
   usage: { inputTokens: number; outputTokens: number },
 ): Promise<void> {
-  const { error } = await db.rpc('llm_record_tokens', {
-    p_subject_type: subject.type,
-    p_subject_key: subject.key,
-    p_input: usage.inputTokens,
-    p_output: usage.outputTokens,
-  });
-  if (error) throw error;
+  await db`
+    select public.llm_record_tokens(
+      ${subject.type},
+      ${subject.key},
+      ${usage.inputTokens},
+      ${usage.outputTokens}
+    )
+  `;
 }
 
 /** Requests counted today for a subject. */
 export async function requestsToday(db: Db, subject: Subject): Promise<number> {
-  const { data, error } = await db
-    .from('llm_usage')
-    .select('requests')
-    .eq('subject_type', subject.type)
-    .eq('subject_key', subject.key)
-    .eq('day', utcDay())
-    .maybeSingle();
-  if (error) throw error;
-  return data?.requests ?? 0;
+  const [row] = await db<Pick<LlmUsageRow, 'requests'>>`
+    select requests
+    from public.llm_usage
+    where subject_type = ${subject.type}
+      and subject_key = ${subject.key}
+      and day = ${utcDay()}::date
+  `;
+  return row?.requests ?? 0;
 }

@@ -2,7 +2,7 @@
 // One real rules-assistant call through the API's gateway and quotas (LLM_PROVIDER from the
 // environment, so it calls Anthropic unless set to fake). Counted as a guest named rules-smoke.
 import { loadConfig } from '../apps/api/src/config';
-import { createSupabaseClients } from '../apps/api/src/db/client';
+import { createClients } from '../apps/api/src/db/client';
 import { createLlm } from '../apps/api/src/llm/setup';
 import { createLogger } from '../apps/api/src/logger';
 import { askRules } from '../apps/api/src/services/rules';
@@ -19,7 +19,7 @@ if (!gameId || !question) {
 
 await loadLocalEnv();
 const config = loadConfig({ ...process.env, LOG_LEVEL: process.env.LOG_LEVEL ?? 'warn' });
-const clients = createSupabaseClients(config.supabase);
+const clients = createClients(config);
 const llm = createLlm(config, clients, createLogger(config));
 const started = performance.now();
 try {
@@ -37,4 +37,6 @@ try {
 } catch (error) {
   console.error(error instanceof Error ? `${error.name}: ${error.message}` : error);
   process.exit(1);
+} finally {
+  await clients.service.close();
 }

@@ -1,5 +1,5 @@
-import type { Db } from './client';
-import type { Json } from './database.types';
+import { requireUserId, type Db } from './client';
+import type { CampaignsRow } from './types';
 
 export type CampaignRow = {
   id: string;
@@ -10,16 +10,10 @@ export type CampaignRow = {
   updatedAt: string;
 };
 
-const COLUMNS = 'id, game_id, state, state_version, archived, updated_at';
-
-type DbRow = {
-  id: string;
-  game_id: string;
-  state: Json;
-  state_version: number;
-  archived: boolean;
-  updated_at: string;
-};
+type DbRow = Pick<
+  CampaignsRow,
+  'id' | 'game_id' | 'state' | 'state_version' | 'archived' | 'updated_at'
+>;
 
 function toRow(row: DbRow): CampaignRow {
   return {
@@ -38,22 +32,23 @@ export async function findActiveCampaign(
   userId: string,
   gameId: string,
 ): Promise<CampaignRow | null> {
-  const { data, error } = await db
-    .from('campaigns')
-    .select(COLUMNS)
-    .eq('user_id', userId)
-    .eq('game_id', gameId)
-    .eq('archived', false)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? toRow(data) : null;
+  const [row] = await db<DbRow>`
+    select id, game_id, state, state_version, archived, updated_at
+    from public.campaigns
+    where user_id = ${userId} and game_id = ${gameId} and not archived
+  `;
+  return row ? toRow(row) : null;
 }
 
-/** Visible only to its owner (row level security), so another user's id reads as null. */
+/** Filtered by the caller's user_id and backed up by RLS, so another user's id reads as null. */
 export async function findCampaignById(db: Db, id: string): Promise<CampaignRow | null> {
-  const { data, error } = await db.from('campaigns').select(COLUMNS).eq('id', id).maybeSingle();
-  if (error) throw error;
-  return data ? toRow(data) : null;
+  const userId = requireUserId(db);
+  const [row] = await db<DbRow>`
+    select id, game_id, state, state_version, archived, updated_at
+    from public.campaigns
+    where id = ${id} and user_id = ${userId}
+  `;
+  return row ? toRow(row) : null;
 }
 
 export async function insertCampaign(
@@ -62,14 +57,14 @@ export async function insertCampaign(
   state: unknown,
   stateVersion: number,
 ): Promise<CampaignRow> {
-  const { data, error } = await db
-    .from('campaigns')
-    // Validated by the game's campaign schema, and it arrived as JSON.
-    .insert({ game_id: gameId, state: state as NonNullable<Json>, state_version: stateVersion })
-    .select(COLUMNS)
-    .single();
-  if (error) throw error;
-  return toRow(data);
+  const userId = requireUserId(db);
+  const [row] = await db<DbRow>`
+    insert into public.campaigns (user_id, game_id, state, state_version)
+    values (${userId}, ${gameId}, ${db.json(state)}, ${stateVersion})
+    returning id, game_id, state, state_version, archived, updated_at
+  `;
+  if (!row) throw new Error('insertCampaign returned no row');
+  return toRow(row);
 }
 
 export async function updateCampaignState(
@@ -78,14 +73,15 @@ export async function updateCampaignState(
   state: unknown,
   stateVersion: number,
 ): Promise<CampaignRow> {
-  const { data, error } = await db
-    .from('campaigns')
-    .update({ state: state as NonNullable<Json>, state_version: stateVersion })
-    .eq('id', id)
-    .select(COLUMNS)
-    .single();
-  if (error) throw error;
-  return toRow(data);
+  const userId = requireUserId(db);
+  const [row] = await db<DbRow>`
+    update public.campaigns
+    set state = ${db.json(state)}, state_version = ${stateVersion}
+    where id = ${id} and user_id = ${userId}
+    returning id, game_id, state, state_version, archived, updated_at
+  `;
+  if (!row) throw new Error('updateCampaignState returned no row');
+  return toRow(row);
 }
 
 /** Archives the caller's active campaign for the game and inserts this one, in one transaction. */
@@ -95,15 +91,10 @@ export async function startCampaign(
   state: unknown,
   stateVersion: number,
 ): Promise<CampaignRow> {
-  const { data, error } = await db
-    .rpc('start_campaign', {
-      p_game_id: gameId,
-      // Validated by the game's campaign schema, and it arrived as JSON.
-      p_state: state as NonNullable<Json>,
-      p_state_version: stateVersion,
-    })
-    .select(COLUMNS)
-    .single();
-  if (error) throw error;
-  return toRow(data);
+  const [row] = await db<DbRow>`
+    select id, game_id, state, state_version, archived, updated_at
+    from public.start_campaign(${gameId}, ${db.json(state)}, ${stateVersion})
+  `;
+  if (!row) throw new Error('start_campaign returned no row');
+  return toRow(row);
 }

@@ -4,9 +4,9 @@ import { createClient } from '@supabase/supabase-js';
 import { ErrorEnvelopeSchema } from '@tablekeeper/core';
 
 import { loadConfig, type Config } from '../config';
-import type { Database } from '../db/database.types';
+import { createDb } from '../db/client';
 
-/** Config for tests: local Supabase (filled by vitest.config.ts) and defaults for the rest. */
+/** Config for tests: local Postgres and Supabase Auth (filled by vitest.config.ts). */
 export function testConfig(overrides: Record<string, string> = {}): Config {
   return loadConfig({ ...process.env, NODE_ENV: 'test', LOG_LEVEL: 'silent', ...overrides });
 }
@@ -16,9 +16,9 @@ export function offlineConfig(overrides: Record<string, string> = {}): Config {
   return loadConfig({
     NODE_ENV: 'test',
     LOG_LEVEL: 'silent',
+    DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:9/tablekeeper',
     SUPABASE_URL: 'http://127.0.0.1:9',
     SUPABASE_ANON_KEY: 'anon',
-    SUPABASE_SERVICE_ROLE_KEY: 'service',
     ...overrides,
   });
 }
@@ -27,15 +27,19 @@ export type TestUser = { id: string; email: string; token: string };
 
 const auth = { persistSession: false, autoRefreshToken: false };
 
-/** Creates a confirmed user with a uniquely prefixed email and signs in. Delete with `deleteUsers`. */
+function serviceRoleKey(): string {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY missing; vitest.config.ts fills it.');
+  return key;
+}
+
+/** Creates a confirmed Auth user with a uniquely prefixed email and signs in. Delete with `deleteUsers`. */
 export async function createTestUser(
   config: Config,
   prefix: string,
   name = 'Test Player',
 ): Promise<TestUser> {
-  const admin = createClient<Database>(config.supabase.url, config.supabase.serviceRoleKey, {
-    auth,
-  });
+  const admin = createClient(config.supabase.url, serviceRoleKey(), { auth });
   const email = `${prefix}-${randomUUID().slice(0, 8)}@local`;
   const password = `pw-${randomUUID()}`;
   const created = await admin.auth.admin.createUser({
@@ -45,16 +49,21 @@ export async function createTestUser(
     user_metadata: { full_name: name },
   });
   if (created.error) throw created.error;
-  const anon = createClient<Database>(config.supabase.url, config.supabase.anonKey, { auth });
+  const anon = createClient(config.supabase.url, config.supabase.anonKey, { auth });
   const session = await anon.auth.signInWithPassword({ email, password });
   if (session.error) throw session.error;
   return { id: created.data.user.id, email, token: session.data.session.access_token };
 }
 
 export async function deleteUsers(config: Config, users: TestUser[]): Promise<void> {
-  const admin = createClient<Database>(config.supabase.url, config.supabase.serviceRoleKey, {
-    auth,
-  });
+  const db = createDb(config.databaseUrl);
+  const ids = users.map((u) => u.id);
+  if (ids.length > 0) {
+    await db`delete from public.play_sessions where user_id = any(${ids}::uuid[])`;
+    await db`delete from public.campaigns where user_id = any(${ids}::uuid[])`;
+    await db`delete from public.profiles where id = any(${ids}::uuid[])`;
+  }
+  const admin = createClient(config.supabase.url, serviceRoleKey(), { auth });
   for (const user of users) await admin.auth.admin.deleteUser(user.id);
 }
 

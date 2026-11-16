@@ -5,13 +5,13 @@ import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../app';
-import { createSupabaseClients } from '../db/client';
+import { createDb } from '../db/client';
 import { findRulebook } from '../db/rules';
 import { guestSubject } from '../services/quota';
 import { errorBody, testConfig } from '../test/helpers';
 
 // Every test has its own salt, so its keys and quota rows are its own; all are removed after.
-const service = createSupabaseClients(testConfig().supabase).service;
+const service = createDb(testConfig().databaseUrl);
 const burstKeys: string[] = [];
 const usageKeys: string[] = [];
 
@@ -34,36 +34,39 @@ const games = (app: ReturnType<typeof createApp>, ip: string) =>
   request(app).get('/v1/games').set('x-forwarded-for', ip);
 
 afterAll(async () => {
-  if (burstKeys.length) await service.from('rate_limit_hits').delete().in('key', burstKeys);
+  if (burstKeys.length) {
+    await service`delete from public.rate_limit_hits where key = any(${burstKeys}::text[])`;
+  }
   if (!usageKeys.length) return;
   // Give the requests and tokens back to today's global row, then drop the guest rows.
-  const { data } = await service
-    .from('llm_usage')
-    .delete()
-    .eq('subject_type', 'ip')
-    .in('subject_key', usageKeys)
-    .select('requests, input_tokens, output_tokens');
-  const rows = data ?? [];
+  const rows = await service<{ requests: number; input_tokens: number; output_tokens: number }>`
+    delete from public.llm_usage
+    where subject_type = 'ip' and subject_key = any(${usageKeys}::text[])
+    returning requests, input_tokens, output_tokens
+  `;
   const sum = (pick: (row: (typeof rows)[number]) => number) =>
     rows.reduce((total, row) => total + pick(row), 0);
-  await service.rpc('llm_record_tokens', {
-    p_subject_type: 'global',
-    p_subject_key: 'global',
-    p_input: -sum((r) => r.input_tokens),
-    p_output: -sum((r) => r.output_tokens),
-  });
+  await service`
+    select public.llm_record_tokens(
+      'global',
+      'global',
+      ${-sum((r) => r.input_tokens)},
+      ${-sum((r) => r.output_tokens)}
+    )
+  `;
   const day = new Date().toISOString().slice(0, 10);
-  const match = { subject_type: 'global', subject_key: 'global', day };
-  const { data: global } = await service
-    .from('llm_usage')
-    .select('requests')
-    .match(match)
-    .maybeSingle();
+  const [global] = await service<{ requests: number }>`
+    select requests
+    from public.llm_usage
+    where subject_type = 'global' and subject_key = 'global' and day = ${day}::date
+  `;
   if (global) {
-    await service
-      .from('llm_usage')
-      .update({ requests: Math.max(0, global.requests - sum((r) => r.requests)) })
-      .match(match);
+    const nextRequests = Math.max(0, global.requests - sum((r) => r.requests));
+    await service`
+      update public.llm_usage
+      set requests = ${nextRequests}
+      where subject_type = 'global' and subject_key = 'global' and day = ${day}::date
+    `;
   }
 });
 
@@ -121,9 +124,13 @@ describe("client IP behind Vercel's proxy", () => {
     expect((await games(app, a)).status).toBe(429);
     expect((await games(app, b)).status).toBe(200);
 
-    const { data } = await service.from('rate_limit_hits').select('key, hits').eq('key', keyA);
+    const data = await service<{ key: string; hits: number }>`
+      select key, hits from public.rate_limit_hits where key = ${keyA}
+    `;
     expect(data).toEqual([{ key: keyA, hits: 2 }]);
-    const { data: raw } = await service.from('rate_limit_hits').select('key').like('key', `%${a}%`);
+    const raw = await service<{ key: string }>`
+      select key from public.rate_limit_hits where key like ${`%${a}%`}
+    `;
     expect(raw).toEqual([]);
   });
 

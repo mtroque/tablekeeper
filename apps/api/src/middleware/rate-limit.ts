@@ -1,8 +1,8 @@
 import { rateLimit } from 'express-rate-limit';
 
 import type { Config } from '../config';
-import type { SupabaseClients } from '../db/client';
-import { SupabaseRateLimitStore } from '../db/rate-limit-store';
+import type { Clients } from '../db/client';
+import { PostgresRateLimitStore } from '../db/rate-limit-store';
 import { AppError } from '../errors';
 
 /**
@@ -10,10 +10,10 @@ import { AppError } from '../errors';
  * so production counts in the database (`RATE_LIMIT_STORE=database`); local dev and tests
  * keep the in-memory default.
  */
-export function burstLimit(config: Config, clients: SupabaseClients) {
+export function burstLimit(config: Config, clients: Clients) {
   const store =
     config.rateLimit.store === 'database'
-      ? new SupabaseRateLimitStore(clients.service, config.quotas.ipHashSalt)
+      ? new PostgresRateLimitStore(clients.service, config.quotas.ipHashSalt)
       : undefined;
   return rateLimit({
     windowMs: config.rateLimit.windowMs,

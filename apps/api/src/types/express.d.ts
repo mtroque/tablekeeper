@@ -1,12 +1,10 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-
-import type { Database } from '../db/database.types';
+import type { Db } from '../db/client';
 
 export type AuthContext = {
   userId: string;
   email: string | null;
-  /** Carries the user's token, so row level security applies. */
-  db: SupabaseClient<Database>;
+  /** Scoped to the signed-in user (`app_user` role and `app.user_id` set per transaction). */
+  db: Db;
 };
 
 declare global {

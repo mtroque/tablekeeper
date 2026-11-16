@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createSupabaseClients } from './db/client';
+import { createDb } from './db/client';
 import { testConfig } from './test/helpers';
 
 const run = promisify(execFile);
@@ -43,10 +43,8 @@ beforeAll(async () => {
 afterAll(async () => {
   await rm(output, { recursive: true, force: true });
   const key = createHash('sha256').update(`${SALT}:${IP}`).digest('hex');
-  await createSupabaseClients(testConfig().supabase)
-    .service.from('rate_limit_hits')
-    .delete()
-    .eq('key', `burst:${key}`);
+  const db = createDb(testConfig().databaseUrl);
+  await db`delete from public.rate_limit_hits where key = ${`burst:${key}`}`;
 });
 
 describe('pnpm build:vercel', () => {
@@ -64,7 +62,7 @@ describe('pnpm build:vercel', () => {
   });
 
   it('answers /health and /v1 in production mode with the database burst store', async () => {
-    const { supabase } = testConfig();
+    const { databaseUrl, supabase } = testConfig();
     const { stdout } = await run(
       'node',
       ['-e', SERVE, join(output, 'functions/index.func/index.cjs'), IP],
@@ -75,9 +73,9 @@ describe('pnpm build:vercel', () => {
           NODE_ENV: 'production',
           LOG_LEVEL: 'silent',
           IP_HASH_SALT: SALT,
+          DATABASE_URL: databaseUrl,
           SUPABASE_URL: supabase.url,
           SUPABASE_ANON_KEY: supabase.anonKey,
-          SUPABASE_SERVICE_ROLE_KEY: supabase.serviceRoleKey,
           LLM_PROVIDER: 'fake',
         },
       },
