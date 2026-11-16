@@ -12,9 +12,9 @@
 └───────────────┬───────────────┘        └──────┬───────────────┬──────┘
                 │ OAuth                         │ SQL (RLS)     │
                 ▼                               ▼               ▼
-        ┌────────────────────────────────────────┐    ┌───────────────┐
-        │ Supabase: Auth, Postgres (+ full-text) │    │ Anthropic API │
-        └────────────────────────────────────────┘    └───────────────┘
+        ┌───────────────────┐    ┌────────────────────────┐    ┌───────────────┐
+        │ Supabase: Auth    │    │ Neon: Postgres (+ FTS) │    │ Anthropic API │
+        └───────────────────┘    └────────────────────────┘    └───────────────┘
 ```
 
 - **Computer vision runs in the browser:** no per-photo cost, no upload, no rate limiting.
@@ -54,7 +54,8 @@ packages/core/src/
 packages/cv/src/
   pipeline/              generic CV stages
   games/<gameId>/        detector + calibration profile.json
-supabase/                migrations, seed.sql, config.toml
+db/                      migrations, seed.sql
+supabase/                config.toml (local Auth)
 scripts/                 ingest-rulebook.ts, eval-vision.ts, dev.mjs, worktrees.sh
 data/                    rulebooks/ (gitignored), fixtures/<gameId>/
 tests/e2e/               Playwright, one file per slice
@@ -133,7 +134,7 @@ Game state is JSON validated by the game's schema, so games need no tables of th
 
 | Table | Key columns | Notes |
 |---|---|---|
-| `profiles` | `id` (= `auth.users.id`), `display_name` | Created by trigger on sign-up |
+| `profiles` | `id` (= `auth.users.id`), `display_name` | Created by the API on first authenticated request |
 | `play_sessions` | `id`, `user_id`, `game_id`, `status` (`in_progress`/`completed`), `state` jsonb, `state_version`, `score_total`, `breakdown` jsonb, `detection_meta` jsonb, `campaign_id`, `played_at` | `detection_meta` records which detected values the user corrected |
 | `campaigns` | `id`, `user_id`, `game_id`, `state` jsonb, `state_version`, `archived`, `updated_at` | |
 | `rulebooks` | `id`, `game_id`, `edition`, `title`, `publisher_url`, `source_version` | |
@@ -141,7 +142,7 @@ Game state is JSON validated by the game's schema, so games need no tables of th
 | `llm_usage` | `subject_type` (`user`/`ip`/`global`), `subject_key`, `day`, `requests`, `input_tokens`, `output_tokens` | Unique per subject per UTC day; IPs stored as salted hashes |
 | `rate_limit_hits` | `key`, `hits`, `reset_at` | Burst limit windows; `key` is `burst:` plus a salted IP hash; windows ended over an hour ago are cleaned up |
 
-**RLS** is on for every table. Users can read and write only their own `profiles`, `play_sessions`, `campaigns`; the other tables have no user policies and are reached only by the API's service role.
+**RLS** is on for every table as a backstop to the API's `user_id` filters. User-scoped queries run in a transaction as `app_user` with `app.user_id` set (`public.app_user_id()`), so a user can read and write only their own `profiles`, `play_sessions`, `campaigns`; the other tables have no user policies and are reached only by the API's service connection.
 
 ## API
 
@@ -161,7 +162,7 @@ REST under `/v1`, JSON. Every request and response is a Zod schema in `packages/
 | `POST /v1/campaigns/:gameId/new` | required | Archive the active campaign and start a new one, in one transaction |
 
 - **Errors:** `{ "error": { "code", "message", "details"? } }` with a matching status. Codes: `VALIDATION`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `QUOTA_EXCEEDED`, `LLM_DISABLED`, `RATE_LIMITED`, `INTERNAL`.
-- **Auth:** `Authorization: Bearer <Supabase access token>`, verified by middleware. Database calls use a per-request client carrying that token, so RLS applies.
+- **Auth:** `Authorization: Bearer <Supabase access token>`, verified by middleware, which ensures the user's `profiles` row exists and attaches a `Db` client that sets `role = app_user` and `app.user_id` per transaction so RLS applies.
 - **CORS:** configured web origins only. `trust proxy` is 1: Vercel overwrites `x-forwarded-for` with the client's IP, so `req.ip` is the client for quotas and the burst limit.
 - **History:** 20 per page, newest first (`played_at`, then `id`); the cursor is opaque base64 of the last row's `played_at` and `id`. `best` and `average` cover all the user's completed sessions of that game.
 - **Saving:** an unknown game is `NOT_FOUND`; a game without a scorer is 422 `VALIDATION`. State is parsed with `parseState` (upgrade, then validate), and a client-sent `scoreTotal` or `breakdown` is stripped (D-038). `detection_meta` holds the state paths that differ between the photo draft and the saved board and the number of detected values (D-037).
@@ -205,7 +206,7 @@ Every model call goes through `gateway.run({ purpose, subject, limits }, (model)
 4. **Burst limit:** `express-rate-limit` on all `/v1` routes, counted in `rate_limit_hits` (`rate_limit_hit`, one statement per hit) so every serverless instance shares one window per client; keys are salted IP hashes. `RATE_LIMIT_STORE=memory`, the default outside production, counts in the process instead (D-073).
 5. **Usage recorded** in `llm_usage` after every call, including failures (`llm_record_tokens`).
 
-The SQL functions (these two, `rate_limit_hit`, `rate_limit_undo`, `search_rulebook_sections` and `replace_rulebook`) are `security definer`, executable by the service role only.
+The SQL functions (these two, `rate_limit_hit`, `rate_limit_undo`, `search_rulebook_sections` and `replace_rulebook`) are `security definer`, executable by the service connection only.
 
 Outside the app, the Anthropic account has a monthly spend limit. Providers: `AnthropicProvider` (model from `LLM_MODEL_RULES`) and `FakeProvider` (scripted, used by all tests and selectable with `LLM_PROVIDER=fake`).
 
