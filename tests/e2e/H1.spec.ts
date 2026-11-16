@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
+
+import { createDb } from '../../apps/api/src/db/client';
 
 import { signInAs } from './helpers';
 
@@ -7,11 +8,10 @@ const SCORE = '/games/harmonies/score';
 const savedIds: string[] = [];
 
 test.afterAll(async () => {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key || savedIds.length === 0) return;
-  const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  await db.from('play_sessions').delete().in('id', savedIds);
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl || savedIds.length === 0) return;
+  const db = createDb(databaseUrl);
+  await db`delete from public.play_sessions where id = any(${savedIds}::uuid[])`;
 });
 
 /** Opens a space's stack sheet and picks a stack by its name. */
