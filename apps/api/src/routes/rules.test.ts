@@ -6,9 +6,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../app';
 import type { Config } from '../config';
-import { createSupabaseClients, type Db } from '../db/client';
+import { createDb, type Db } from '../db/client';
 import type { Subject } from '../db/quota';
-import { findRulebook } from '../db/rules';
+import { findRulebook, replaceRulebook } from '../db/rules';
 import { guestSubject } from '../services/quota';
 import { askRules } from '../services/rules';
 import { createTestUser, deleteUsers, errorBody, testConfig, type TestUser } from '../test/helpers';
@@ -16,7 +16,7 @@ import { createTestUser, deleteUsers, errorBody, testConfig, type TestUser } fro
 // Every test uses its own salt and forwarded IP, so its guest quota starts at zero. Usage rows
 // it creates are removed afterwards and taken back off the shared global row.
 const GAME = 'azul';
-const service: Db = createSupabaseClients(testConfig().supabase).service;
+const service: Db = createDb(testConfig().databaseUrl);
 const subjects: Subject[] = [];
 let createdRulebook: string | null = null;
 let user: TestUser;
@@ -44,7 +44,7 @@ const ask = (app: ReturnType<typeof appFor>, ip: string, question = 'How does th
 /** Uses the loaded rulebook, or loads a small one for the test (removed afterwards). */
 async function ensureRulebook(): Promise<void> {
   if (await findRulebook(service, GAME)) return;
-  const { data, error } = await service.rpc('replace_rulebook', {
+  createdRulebook = await replaceRulebook(service, {
     p_rulebook: {
       game_id: GAME,
       edition: 'Test',
@@ -66,8 +66,6 @@ async function ensureRulebook(): Promise<void> {
       },
     ],
   });
-  if (error) throw error;
-  createdRulebook = data;
 }
 
 async function cleanUsage(list: Subject[]): Promise<void> {
@@ -75,35 +73,32 @@ async function cleanUsage(list: Subject[]): Promise<void> {
   let input = 0;
   let output = 0;
   for (const subject of list) {
-    const { data } = await service
-      .from('llm_usage')
-      .delete()
-      .eq('subject_type', subject.type)
-      .eq('subject_key', subject.key)
-      .select('requests, input_tokens, output_tokens');
-    for (const row of data ?? []) {
+    const rows = await service<{ requests: number; input_tokens: number; output_tokens: number }>`
+      delete from public.llm_usage
+      where subject_type = ${subject.type} and subject_key = ${subject.key}
+      returning requests, input_tokens, output_tokens
+    `;
+    for (const row of rows) {
       requests += row.requests;
       input += row.input_tokens;
       output += row.output_tokens;
     }
   }
-  await service.rpc('llm_record_tokens', {
-    p_subject_type: 'global',
-    p_subject_key: 'global',
-    p_input: -input,
-    p_output: -output,
-  });
+  await service`
+    select public.llm_record_tokens('global', 'global', ${-input}, ${-output})
+  `;
   const day = new Date().toISOString().slice(0, 10);
-  const { data: global } = await service
-    .from('llm_usage')
-    .select('requests')
-    .match({ subject_type: 'global', subject_key: 'global', day })
-    .maybeSingle();
+  const [global] = await service<{ requests: number }>`
+    select requests
+    from public.llm_usage
+    where subject_type = 'global' and subject_key = 'global' and day = ${day}::date
+  `;
   if (global) {
-    await service
-      .from('llm_usage')
-      .update({ requests: Math.max(0, global.requests - requests) })
-      .match({ subject_type: 'global', subject_key: 'global', day });
+    await service`
+      update public.llm_usage
+      set requests = ${Math.max(0, global.requests - requests)}
+      where subject_type = 'global' and subject_key = 'global' and day = ${day}::date
+    `;
   }
 }
 
@@ -116,7 +111,9 @@ beforeAll(async () => {
 afterAll(async () => {
   await cleanUsage(subjects);
   await deleteUsers(testConfig(), [user]);
-  if (createdRulebook) await service.from('rulebooks').delete().eq('id', createdRulebook);
+  if (createdRulebook) {
+    await service`delete from public.rulebooks where id = ${createdRulebook}`;
+  }
 });
 
 describe('POST /v1/games/:gameId/rules/ask', () => {
@@ -151,9 +148,7 @@ describe('POST /v1/games/:gameId/rules/ask', () => {
     expect(errorBody(res).code).toBe('NOT_FOUND');
 
     // A registered game whose rulebook isn't loaded: the lookup finds no row.
-    const noRows = {
-      from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => ({ data: null }) }) }) }),
-    } as unknown as Db;
+    const noRows = (() => Promise.resolve([])) as unknown as Db;
     await expect(
       askRules(
         { config, service: noRows, gateway: undefined as never, quotas: undefined as never },
@@ -204,12 +199,12 @@ describe('POST /v1/games/:gameId/rules/ask', () => {
 
   it('stops everyone at the global daily budget', async () => {
     const day = new Date().toISOString().slice(0, 10);
-    const { data } = await service
-      .from('llm_usage')
-      .select('requests')
-      .match({ subject_type: 'global', subject_key: 'global', day })
-      .maybeSingle();
-    const { config, ip } = guest({ LLM_GLOBAL_DAILY_REQUESTS: String(data?.requests ?? 1) });
+    const [global] = await service<{ requests: number }>`
+      select requests
+      from public.llm_usage
+      where subject_type = 'global' and subject_key = 'global' and day = ${day}::date
+    `;
+    const { config, ip } = guest({ LLM_GLOBAL_DAILY_REQUESTS: String(global?.requests ?? 1) });
     const res = await ask(appFor(config), ip);
     expect(res.status).toBe(429);
     expect(errorBody(res)).toMatchObject({ code: 'QUOTA_EXCEEDED', details: { scope: 'global' } });
@@ -229,13 +224,13 @@ describe('POST /v1/games/:gameId/rules/ask', () => {
     const { config, ip } = guest();
     await ask(appFor(config), ip);
     const subject = subjects.at(-1) as Subject;
-    const { data } = await service
-      .from('llm_usage')
-      .select('requests, input_tokens, output_tokens')
-      .match({ subject_type: 'ip', subject_key: subject.key })
-      .single();
+    const [row] = await service<{ requests: number; input_tokens: number; output_tokens: number }>`
+      select requests, input_tokens, output_tokens
+      from public.llm_usage
+      where subject_type = 'ip' and subject_key = ${subject.key}
+    `;
     // The fake provider reports 100 in and 20 out per call; this answer took 3 calls.
-    expect(data).toEqual({ requests: 1, input_tokens: 300, output_tokens: 60 });
+    expect(row).toEqual({ requests: 1, input_tokens: 300, output_tokens: 60 });
   });
 });
 

@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import {
   CampaignResponseSchema,
   CampaignSchema,
@@ -10,14 +9,12 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../app';
-import type { Database } from '../db/database.types';
+import { createDb } from '../db/client';
 import { createTestUser, deleteUsers, errorBody, testConfig, type TestUser } from '../test/helpers';
 
 const config = testConfig();
 const app = createApp(config);
-const admin = createClient<Database>(config.supabase.url, config.supabase.serviceRoleKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
-});
+const admin = createDb(config.databaseUrl);
 let alice: TestUser;
 let bob: TestUser;
 
@@ -52,12 +49,12 @@ describe('POST /v1/sessions', () => {
     expect(session.scoreTotal).toBe(4);
     expect(session.breakdown?.total).toBe(4);
 
-    const stored = await admin
-      .from('play_sessions')
-      .select('score_total, user_id')
-      .eq('id', session.id)
-      .single();
-    expect(stored.data).toEqual({ score_total: 4, user_id: alice.id });
+    const [stored] = await admin<{ score_total: number; user_id: string }>`
+      select score_total, user_id
+      from public.play_sessions
+      where id = ${session.id}
+    `;
+    expect(stored).toEqual({ score_total: 4, user_id: alice.id });
   });
 
   it('keeps detection meta', async () => {
@@ -315,12 +312,13 @@ describe('/v1/campaigns/:gameId', () => {
       .get('/v1/campaigns/_example')
       .set('authorization', bearer(bob));
     expect(CampaignResponseSchema.parse(active.body).campaign?.id).toBe(fresh.id);
-    const rows = await admin
-      .from('campaigns')
-      .select('id, archived')
-      .eq('user_id', bob.id)
-      .order('created_at');
-    expect(rows.data).toEqual([
+    const rows = await admin<{ id: string; archived: boolean }>`
+      select id, archived
+      from public.campaigns
+      where user_id = ${bob.id}
+      order by created_at
+    `;
+    expect(rows).toEqual([
       { id: old.id, archived: true },
       { id: fresh.id, archived: false },
     ]);

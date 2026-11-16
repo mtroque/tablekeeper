@@ -3,15 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { loadConfig } from './config';
 
 const base = {
+  DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/tablekeeper',
   SUPABASE_URL: 'http://127.0.0.1:54321',
   SUPABASE_ANON_KEY: 'anon',
-  SUPABASE_SERVICE_ROLE_KEY: 'service',
 };
 
 describe('loadConfig', () => {
   it('applies the .env.example defaults', () => {
     const config = loadConfig(base);
     expect(config.port).toBe(4000);
+    expect(config.databaseUrl).toBe(base.DATABASE_URL);
     expect(config.webOrigins).toEqual(['http://localhost:3000']);
     expect(config.quotas.guestDailyRequests).toBe(5);
     expect(config.llm).toMatchObject({
@@ -49,7 +50,7 @@ describe('loadConfig', () => {
 
   it('names every invalid variable', () => {
     expect(() => loadConfig({ SUPABASE_URL: 'nope', RATE_LIMIT_MAX: '-1' })).toThrow(
-      /SUPABASE_URL[\s\S]*SUPABASE_ANON_KEY[\s\S]*RATE_LIMIT_MAX/,
+      /DATABASE_URL[\s\S]*SUPABASE_URL[\s\S]*SUPABASE_ANON_KEY[\s\S]*RATE_LIMIT_MAX/,
     );
   });
 

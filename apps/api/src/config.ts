@@ -23,9 +23,9 @@ const EnvSchema = z.object({
   ),
   WEB_ORIGINS: z.preprocess(emptyAsUndefined, z.string().default('http://localhost:3000')),
 
+  DATABASE_URL: z.url(),
   SUPABASE_URL: z.url(),
   SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
   LLM_ENABLED: bool(true),
   LLM_PROVIDER: z.preprocess(emptyAsUndefined, z.enum(['anthropic', 'fake']).default('anthropic')),
@@ -50,7 +50,8 @@ export type Config = {
   port: number;
   logLevel: z.infer<typeof EnvSchema>['LOG_LEVEL'];
   webOrigins: string[];
-  supabase: { url: string; anonKey: string; serviceRoleKey: string };
+  databaseUrl: string;
+  supabase: { url: string; anonKey: string };
   llm: {
     enabled: boolean;
     provider: 'anthropic' | 'fake';
@@ -91,10 +92,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     webOrigins: e.WEB_ORIGINS.split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),
+    databaseUrl: e.DATABASE_URL,
     supabase: {
       url: e.SUPABASE_URL,
       anonKey: e.SUPABASE_ANON_KEY,
-      serviceRoleKey: e.SUPABASE_SERVICE_ROLE_KEY,
     },
     llm: {
       enabled: e.LLM_ENABLED,

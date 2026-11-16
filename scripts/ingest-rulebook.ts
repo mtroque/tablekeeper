@@ -5,9 +5,10 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
+import { createDb } from '../apps/api/src/db/client';
+import { replaceRulebook } from '../apps/api/src/db/rules';
 import { getGame } from '../packages/core/src/games/registry';
 
 import { loadLocalEnv, ROOT } from './lib/local-env.mjs';
@@ -36,15 +37,16 @@ if (args.includes('--load')) {
   if (parsed.data.gameId !== game.id) fail(`${reviewPath} is for ${parsed.data.gameId}.`);
 
   await loadLocalEnv();
-  const env = z
-    .object({ SUPABASE_URL: z.url(), SUPABASE_SERVICE_ROLE_KEY: z.string().min(1) })
-    .parse(process.env);
-  const db = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const { error } = await db.rpc('replace_rulebook', toLoadArgs(parsed.data));
-  if (error) fail(`Loading failed: ${error.message}`);
-  console.log(`Loaded ${parsed.data.sections.length} sections for ${game.name}.`);
+  const env = z.object({ DATABASE_URL: z.url() }).parse(process.env);
+  const db = createDb(env.DATABASE_URL);
+  try {
+    await replaceRulebook(db, toLoadArgs(parsed.data));
+    console.log(`Loaded ${parsed.data.sections.length} sections for ${game.name}.`);
+  } catch (error) {
+    fail(`Loading failed: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    await db.close();
+  }
   process.exit(0);
 }
 

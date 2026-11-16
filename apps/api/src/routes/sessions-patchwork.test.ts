@@ -1,17 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
 import { initialPatchworkState, SessionSchema, type PatchworkState } from '@tablekeeper/core';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../app';
-import type { Database } from '../db/database.types';
+import { createDb } from '../db/client';
 import { createTestUser, deleteUsers, errorBody, testConfig, type TestUser } from '../test/helpers';
 
 const config = testConfig();
 const app = createApp(config);
-const admin = createClient<Database>(config.supabase.url, config.supabase.serviceRoleKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
-});
+const admin = createDb(config.databaseUrl);
 let player: TestUser;
 
 /** The rulebook's Scoring example: 5 empty spaces, 14 pralines, special tile: 11 points. */
@@ -53,12 +50,12 @@ describe('patchwork sessions', () => {
     ]);
     expect(session.state).toEqual(rulebookExample);
 
-    const stored = await admin
-      .from('play_sessions')
-      .select('score_total, state_version')
-      .eq('id', session.id)
-      .single();
-    expect(stored.data).toEqual({ score_total: 11, state_version: 1 });
+    const [stored] = await admin<{ score_total: number; state_version: number }>`
+      select score_total, state_version
+      from public.play_sessions
+      where id = ${session.id}
+    `;
+    expect(stored).toEqual({ score_total: 11, state_version: 1 });
   });
 
   it('rejects a box board that is not 81 spaces', async () => {

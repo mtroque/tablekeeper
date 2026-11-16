@@ -6,8 +6,8 @@ import {
   type SessionStatus,
 } from '@tablekeeper/core';
 
-import type { Db } from './client';
-import type { Json } from './database.types';
+import { requireUserId, type Db } from './client';
+import type { PlaySessionsRow } from './types';
 
 /** A stored session in camelCase; `gameId` is unchecked text, the service resolves it. */
 export type SessionRow = {
@@ -36,21 +36,19 @@ export type SessionWrite = {
   playedAt?: string;
 };
 
-const COLUMNS =
-  'id, game_id, status, state, state_version, score_total, breakdown, detection_meta, campaign_id, played_at';
-
-type DbRow = {
-  id: string;
-  game_id: string;
-  status: string;
-  state: Json;
-  state_version: number;
-  score_total: number | null;
-  breakdown: Json | null;
-  detection_meta: Json | null;
-  campaign_id: string | null;
-  played_at: string;
-};
+type DbRow = Pick<
+  PlaySessionsRow,
+  | 'id'
+  | 'game_id'
+  | 'status'
+  | 'state'
+  | 'state_version'
+  | 'score_total'
+  | 'breakdown'
+  | 'detection_meta'
+  | 'campaign_id'
+  | 'played_at'
+>;
 
 // Stored JSON is validated on the way out; anything malformed reads as missing.
 function toRow(row: DbRow): SessionRow {
@@ -70,43 +68,50 @@ function toRow(row: DbRow): SessionRow {
   };
 }
 
-function toDb(write: Partial<SessionWrite>) {
-  return {
-    ...(write.gameId === undefined ? {} : { game_id: write.gameId }),
-    ...(write.status === undefined ? {} : { status: write.status }),
-    // Request bodies arrive as JSON, so state is JSON already.
-    ...(write.state === undefined ? {} : { state: write.state as NonNullable<Json> }),
-    ...(write.stateVersion === undefined ? {} : { state_version: write.stateVersion }),
-    ...(write.scoreTotal === undefined ? {} : { score_total: write.scoreTotal }),
-    ...(write.breakdown === undefined ? {} : { breakdown: write.breakdown as unknown as Json }),
-    ...(write.detectionMeta === undefined
-      ? {}
-      : { detection_meta: write.detectionMeta as unknown as Json }),
-    ...(write.campaignId === undefined ? {} : { campaign_id: write.campaignId }),
-    ...(write.playedAt === undefined ? {} : { played_at: write.playedAt }),
-  };
-}
-
 export async function insertSession(db: Db, write: SessionWrite): Promise<SessionRow> {
-  const { data, error } = await db
-    .from('play_sessions')
-    .insert({
-      ...toDb(write),
-      game_id: write.gameId,
-      status: write.status,
-      state: write.state as NonNullable<Json>,
-      state_version: write.stateVersion,
-    })
-    .select(COLUMNS)
-    .single();
-  if (error) throw error;
-  return toRow(data);
+  const userId = requireUserId(db);
+  const [row] = await db<DbRow>`
+    insert into public.play_sessions (
+      user_id,
+      game_id,
+      status,
+      state,
+      state_version,
+      score_total,
+      breakdown,
+      detection_meta,
+      campaign_id,
+      played_at
+    ) values (
+      ${userId},
+      ${write.gameId},
+      ${write.status},
+      ${db.json(write.state)},
+      ${write.stateVersion},
+      ${write.scoreTotal},
+      ${db.json(write.breakdown)},
+      ${write.detectionMeta ? db.json(write.detectionMeta) : null},
+      ${write.campaignId},
+      coalesce(${write.playedAt ?? null}::timestamptz, now())
+    )
+    returning
+      id, game_id, status, state, state_version, score_total,
+      breakdown, detection_meta, campaign_id, played_at
+  `;
+  if (!row) throw new Error('insertSession returned no row');
+  return toRow(row);
 }
 
 export async function findSession(db: Db, id: string): Promise<SessionRow | null> {
-  const { data, error } = await db.from('play_sessions').select(COLUMNS).eq('id', id).maybeSingle();
-  if (error) throw error;
-  return data ? toRow(data) : null;
+  const userId = requireUserId(db);
+  const [row] = await db<DbRow>`
+    select
+      id, game_id, status, state, state_version, score_total,
+      breakdown, detection_meta, campaign_id, played_at
+    from public.play_sessions
+    where id = ${id} and user_id = ${userId}
+  `;
+  return row ? toRow(row) : null;
 }
 
 export async function updateSession(
@@ -114,14 +119,25 @@ export async function updateSession(
   id: string,
   write: Partial<SessionWrite>,
 ): Promise<SessionRow | null> {
-  const { data, error } = await db
-    .from('play_sessions')
-    .update(toDb(write))
-    .eq('id', id)
-    .select(COLUMNS)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? toRow(data) : null;
+  const userId = requireUserId(db);
+  const [row] = await db<DbRow>`
+    update public.play_sessions
+    set
+      game_id = case when ${write.gameId !== undefined} then ${write.gameId ?? null} else game_id end,
+      status = case when ${write.status !== undefined} then ${write.status ?? null} else status end,
+      state = case when ${write.state !== undefined} then ${write.state !== undefined ? db.json(write.state) : null} else state end,
+      state_version = case when ${write.stateVersion !== undefined} then ${write.stateVersion ?? null} else state_version end,
+      score_total = case when ${write.scoreTotal !== undefined} then ${write.scoreTotal ?? null} else score_total end,
+      breakdown = case when ${write.breakdown !== undefined} then ${write.breakdown !== undefined ? db.json(write.breakdown) : null} else breakdown end,
+      detection_meta = case when ${write.detectionMeta !== undefined} then ${write.detectionMeta ? db.json(write.detectionMeta) : null} else detection_meta end,
+      campaign_id = case when ${write.campaignId !== undefined} then ${write.campaignId ?? null} else campaign_id end,
+      played_at = case when ${write.playedAt !== undefined} then ${write.playedAt ?? null}::timestamptz else played_at end
+    where id = ${id} and user_id = ${userId}
+    returning
+      id, game_id, status, state, state_version, score_total,
+      breakdown, detection_meta, campaign_id, played_at
+  `;
+  return row ? toRow(row) : null;
 }
 
 export type SessionCursor = { playedAt: string; id: string };
@@ -134,32 +150,43 @@ export async function listSessions(
   limit: number,
   after?: SessionCursor,
 ): Promise<SessionRow[]> {
-  let query = db
-    .from('play_sessions')
-    .select(COLUMNS)
-    .eq('user_id', userId)
-    .eq('game_id', gameId)
-    .order('played_at', { ascending: false })
-    .order('id', { ascending: false })
-    .limit(limit);
-  if (after) {
-    const at = JSON.stringify(after.playedAt);
-    query = query.or(`played_at.lt.${at},and(played_at.eq.${at},id.lt.${after.id})`);
-  }
-  const { data, error } = await query;
-  if (error) throw error;
-  return data.map(toRow);
+  const rows = after
+    ? await db<DbRow>`
+        select
+          id, game_id, status, state, state_version, score_total,
+          breakdown, detection_meta, campaign_id, played_at
+        from public.play_sessions
+        where user_id = ${userId}
+          and game_id = ${gameId}
+          and (
+            played_at < ${after.playedAt}::timestamptz
+            or (played_at = ${after.playedAt}::timestamptz and id < ${after.id}::uuid)
+          )
+        order by played_at desc, id desc
+        limit ${limit}
+      `
+    : await db<DbRow>`
+        select
+          id, game_id, status, state, state_version, score_total,
+          breakdown, detection_meta, campaign_id, played_at
+        from public.play_sessions
+        where user_id = ${userId}
+          and game_id = ${gameId}
+        order by played_at desc, id desc
+        limit ${limit}
+      `;
+  return rows.map(toRow);
 }
 
 /** Scores of every completed session of a game, for personal best and average. */
 export async function completedScores(db: Db, userId: string, gameId: string): Promise<number[]> {
-  const { data, error } = await db
-    .from('play_sessions')
-    .select('score_total')
-    .eq('user_id', userId)
-    .eq('game_id', gameId)
-    .eq('status', 'completed')
-    .not('score_total', 'is', null);
-  if (error) throw error;
-  return data.map((row) => row.score_total);
+  const rows = await db<{ score_total: number }>`
+    select score_total
+    from public.play_sessions
+    where user_id = ${userId}
+      and game_id = ${gameId}
+      and status = 'completed'
+      and score_total is not null
+  `;
+  return rows.map((row) => row.score_total);
 }
