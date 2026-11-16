@@ -33,7 +33,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | W1 | CI checks: typecheck, lint, commits, unit tests and build on every push and PR | - | ✅ |
 | W2 | Prose rules become lint rules, with a baseline that only shrinks | W1 | ✅ |
 | W3 | Repo checks: rule ids have tests, migrations immutable, forbidden files, spec ownership | W1 | ✅ |
-| W4 | PR workflow: protected `main`, `/build` opens PRs, `/merge` merges them | W1, W3 | ⬜ |
+| W4 | PR workflow: protected `main`, `/build` opens PRs, `/merge` merges them | W1, W3 | ✅ |
 | W5 | `/harden`: turn a correction into a check | W2 | ⬜ |
 | W6 | Effects only through named hooks; raw `useEffect` banned | W2 | ⬜ |
 | W7 | CI database jobs: API integration and e2e tests in CI | W1, X3 | ⬜ |
