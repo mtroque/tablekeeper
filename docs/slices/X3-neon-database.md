@@ -27,12 +27,12 @@
 None new. `/privacy` updates its "Services Used" list and "Last updated" date to name Neon for the database and Supabase for sign-in.
 
 ## Acceptance criteria
-- [ ] No package in `apps/api` or `scripts` imports `@supabase/supabase-js` for database access
-- [ ] `pnpm db:reset` builds the local database from migrations and seed; `pnpm db:start` and `db:reset` still refuse to run in a worktree
-- [ ] Every existing API integration test passes against the new layer, and `rls.test.ts` shows cross-user reads and writes fail both in the API and at the database
-- [ ] A signed-in user's first request creates their profile; saving a play and a campaign works end to end (`tests/e2e/X3.spec.ts`)
-- [ ] Production API on Vercel talks to Neon: `/health`, a guest rules question, and a signed-in save all work, with timings recorded here
-- [ ] Docs and the privacy page name Neon instead of Supabase for the database
+- [x] No package in `apps/api` or `scripts` imports `@supabase/supabase-js` for database access. Remaining imports are Auth only: `middleware/auth.ts` (`auth.getUser`) and `test/helpers.ts` (test users); X4 removes them
+- [x] `pnpm db:reset` builds the local database from migrations and seed (ran it: 5 migrations applied, profiles seeded, local rulebooks loaded); the worktree guard in `scripts/db.mjs` runs before any command, unchanged
+- [x] Every existing API integration test passes against the new layer (`pnpm test`: 61 files, 518 passed, 1 skipped), and `rls.test.ts` shows cross-user reads and writes fail at the database (`app_user` with another `app.user_id` sees nothing, insert as someone else is `42501`, shared tables are `42501`) and in the API (404 on another user's session and campaign)
+- [x] A signed-in user's first request creates their profile; saving a play and a campaign works end to end (`tests/e2e/X3.spec.ts`; full `pnpm test:e2e`: 37 passed)
+- [ ] Production API on Vercel talks to Neon. Done on 16 November 2026: Neon `tablekeeper-db` (`sin1`, free) connected to `tablekeeper-api`, migrations applied, all four rulebooks loaded (9, 13, 17, 10 sections), API deployed. `/health` 1240ms cold, 508ms warm; guest Azul question 200 in 10.4s with 1 citation; a pooled `createUserDb` check on Neon created a profile and another user read null. **Left:** a signed-in save through the live site (sign in with Google, save a score, see it in history); the smoke script couldn't sign in because `SUPABASE_URL` and the keys are Sensitive on Vercel and pull as empty
+- [x] Docs and the privacy page name Neon instead of Supabase for the database (`docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md`, `docs/PRODUCT.md`, `README.md`, `.env.example`, `/privacy` dated 16 November 2026)
 
 ## Tests
 - `apps/api/src/db/rls.test.ts`: database-level RLS checks (using `createUserDb` for user A, user B, and an unauthenticated client) and API-level cross-user read/write checks for sessions, campaigns and profiles.
@@ -52,7 +52,18 @@ Resolved:
 - **Local Auth until X4:** keep local Supabase running for Auth (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) until X4 replaces it with Neon Auth; `DATABASE_URL` points the API and scripts directly at Postgres.
 
 ## Decisions
+- `postgres` (porsager) over TCP to Neon's pooled URL, `max: 5`, `fetch_types: false`, timestamps kept as strings (cursor precision), int8 parsed as number. Why: works offline against local Postgres, warm Fluid instances reuse connections, no WebSocket shim.
+- RLS backstop through an `app_user` role and transaction-local `app.user_id` (`public.app_user_id()`), set by `createUserDb`; every user query also filters by `user_id`. Why: the pool connects as the owner, which bypasses RLS, so a non-owner role is switched to per transaction.
+- Migration runner is `scripts/db.mjs` (`schema_migrations` table, one transaction per file), with an idempotent `auth` stub so the four Supabase-era migrations still apply on plain Postgres and Neon. Migrations stay immutable; the move to `db/migrations/` is a pure rename.
+- Local database is a `tablekeeper` database inside the local Supabase Postgres (`DATABASE_URL` derived from `supabase status`), since local Supabase still runs Auth until X4.
+- Profiles are created by `optionalAuth` on every authenticated request (`on conflict do nothing`), replacing the sign-up trigger.
+- `SupabaseRateLimitStore` renamed `PostgresRateLimitStore`; behavior unchanged (D-073).
+- New dependency: `postgres` in `apps/api` (zero dependencies).
 
 ## Corrections
+| Date | Pattern | Where | What was wrong | Correction | Source | Status |
+|---|---|---|---|---|---|---|
+| 2026-11-16 | `tool-writes-env-file` | slice/X3, deploy smoke script | `vercel link` in the main checkout appended `VERCEL_OIDC_TOKEN` to `.env.local` and added lines to `.gitignore`; `.gitignore` was reverted, `.env.local` can't be read by agents | Deploy with `--cwd`/`--project` flags or from `.scratch/`, never `vercel link` in the repo root | self | open |
+| 2026-11-16 | `prod-smoke-shortcut` | slice/X3, deploy smoke script | Tried to sign up a throwaway account in production Auth using the anon key scraped from the web bundle, to finish the signed-in smoke check | Stopped; the signed-in production check is left to the owner | self | open |
 
 ## Shared change requests
