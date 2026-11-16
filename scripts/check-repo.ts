@@ -5,6 +5,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import {
+  checkDecisionIds,
   checkForbiddenFiles,
   checkMigrations,
   checkOwnership,
@@ -95,6 +96,8 @@ function loadTestFiles(): Record<string, string> {
   return files;
 }
 
+const SPEC_PATH = /^docs\/slices\/[A-Z0-9]+-.*\.md$/;
+
 function countRemovedLines(baseRef: string, path: string): number {
   const diff = git('diff', '-U0', `${baseRef}..HEAD`, '--', path);
   let removed = 0;
@@ -122,14 +125,29 @@ function diffSinceBase(baseRef: string): {
     const lastPath = parts.at(-1) ?? firstPath;
 
     migrationEntries.push({ status, path: firstPath });
-    if (status.startsWith('D')) continue;
+    if (status.startsWith('D')) {
+      // A slice deletes its own spec when it finishes; its `## Owns` still applies to the branch.
+      if (SPEC_PATH.test(firstPath)) {
+        const deletedIn = git(
+          'log',
+          '-1',
+          '--format=%H',
+          '--diff-filter=D',
+          `${baseRef}..HEAD`,
+          '--',
+          firstPath,
+        );
+        if (deletedIn) specs[firstPath] = git('show', `${deletedIn}^:${firstPath}`);
+      }
+      continue;
+    }
 
     changedFiles.push({
       path: lastPath,
       removedLines: status.startsWith('A') ? 0 : countRemovedLines(baseRef, lastPath),
     });
 
-    if (/^docs\/slices\/[A-Z0-9]+-.*\.md$/.test(lastPath) && existsSync(join(ROOT, lastPath))) {
+    if (SPEC_PATH.test(lastPath) && existsSync(join(ROOT, lastPath))) {
       specs[lastPath] = readFileSync(join(ROOT, lastPath), 'utf8');
     }
   }
@@ -145,6 +163,7 @@ failures.push(...checkForbiddenFiles(listFiles(stagedOnly)));
 
 if (!stagedOnly) {
   failures.push(...checkRuleIds(loadGameDocs(), loadTestFiles()));
+  failures.push(...checkDecisionIds(readFileSync(join(ROOT, 'docs/DECISIONS.md'), 'utf8')));
 
   const baseRef = resolveBaseRef();
   if (baseRef) {

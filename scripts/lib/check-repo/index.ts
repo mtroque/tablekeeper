@@ -1,3 +1,4 @@
+export * from './decisions';
 export * from './forbidden-files';
 export * from './migrations';
 export * from './ownership';

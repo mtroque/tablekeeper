@@ -12,6 +12,17 @@ export const ADDITIVE_WIRING_FILES = new Set([
   'playwright.config.ts',
 ]);
 
+/**
+ * Shared docs every slice updates in its own finish commit (AGENTS.md → Parallel sessions →
+ * Shared docs): the roadmap row may be edited, decisions and corrections only appended to,
+ * unless a spec owns the file (e.g. `/harden` setting correction statuses).
+ */
+export const SHARED_DOC_FILES = new Map<string, 'edit' | 'append'>([
+  ['docs/ROADMAP.md', 'edit'],
+  ['docs/DECISIONS.md', 'append'],
+  ['docs/CORRECTIONS.md', 'append'],
+]);
+
 export type ChangedFile = {
   path: string;
   /** Number of removed lines in `git diff -U0` (0 when only adding lines). */
@@ -174,6 +185,16 @@ export function checkOwnership({
   for (const { path, removedLines } of changedFiles) {
     const normalized = path.replaceAll('\\', '/');
     if (matchesAnyPattern(normalized, patterns)) continue;
+
+    const sharedDoc = SHARED_DOC_FILES.get(normalized);
+    if (sharedDoc === 'edit') continue;
+    if (sharedDoc === 'append') {
+      if (removedLines === 0) continue;
+      const msg = `${normalized}: shared doc has ${removedLines} removed/modified line(s); a slice only appends to it unless ${specNames} owns it (AGENTS.md → Parallel sessions → Shared docs).`;
+      if (reportOnly) notes.push(msg);
+      else failures.push(msg);
+      continue;
+    }
 
     if (ADDITIVE_WIRING_FILES.has(normalized)) {
       if (removedLines === 0) continue;
