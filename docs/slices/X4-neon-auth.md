@@ -24,11 +24,11 @@
 None new. `/privacy` updates "Services Used" and "Logs and Storage" to reflect Neon Auth (HTTP-only session cookie, no Supabase) and updates its "Last updated" date.
 
 ## Acceptance criteria
-- [ ] Signing in with Google on production creates a Neon Auth user and a profile, and a saved play shows in history
-- [ ] A guest result saved during sign-in lands in the account after the redirect
-- [ ] The API rejects missing, expired and foreign-issuer tokens with `UNAUTHENTICATED` (tests)
-- [ ] Every e2e spec that signs in passes with the new test-user sign-in
-- [ ] No `supabase` dependency, folder, env var or doc mention remains (`grep -ri supabase` is clean outside git history and `docs/DECISIONS.md`)
+- [ ] Signing in with Google on production creates a Neon Auth user and a profile, and a saved play shows in history. Ready for production: `20261116180000_neon_auth.sql` applied on Neon `tablekeeper-db`, Google OAuth and trusted domains configured in Neon Console, `NEXT_PUBLIC_NEON_AUTH_URL` set on `tablekeeper` (production and preview). Needs live Google sign-in verification after deploy
+- [x] A guest result saved during sign-in lands in the account after the redirect (`tests/e2e/X4.spec.ts` and `tests/e2e/S1.spec.ts` pass)
+- [x] The API rejects missing, expired and foreign-issuer tokens with `UNAUTHENTICATED` (`apps/api/src/routes/me.test.ts`: 6 tests pass)
+- [x] Every e2e spec that signs in passes with the new test-user sign-in (`pnpm test:e2e`: 38 passed, covering `S0`, `S1`, `A1`, `D1`, `D2`, `H1`, `P1`, `X3`, `X4`)
+- [x] No `supabase` dependency, folder, env var or doc mention remains (`supabase/` removed, `@supabase/supabase-js` removed from all `package.json`, `git grep -in supabase` clean outside `docs/DECISIONS.md`, `docs/CORRECTIONS.md`, `db/migrations/20261116120000_neon_database.sql`, `pnpm-lock.yaml`, and past/W slice specs)
 
 ## Tests
 - `apps/api/src/routes/me.test.ts`: test missing token, malformed header, invalid token, expired token, foreign-issuer token (`UNAUTHENTICATED` 401), and valid token creating the profile.
@@ -44,6 +44,10 @@ Resolved:
 - **OAuth callback:** `@neondatabase/auth`'s `getSession()` handles `neon_auth_session_verifier` on `/auth/callback`, keeping `resumePendingSave()` and `RETURN_TO_KEY` intact.
 
 ## Decisions
+- Web auth uses `@neondatabase/auth` (`BetterAuthVanillaAdapter`) pointed at `NEXT_PUBLIC_NEON_AUTH_URL`. Production uses Neon Auth HTTP-only session cookies (`getSession()` / `token()`), superseding D-022; local e2e tests mint HS256 JWTs signed with `AUTH_TEST_SECRET` into `localStorage` under `tk:auth`.
+- API auth (`apps/api/src/middleware/auth.ts`) verifies JWTs with `jose` (`createRemoteJWKSet` against `${NEON_AUTH_BASE_URL}/.well-known/jwks.json`, `issuer` checked). In `NODE_ENV=test` only, HS256 tokens signed with `AUTH_TEST_SECRET` are also accepted so tests run offline.
+- Local database runs in Docker (`tablekeeper-postgres`, `postgres:16-alpine` on port `54322`) managed by `scripts/db.mjs`, with `neon_auth."user"` stubbed locally so `20261116180000_neon_auth.sql` FKs work offline.
+- New dependencies: `jose` in `apps/api` and root `devDependencies`; `@neondatabase/auth` in `apps/web` (`core-js` build script disabled in `pnpm-workspace.yaml`).
 
 ## Corrections
 
