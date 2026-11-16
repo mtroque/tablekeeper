@@ -1,6 +1,6 @@
 # W1: CI checks
 
-**Status:** 🟨 · **Depends on:** none
+**Status:** ✅ · **Depends on:** none
 
 **Goal:** Every push and PR runs the checks that need no database on GitHub Actions, so "done" no longer depends on an agent remembering to run them. Free for this public repo. See `docs/AUTOMATION.md`.
 
@@ -20,9 +20,12 @@
 None.
 
 ## Acceptance criteria
-- [ ] A PR with a type error, a lint error and a bad commit message fails the matching steps (show the run)
-- [ ] A clean push to `main` passes, with its duration recorded here
-- [ ] `pnpm test:unit` passes locally with Supabase stopped
+- [x] A PR with a type error, a lint error and a bad commit message fails the matching steps (show the run). Verified on temporary PR `#1` (`test/w1-failures`, closed and branch deleted after verification):
+  - Type error (`Type 'string' is not assignable to type 'number'`): failed the `Typecheck` step in 37s ([run 43826834019](https://github.com/mtroque/tablekeeper/actions/runs/43826834019)).
+  - Lint error (`No em or en dashes in user-facing text`): passed `Typecheck`, failed the `Lint` step in 57s ([run 43827088129](https://github.com/mtroque/tablekeeper/actions/runs/43827088129)).
+  - Bad commit message (`bad commit message`): passed `Typecheck` and `Lint`, failed the `Commits` step in 1m11s ([run 43827379847](https://github.com/mtroque/tablekeeper/actions/runs/43827379847)).
+- [x] A clean push to `main` passes, with its duration recorded here: [run 43826191442](https://github.com/mtroque/tablekeeper/actions/runs/43826191442) on `main` (commit `ebea5fa`) passed all steps (`Typecheck`, `Lint`, `Commits`, `Unit tests`, `Build`) in **2m12s** on a cold cache.
+- [x] `pnpm test:unit` passes locally with Supabase stopped: 45 test files (363 tests across `core`, `cv`, `tooling`, `web`) passed in 10.44s without Supabase running or accessible.
 
 ## Tests
 `pnpm test:unit` locally with Supabase stopped and without `.env.local` values in the environment; CI verification on a test PR and on `main`.
@@ -34,8 +37,10 @@ None.
 None.
 
 ## Decisions
+- **D-079** The CI workflow (`.github/workflows/ci.yml`) runs one `Checks` job on every push to `main` and pull request: `pnpm typecheck`, `pnpm lint`, `pnpm lint:commits` (using `COMMITLINT_FROM` / `COMMITLINT_TO` from the event payload), `pnpm test:unit` (`core`, `cv`, `tooling`, `web` Vitest projects), and `pnpm build` (with placeholder `NEXT_PUBLIC_*` URLs so Next.js static prerendering needs no `.env.local`). `vitest.config.ts` ignores `LocalEnvError` from `loadLocalEnv({ exitOnError: false })` so unit tests run without `.env.local` or local Supabase.
 
 ## Corrections
+None.
 
 ## Shared change requests
 None.
