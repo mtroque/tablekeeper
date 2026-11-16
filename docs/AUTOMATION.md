@@ -19,7 +19,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | TypeScript strict, no `any`, no non-null `!` outside tests | `tsconfig.base.json`, typescript-eslint `strictTypeChecked` | ✅ |
 | Package boundaries | `eslint.config.js` (`boundary()`, `import-x/no-restricted-paths`) | ✅ |
 | UI copy: no dashes, emoji, banned phrases | `eslint-rules/ui-copy.js` | ✅ |
-| Conventional Commits | commit-msg hook, `pnpm lint:commits` | ✅ |
+| Conventional Commits | commit-msg hook, `pnpm lint:commits` (`commitlint.config.js`: `scope-enum`, `require-scope-except-merge`, `header-max-length`) | ✅ |
 | CV worker never reaches UI code | `cv-worker-imports.test.ts` (D-060) | ✅ |
 | Every check runs before anything reaches `main` | `.github/workflows/ci.yml` (`Checks` job), branch protection on `main` (`enforce_admins: true`, linear history, rebase-only merge) | ✅ |
 | Only config reads `process.env` | `eslint-rules/rules.js` (`rules/no-env-outside-config`) | ✅ |

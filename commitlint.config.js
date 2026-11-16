@@ -1,6 +1,24 @@
-// Conventional Commits (docs/CONVENTIONS.md → Git). Scope is optional, but must be a game id or an area.
+// Conventional Commits (docs/CONVENTIONS.md → Git). Scope is required (except `/merge` commits: `docs: merge <branch>`), and must be a game id or an area.
+export function requireScopeExceptMerge({ type, scope, subject }) {
+  if (scope) return [true];
+  if (type === 'docs' && typeof subject === 'string' && subject.startsWith('merge ')) {
+    return [true];
+  }
+  return [
+    false,
+    'Add a scope from commitlint.config.js (e.g. docs, web, api, workflow) instead of dropping it (docs/CONVENTIONS.md → Git).',
+  ];
+}
+
 export default {
   extends: ['@commitlint/config-conventional'],
+  plugins: [
+    {
+      rules: {
+        'require-scope-except-merge': requireScopeExceptMerge,
+      },
+    },
+  ],
   rules: {
     'type-enum': [
       2,
@@ -34,10 +52,12 @@ export default {
         'db',
         'rules',
         'deps',
+        'docs',
         'roadmap',
         'workflow',
       ],
     ],
+    'require-scope-except-merge': [2, 'always'],
     'header-max-length': [2, 'always', 72],
     'subject-full-stop': [2, 'never', '.'],
   },
