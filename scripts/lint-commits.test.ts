@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 
 import { requireScopeExceptMerge } from '../commitlint.config.js';
+
 import { ROOT } from './lib/local-env.mjs';
 
 function runCommitlint(message: string) {
