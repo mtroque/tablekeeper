@@ -8,12 +8,20 @@ export type FileEntry = {
   sizeBytes: number;
 };
 
+/** Paths agents used for throwaway files before `.scratch/` existed: `zz-*` e2e specs, `scripts/_*`, `scripts/.*`. */
+function isScratchPath(path: string): boolean {
+  return (
+    path.startsWith('.scratch/') || path.startsWith('tests/e2e/zz-') || /^scripts\/[_.]/.test(path)
+  );
+}
+
 /**
  * Checks tracked or staged files against AGENTS.md → Hard rules:
  * - No `.env*` except `.env.example`
  * - No PDFs (`*.pdf`)
  * - No files under `data/rulebooks/`
  * - No image over 2MB
+ * - No agent scratch files outside `.scratch/` (AGENTS.md → Parallel sessions)
  */
 export function checkForbiddenFiles(files: readonly FileEntry[]): string[] {
   const failures: string[] = [];
@@ -32,6 +40,13 @@ export function checkForbiddenFiles(files: readonly FileEntry[]): string[] {
     if (normalized.startsWith('data/rulebooks/') && name !== '.gitkeep') {
       failures.push(
         `${normalized}: files under data/rulebooks/ are forbidden in git. Keep rulebook PDFs and extracted sections local only (AGENTS.md → Hard rules).`,
+      );
+      continue;
+    }
+
+    if (isScratchPath(normalized)) {
+      failures.push(
+        `${normalized}: looks like an agent scratch file. Put throwaway scripts and screenshot specs in .scratch/ (gitignored) instead (AGENTS.md → Parallel sessions).`,
       );
       continue;
     }

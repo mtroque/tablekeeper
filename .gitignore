@@ -25,6 +25,9 @@ data/fixtures/*/eval-report.md
 supabase/.branches/
 supabase/.temp/
 
+# agent scratch files (AGENTS.md → Parallel sessions)
+.scratch/
+
 # Claude Code worktrees
 .claude/worktrees/
 .claude/settings.local.json

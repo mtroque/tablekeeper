@@ -64,6 +64,8 @@ Parallel work runs in Claude Code worktrees (`claude --worktree <name>`: `.claud
 - **Additive wiring:** a slice may add lines to shared hub files to connect its own code: export lines in `packages/core/src/index.ts` and `packages/cv/src/index.ts`, route mounts in `apps/api/src/app.ts`, entries in the game registries, a call to its own function from an existing page or hook, and env flags in test configs. It may not change or remove existing lines, and `packages/core/src/kit/types.ts` stays frozen. List each wiring edit in the spec's `## Decisions`. When `/merge` hits a conflict in these lines, it keeps both sides.
 - **Database:** one local Supabase for all worktrees, started from the main checkout. Never run `pnpm db:start`, `db:reset` or `supabase stop` from a worktree. Prefix test data with your slice's area (e.g. the game id).
 - **Ports** are picked automatically by `pnpm dev` and `pnpm test:e2e`; never hard-code them.
+- **Commands in a worktree:** Claude Code refuses any shell command it can't prove stays inside the worktree (heredocs, loops, variables in `sed`, inline scripts, paths outside it). Run one plain command per call, edit files with the edit tools, and put throwaway scripts and screenshot specs in `.scratch/` (gitignored; `pnpm check:repo` rejects them elsewhere), as `.mts` files run with `pnpm exec tsx`.
+- **Preflight:** `pnpm preflight` reports the branch, tree, `node_modules`, `.env.local` and local Supabase. Don't read or `ls` `.env.local` yourself; that's denied.
 
 ## Hard rules
 

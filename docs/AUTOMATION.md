@@ -33,6 +33,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | Every game rule id has a test, and every cited id exists | `pnpm check:repo` (`scripts/lib/check-repo/rule-ids.ts`) | ✅ |
 | Applied migrations are never edited | `pnpm check:repo` (`scripts/lib/check-repo/migrations.ts`) | ✅ |
 | No secrets, `.env*`, PDFs, rulebook text or photos over 2MB | pre-commit hook (`pnpm check:repo --staged`) and `pnpm check:repo` (`scripts/lib/check-repo/forbidden-files.ts`) | ✅ |
+| Agent scratch files stay in `.scratch/` | `.gitignore`, and `pnpm check:repo` rejects `zz-*` e2e specs and `scripts/_*`, `scripts/.*` (`scripts/lib/check-repo/forbidden-files.ts`) | ✅ |
 | A slice edits only what its spec owns | `pnpm check:repo` against the spec's `## Owns` (`scripts/lib/check-repo/ownership.ts`) | ✅ |
 | API integration and e2e tests pass | CI database jobs | W7 |
 | Score invariants (breakdown sums to total, schema round trip, API agrees with UI) | fast-check property tests | W8 |

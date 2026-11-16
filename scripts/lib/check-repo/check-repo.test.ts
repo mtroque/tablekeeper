@@ -105,6 +105,26 @@ describe('checkForbiddenFiles', () => {
       'docs/rules.pdf: PDF files are forbidden in git. Link to the official publisher PDF instead (AGENTS.md → Hard rules).',
     ]);
   });
+
+  it('fails on agent scratch files and allows real scripts and e2e specs', () => {
+    const failures = checkForbiddenFiles([
+      { path: '.scratch/find.mts', sizeBytes: 100 },
+      { path: 'tests/e2e/zz-shot.spec.ts', sizeBytes: 100 },
+      { path: 'scripts/_debug.ts', sizeBytes: 100 },
+      { path: 'scripts/.x2tmp/run.ts', sizeBytes: 100 },
+      { path: 'scripts/preflight.mjs', sizeBytes: 100 },
+      { path: 'scripts/lib/_helpers.ts', sizeBytes: 100 },
+      { path: 'tests/e2e/S1.spec.ts', sizeBytes: 100 },
+    ]);
+    const hint =
+      'looks like an agent scratch file. Put throwaway scripts and screenshot specs in .scratch/ (gitignored) instead (AGENTS.md → Parallel sessions).';
+    expect(failures).toEqual([
+      `.scratch/find.mts: ${hint}`,
+      `scripts/.x2tmp/run.ts: ${hint}`,
+      `scripts/_debug.ts: ${hint}`,
+      `tests/e2e/zz-shot.spec.ts: ${hint}`,
+    ]);
+  });
 });
 
 describe('checkOwnership', () => {
