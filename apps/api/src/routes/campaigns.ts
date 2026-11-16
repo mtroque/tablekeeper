@@ -5,13 +5,13 @@ import {
 } from '@tablekeeper/core';
 import { Router } from 'express';
 
-import type { SupabaseClients } from '../db/client';
+import type { Clients } from '../db/client';
 import { unauthenticated } from '../errors';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getCampaign, putCampaign, startCampaign } from '../services/campaigns';
 
-export function campaignsRouter(clients: SupabaseClients): Router {
+export function campaignsRouter(clients: Clients): Router {
   const router = Router();
   const auth = requireAuth(clients);
 

@@ -1,7 +1,7 @@
 import type { Logger } from 'pino';
 
 import type { Config } from '../config';
-import type { SupabaseClients } from '../db/client';
+import type { Clients } from '../db/client';
 
 import { AnthropicProvider } from './anthropic-provider';
 import { FakeProvider } from './fake-provider';
@@ -26,7 +26,7 @@ export function createProvider(config: Config): LlmProvider {
 
 export function createLlm(
   config: Config,
-  clients: SupabaseClients,
+  clients: Clients,
   logger: Logger,
   provider: LlmProvider = createProvider(config),
 ): Llm {

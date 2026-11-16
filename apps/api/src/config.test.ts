@@ -4,8 +4,7 @@ import { loadConfig } from './config';
 
 const base = {
   DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/tablekeeper',
-  SUPABASE_URL: 'http://127.0.0.1:54321',
-  SUPABASE_ANON_KEY: 'anon',
+  NEON_AUTH_BASE_URL: 'http://127.0.0.1:9/auth',
 };
 
 describe('loadConfig', () => {
@@ -13,6 +12,7 @@ describe('loadConfig', () => {
     const config = loadConfig(base);
     expect(config.port).toBe(4000);
     expect(config.databaseUrl).toBe(base.DATABASE_URL);
+    expect(config.auth).toEqual({ baseUrl: base.NEON_AUTH_BASE_URL, testSecret: undefined });
     expect(config.webOrigins).toEqual(['http://localhost:3000']);
     expect(config.quotas.guestDailyRequests).toBe(5);
     expect(config.llm).toMatchObject({
@@ -49,12 +49,20 @@ describe('loadConfig', () => {
   });
 
   it('names every invalid variable', () => {
-    expect(() => loadConfig({ SUPABASE_URL: 'nope', RATE_LIMIT_MAX: '-1' })).toThrow(
-      /DATABASE_URL[\s\S]*SUPABASE_URL[\s\S]*SUPABASE_ANON_KEY[\s\S]*RATE_LIMIT_MAX/,
+    expect(() => loadConfig({ NEON_AUTH_BASE_URL: 'nope', RATE_LIMIT_MAX: '-1' })).toThrow(
+      /DATABASE_URL[\s\S]*NEON_AUTH_BASE_URL[\s\S]*RATE_LIMIT_MAX/,
     );
   });
 
-  it('refuses the placeholder IP salt in production', () => {
+  it('refuses the placeholder IP salt or test auth secret in production', () => {
     expect(() => loadConfig({ ...base, NODE_ENV: 'production' })).toThrow(/IP_HASH_SALT/);
+    expect(() =>
+      loadConfig({
+        ...base,
+        NODE_ENV: 'production',
+        IP_HASH_SALT: 'real-salt',
+        AUTH_TEST_SECRET: 'secret',
+      }),
+    ).toThrow(/AUTH_TEST_SECRET/);
   });
 });

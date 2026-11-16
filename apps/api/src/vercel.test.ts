@@ -62,7 +62,7 @@ describe('pnpm build:vercel', () => {
   });
 
   it('answers /health and /v1 in production mode with the database burst store', async () => {
-    const { databaseUrl, supabase } = testConfig();
+    const { databaseUrl, auth } = testConfig();
     const { stdout } = await run(
       'node',
       ['-e', SERVE, join(output, 'functions/index.func/index.cjs'), IP],
@@ -74,8 +74,7 @@ describe('pnpm build:vercel', () => {
           LOG_LEVEL: 'silent',
           IP_HASH_SALT: SALT,
           DATABASE_URL: databaseUrl,
-          SUPABASE_URL: supabase.url,
-          SUPABASE_ANON_KEY: supabase.anonKey,
+          NEON_AUTH_BASE_URL: auth.baseUrl,
           LLM_PROVIDER: 'fake',
         },
       },

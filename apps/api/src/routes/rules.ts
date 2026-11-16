@@ -2,14 +2,14 @@ import { RulesAskParamsSchema, RulesAskRequestSchema } from '@tablekeeper/core';
 import { Router } from 'express';
 
 import type { Config } from '../config';
-import type { SupabaseClients } from '../db/client';
+import type { Clients } from '../db/client';
 import type { Llm } from '../llm/setup';
 import { optionalAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { subjectFor } from '../services/quota';
 import { askRules } from '../services/rules';
 
-export function rulesRouter(config: Config, clients: SupabaseClients, llm: Llm): Router {
+export function rulesRouter(config: Config, clients: Clients, llm: Llm): Router {
   const router = Router();
   router.post(
     '/games/:gameId/rules/ask',

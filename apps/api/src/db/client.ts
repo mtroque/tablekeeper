@@ -24,11 +24,9 @@ export interface Db {
 }
 
 export type Clients = {
-  supabase: Config['supabase'];
+  auth: Config['auth'];
   service: Db;
 };
-
-export type SupabaseClients = Clients;
 
 type TaggedRunner = <Row extends Record<string, unknown>>(
   strings: TemplateStringsArray,
@@ -123,9 +121,9 @@ export function createUserDb(service: Db, userId: string | null): Db {
   });
 }
 
-export function createClients(config: Pick<Config, 'databaseUrl' | 'supabase'>): Clients {
+export function createClients(config: Pick<Config, 'databaseUrl' | 'auth'>): Clients {
   return {
-    supabase: config.supabase,
+    auth: config.auth,
     service: createDb(config.databaseUrl),
   };
 }
