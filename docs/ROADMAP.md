@@ -28,37 +28,39 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. This tab
 | H4 | Harmonies Crescendo: Whispers, and the module switches | H3 | ⬜ |
 | H5 | Harmonies Crescendo: board sides C and D (layouts need verifying) | H4 | ⬜ |
 | H6 | Harmonies Crescendo: Sanctuaries, entered by their 2 colors | H5 | ⬜ |
-| X3 | Database on Neon: SQL driver instead of supabase-js, API-side access checks with RLS backstop, local Postgres | X2 | ⬜ |
-| X4 | Sign-in with Neon Auth: Google via Neon Auth, Supabase removed | X3 | ⬜ |
+| X3 | Database on Neon: SQL driver instead of supabase-js, API-side access checks with RLS backstop, local Postgres | X2 | ✅ |
+| X4 | Sign-in with Neon Auth: Google via Neon Auth, Supabase removed | X3 | ✅ |
 | W1 | CI checks: typecheck, lint, commits, unit tests and build on every push and PR | - | ✅ |
 | W2 | Prose rules become lint rules, with a baseline that only shrinks | W1 | ✅ |
 | W3 | Repo checks: rule ids have tests, migrations immutable, forbidden files, spec ownership | W1 | ✅ |
 | W4 | PR workflow: protected `main`, `/build` opens PRs, `/merge` merges them | W1, W3 | ✅ |
-| W5 | `/harden`: turn a correction into a check | W2 | ⬜ |
+| W5 | `/harden`: turn a correction into a check | W2 | ✅ |
 | W6 | Effects only through named hooks; raw `useEffect` banned | W2 | ⬜ |
 | W7 | CI database jobs: API integration and e2e tests in CI | W1, X3 | ⬜ |
 | W8 | Property-based tests for scorers and contracts | W1 | ⬜ |
 | W9 | CV accuracy gate in CI | W1 | ⬜ |
 | W10 | Screen map and screenshots on every PR | W7, W15 | ⬜ |
-| W11 | Review bots: Claude on request, Antigravity from a local script | W4 | ⬜ |
+| W11 | Review loop: every factory PR reviewed, findings resumed into the builder's session | W14 | ⬜ |
 | W12 | Groomer loop and workflow metrics | W2, W4 | ⬜ |
-| W13 | Exploratory QA on previews, filing issues | W4, W10 | ⬜ |
-| W14 | Nightly factory: issues to PRs, auto-merge by policy | W7, W11, W12, W16 | ⬜ |
+| W13 | Exploratory QA: an agent walks the screen map in CI and files issues | W7, W10 | ⬜ |
+| W14 | Factory runner: Claude Code on Actions every 5 hours, Project-ordered issue queue | W4, W7 | ⬜ |
 | W15 | Local screenshots: `pnpm shot` for agents checking screen states | - | ⬜ |
-| W16 | Session grading: silent failures in transcripts become `trace` corrections and metrics | W4, W12 | ⬜ |
+| W16 | Session grading: silent failures in transcripts become `trace` corrections and metrics | W12, W14 | ⬜ |
+| W17 | Trace follow-ups: Antigravity transcript paths, per-session `.scratch/` | - | ✅ |
+| W18 | Factory plan: runner, review loop and merge authority replanned; W specs expanded; docs cleanup | - | ✅ |
+| W19 | Merge authority: reviewer verdict plus fixed rules, shadow mode first, per-area policy file | W7, W11, W12 | ⬜ |
 
 ## Next
 
-Workflow before features; direction in `docs/AUTOMATION.md`.
+Workflow before features; direction in `docs/AUTOMATION.md`. Done so far: W1 to W5, W17, W18.
 
-1. W1.
-2. W2 and W3 in parallel.
-3. W4, so everything after goes through PRs.
-4. W5, W6, W8, W9, W15 and X3, in any order.
-5. W7, then W10 and W11.
-6. W12, then W13 and W16, then W14.
+1. W7 first: W10, W13, W14 and W19 build on its CI environment.
+2. Alongside it, in any order: W6, W8, W9, W12, W15.
+3. W14, then W11. From here the factory can build the remaining slices itself from the queue.
+4. W10 (after W15), then W13.
+5. W16 and W19.
 
-Product slices can run alongside from step 3 on; they then get the new checks for free.
+Product slices can run alongside; they get the new checks for free.
 
 ## Later
 
