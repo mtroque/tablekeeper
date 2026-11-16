@@ -1,52 +1,29 @@
-import { randomUUID } from 'node:crypto';
-
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
+
+import {
+  AUTH_STORAGE_KEY,
+  createTestUser,
+  deleteTestUsers,
+  signTestSession,
+  type E2eUser,
+} from './helpers';
 
 const SCORE = '/games/azul/score';
-/** Must match AUTH_STORAGE_KEY in apps/web/src/lib/supabase.ts. */
-const AUTH_STORAGE_KEY = 'tk:auth';
-const auth = { persistSession: false, autoRefreshToken: false };
-
-function supabaseEnv() {
-  const url = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !anonKey || !serviceKey) {
-    throw new Error('Supabase env missing; playwright.config.ts fills it.');
-  }
-  return { url, anonKey, serviceKey };
-}
 
 // Its own user (as S1 does), so S0's sign-out-everywhere test can't end this one's sessions.
-const user = { id: '', email: '', password: `pw-${randomUUID()}` };
+let user: E2eUser;
 
 test.beforeAll(async () => {
-  const { url, serviceKey } = supabaseEnv();
-  user.email = `azul-e2e-${randomUUID().slice(0, 8)}@local`;
-  const { data, error } = await createClient(url, serviceKey, { auth }).auth.admin.createUser({
-    email: user.email,
-    password: user.password,
-    email_confirm: true,
-    user_metadata: { full_name: 'Azul Player' },
-  });
-  if (error) throw error;
-  user.id = data.user.id;
+  user = await createTestUser('azul-e2e', 'Azul Player');
 });
 
 test.afterAll(async () => {
-  const { url, serviceKey } = supabaseEnv();
-  await createClient(url, serviceKey, { auth }).auth.admin.deleteUser(user.id);
+  await deleteTestUsers([user]);
 });
 
 /** A new browser context ("another device") signed in as the Azul user. */
 async function signedInDevice(browser: Browser): Promise<Page> {
-  const { url, anonKey } = supabaseEnv();
-  const { data, error } = await createClient(url, anonKey, { auth }).auth.signInWithPassword({
-    email: user.email,
-    password: user.password,
-  });
-  if (error) throw error;
+  const session = await signTestSession(user);
   const context = await browser.newContext();
   await context.addInitScript(
     ([key, value]) => {
@@ -55,7 +32,7 @@ async function signedInDevice(browser: Browser): Promise<Page> {
         sessionStorage.setItem('tk:e2e-signed-in', '1');
       }
     },
-    [AUTH_STORAGE_KEY, JSON.stringify(data.session)] as const,
+    [AUTH_STORAGE_KEY, session] as const,
   );
   return context.newPage();
 }

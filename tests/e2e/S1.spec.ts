@@ -1,69 +1,26 @@
-import { randomUUID } from 'node:crypto';
-
 import { expect, test, type Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
+
+import {
+  AUTH_STORAGE_KEY,
+  createTestUser,
+  deleteTestUsers,
+  signInWithSession,
+  signTestSession,
+  type E2eUser,
+} from './helpers';
 
 const SCORE = '/games/_example/score';
-/** Must match AUTH_STORAGE_KEY in apps/web/src/lib/supabase.ts. */
-const AUTH_STORAGE_KEY = 'tk:auth';
-const auth = { persistSession: false, autoRefreshToken: false };
 
-function supabaseEnv() {
-  const url = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !anonKey || !serviceKey) {
-    throw new Error('Supabase env missing; playwright.config.ts fills it.');
-  }
-  return { url, anonKey, serviceKey };
-}
-
-// S0's e2e test signs the shared seeded user out everywhere, which ends any session of that
-// user mid-test when files run in parallel. So each worker gets its own S1 user, removed after.
-const user = { id: '', email: '', password: `pw-${randomUUID()}` };
+// Each worker gets its own S1 user, removed after (D-043).
+let user: E2eUser;
 
 test.beforeAll(async () => {
-  const { url, serviceKey } = supabaseEnv();
-  user.email = `s1-e2e-${randomUUID().slice(0, 8)}@local`;
-  const { data, error } = await createClient(url, serviceKey, { auth }).auth.admin.createUser({
-    email: user.email,
-    password: user.password,
-    email_confirm: true,
-    user_metadata: { full_name: 'S1 Player' },
-  });
-  if (error) throw error;
-  user.id = data.user.id;
+  user = await createTestUser('s1-e2e', 'S1 Player');
 });
 
 test.afterAll(async () => {
-  const { url, serviceKey } = supabaseEnv();
-  await createClient(url, serviceKey, { auth }).auth.admin.deleteUser(user.id);
+  await deleteTestUsers([user]);
 });
-
-/** A fresh session for the S1 user, as the browser's Supabase client stores it. */
-async function userSession(): Promise<string> {
-  const { url, anonKey } = supabaseEnv();
-  const { data, error } = await createClient(url, anonKey, { auth }).auth.signInWithPassword({
-    email: user.email,
-    password: user.password,
-  });
-  if (error) throw error;
-  return JSON.stringify(data.session);
-}
-
-/** Starts the page signed in (once per tab, like the shared `signInAs`). */
-async function signIn(page: Page): Promise<void> {
-  const session = await userSession();
-  await page.addInitScript(
-    ([key, value]) => {
-      if (!sessionStorage.getItem('tk:e2e-signed-in')) {
-        localStorage.setItem(key, value);
-        sessionStorage.setItem('tk:e2e-signed-in', '1');
-      }
-    },
-    [AUTH_STORAGE_KEY, session] as const,
-  );
-}
 
 /** Covers the given cells of the example board on the review screen. */
 async function cover(page: Page, cells: Array<[number, number]>) {
@@ -75,7 +32,7 @@ async function cover(page: Page, cells: Array<[number, number]>) {
 test('signed in: manual entry, review survives a refresh, save, history and detail agree', async ({
   page,
 }) => {
-  await signIn(page);
+  await signInWithSession(page, await signTestSession(user));
   await page.goto(SCORE);
   await page.getByRole('button', { name: 'Enter by Hand' }).click();
   await expect(page).toHaveURL(/\/score\/review$/);
@@ -133,9 +90,18 @@ test("guest: Don't Save stores nothing", async ({ page }) => {
 });
 
 test('guest: Sign In with Google saves the result on return without re-entry', async ({ page }) => {
-  // Real Google sign-in isn't used in tests: stop at Supabase's authorize step, then come
+  // Real Google sign-in isn't used in tests: stop at Neon Auth's social sign-in call, then come
   // back to the callback signed in, as the OAuth redirect would.
-  await page.route('**/auth/v1/authorize**', (route) => route.abort());
+  await page.route('**/sign-in/social**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        url: 'https://accounts.google.com/o/oauth2/v2/auth',
+        redirect: false,
+      }),
+    }),
+  );
   await page.goto(SCORE);
   await page.getByRole('button', { name: 'Enter by Hand' }).click();
   await cover(page, [
@@ -146,11 +112,11 @@ test('guest: Sign In with Google saves the result on return without re-entry', a
   ]);
   await page.getByRole('link', { name: 'See Score' }).click();
   await expect(page.getByTestId('score-total')).toHaveText('4 Points');
-  const authorize = page.waitForRequest('**/auth/v1/authorize**');
+  const authorize = page.waitForRequest('**/sign-in/social**');
   await page.getByRole('button', { name: 'Sign In with Google' }).click();
   await authorize;
 
-  const session = await userSession();
+  const session = await signTestSession(user);
   await page.goto('/');
   await page.evaluate(
     ([key, value]) => {
@@ -217,7 +183,7 @@ test('square and hex editors report taps as cell refs and work by keyboard', asy
 });
 
 test('signed in: the campaign page saves through the account', async ({ page }) => {
-  await signIn(page);
+  await signInWithSession(page, await signTestSession(user));
   await page.goto('/games/_example/campaign');
   const value = page.getByRole('button', { name: /^Games Played: \d+\./ });
   await expect(value).toBeVisible();

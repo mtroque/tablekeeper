@@ -1,61 +1,25 @@
-import { randomUUID } from 'node:crypto';
-
 import { expect, test, type Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
+
+import {
+  createTestUser,
+  deleteTestUsers,
+  signInWithSession,
+  signTestSession,
+  type E2eUser,
+} from './helpers';
 
 const SCORE = '/games/patchwork/score';
-/** Must match AUTH_STORAGE_KEY in apps/web/src/lib/supabase.ts. */
-const AUTH_STORAGE_KEY = 'tk:auth';
-const auth = { persistSession: false, autoRefreshToken: false };
 
-function supabaseEnv() {
-  const url = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !anonKey || !serviceKey) {
-    throw new Error('Supabase env missing; playwright.config.ts fills it.');
-  }
-  return { url, anonKey, serviceKey };
-}
-
-// Like S1: S0's sign-out test ends every session of the shared seeded user, so this file
-// signs in its own user, removed after.
-const user = { id: '', email: '', password: `pw-${randomUUID()}` };
+// Each worker gets its own user, removed after (D-043).
+let user: E2eUser;
 
 test.beforeAll(async () => {
-  const { url, serviceKey } = supabaseEnv();
-  user.email = `patchwork-e2e-${randomUUID().slice(0, 8)}@local`;
-  const { data, error } = await createClient(url, serviceKey, { auth }).auth.admin.createUser({
-    email: user.email,
-    password: user.password,
-    email_confirm: true,
-  });
-  if (error) throw error;
-  user.id = data.user.id;
+  user = await createTestUser('patchwork-e2e', 'Patchwork Player');
 });
 
 test.afterAll(async () => {
-  const { url, serviceKey } = supabaseEnv();
-  await createClient(url, serviceKey, { auth }).auth.admin.deleteUser(user.id);
+  await deleteTestUsers([user]);
 });
-
-async function signIn(page: Page): Promise<void> {
-  const { url, anonKey } = supabaseEnv();
-  const { data, error } = await createClient(url, anonKey, { auth }).auth.signInWithPassword({
-    email: user.email,
-    password: user.password,
-  });
-  if (error) throw error;
-  await page.addInitScript(
-    ([key, value]) => {
-      if (!sessionStorage.getItem('tk:e2e-signed-in')) {
-        localStorage.setItem(key, value);
-        sessionStorage.setItem('tk:e2e-signed-in', '1');
-      }
-    },
-    [AUTH_STORAGE_KEY, JSON.stringify(data.session)] as const,
-  );
-}
 
 async function increase(page: Page, label: string, times: number) {
   for (let i = 0; i < times; i++) {
@@ -66,7 +30,7 @@ async function increase(page: Page, label: string, times: number) {
 test("manual entry: the rulebook's Scoring example scores 11 and highlights the empty spaces", async ({
   page,
 }) => {
-  await signIn(page);
+  await signInWithSession(page, await signTestSession(user));
   await page.goto(SCORE);
   await page.getByRole('button', { name: 'Enter by Hand' }).click();
   await expect(page).toHaveURL(/\/score\/review$/);

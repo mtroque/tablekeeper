@@ -60,18 +60,23 @@ test('desktop shows the centered column with the QR side note; phones do not', a
   await expect(note).toBeHidden();
 });
 
-test('Sign In starts Google sign-in through Supabase', async ({ page }) => {
-  let authorizeUrl: URL | undefined;
-  await page.route('**/auth/v1/authorize**', async (route) => {
-    authorizeUrl = new URL(route.request().url());
-    await route.fulfill({ status: 200, body: 'stopped before Google' });
+test('Sign In starts Google sign-in through Neon Auth', async ({ page }) => {
+  let socialBody: { provider?: string; callbackURL?: string } | undefined;
+  await page.route('**/sign-in/social**', async (route) => {
+    socialBody = route.request().postDataJSON() as { provider?: string; callbackURL?: string };
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        url: 'https://accounts.google.com/o/oauth2/v2/auth',
+        redirect: false,
+      }),
+    });
   });
   await page.goto('/games/harmonies/rules');
   await page.getByRole('button', { name: 'Sign In' }).click();
-  await expect.poll(() => authorizeUrl?.searchParams.get('provider')).toBe('google');
-  expect(authorizeUrl?.searchParams.get('redirect_to')).toMatch(
-    /^http:\/\/localhost:\d+\/auth\/callback$/,
-  );
+  await expect.poll(() => socialBody?.provider).toBe('google');
+  expect(socialBody?.callbackURL).toMatch(/^http:\/\/localhost:\d+\/auth\/callback$/);
 });
 
 test('a seeded user is signed in, sees their profile and can sign out', async ({ page }) => {

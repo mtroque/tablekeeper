@@ -5,16 +5,16 @@
 ```
 ┌───────────────────────────────┐        ┌─────────────────────────────┐
 │ apps/web  (Next.js, Vercel)   │  HTTPS │ apps/api  (Express, Vercel) │
-│ - UI (Tailwind + shadcn/ui)   │───────▶│ - verifies Supabase JWT     │
-│ - Supabase Auth (Google)      │  JSON  │ - sessions / campaigns      │
+│ - UI (Tailwind + shadcn/ui)   │───────▶│ - verifies Neon Auth JWT    │
+│ - Neon Auth (Google)          │  JSON  │ - sessions / campaigns      │
 │ - CV pipeline in a Web Worker │        │ - rules assistant (agent)   │
 │ - guest storage               │        │ - LLM gateway + quotas      │
 └───────────────┬───────────────┘        └──────┬───────────────┬──────┘
                 │ OAuth                         │ SQL (RLS)     │
                 ▼                               ▼               ▼
-        ┌───────────────────┐    ┌────────────────────────┐    ┌───────────────┐
-        │ Supabase: Auth    │    │ Neon: Postgres (+ FTS) │    │ Anthropic API │
-        └───────────────────┘    └────────────────────────┘    └───────────────┘
+        ┌────────────────────────────────────────────┐    ┌───────────────┐
+        │ Neon: Auth (neon_auth), Postgres (+ FTS)   │    │ Anthropic API │
+        └────────────────────────────────────────────┘    └───────────────┘
 ```
 
 - **Computer vision runs in the browser:** no per-photo cost, no upload, no rate limiting.
@@ -55,7 +55,6 @@ packages/cv/src/
   pipeline/              generic CV stages
   games/<gameId>/        detector + calibration profile.json
 db/                      migrations, seed.sql
-supabase/                config.toml (local Auth)
 scripts/                 ingest-rulebook.ts, eval-vision.ts, dev.mjs, worktrees.sh
 data/                    rulebooks/ (gitignored), fixtures/<gameId>/
 tests/e2e/               Playwright, one file per slice
@@ -134,7 +133,7 @@ Game state is JSON validated by the game's schema, so games need no tables of th
 
 | Table | Key columns | Notes |
 |---|---|---|
-| `profiles` | `id` (= `auth.users.id`), `display_name` | Created by the API on first authenticated request |
+| `profiles` | `id` (= `neon_auth."user".id`), `display_name` | Created by the API on first authenticated request |
 | `play_sessions` | `id`, `user_id`, `game_id`, `status` (`in_progress`/`completed`), `state` jsonb, `state_version`, `score_total`, `breakdown` jsonb, `detection_meta` jsonb, `campaign_id`, `played_at` | `detection_meta` records which detected values the user corrected |
 | `campaigns` | `id`, `user_id`, `game_id`, `state` jsonb, `state_version`, `archived`, `updated_at` | |
 | `rulebooks` | `id`, `game_id`, `edition`, `title`, `publisher_url`, `source_version` | |
@@ -162,7 +161,7 @@ REST under `/v1`, JSON. Every request and response is a Zod schema in `packages/
 | `POST /v1/campaigns/:gameId/new` | required | Archive the active campaign and start a new one, in one transaction |
 
 - **Errors:** `{ "error": { "code", "message", "details"? } }` with a matching status. Codes: `VALIDATION`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `QUOTA_EXCEEDED`, `LLM_DISABLED`, `RATE_LIMITED`, `INTERNAL`.
-- **Auth:** `Authorization: Bearer <Supabase access token>`, verified by middleware, which ensures the user's `profiles` row exists and attaches a `Db` client that sets `role = app_user` and `app.user_id` per transaction so RLS applies.
+- **Auth:** `Authorization: Bearer <Neon Auth JWT>`, verified by middleware against Neon Auth's JWKS (`NEON_AUTH_BASE_URL/.well-known/jwks.json`, or `AUTH_TEST_SECRET` in test mode), which ensures the user's `profiles` row exists and attaches a `Db` client that sets `role = app_user` and `app.user_id` per transaction so RLS applies.
 - **CORS:** configured web origins only. `trust proxy` is 1: Vercel overwrites `x-forwarded-for` with the client's IP, so `req.ip` is the client for quotas and the burst limit.
 - **History:** 20 per page, newest first (`played_at`, then `id`); the cursor is opaque base64 of the last row's `played_at` and `id`. `best` and `average` cover all the user's completed sessions of that game.
 - **Saving:** an unknown game is `NOT_FOUND`; a game without a scorer is 422 `VALIDATION`. State is parsed with `parseState` (upgrade, then validate), and a client-sent `scoreTotal` or `breakdown` is stripped (D-038). `detection_meta` holds the state paths that differ between the photo draft and the saved board and the number of detected values (D-037).

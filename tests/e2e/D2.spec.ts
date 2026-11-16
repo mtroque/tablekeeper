@@ -1,61 +1,25 @@
-import { randomUUID } from 'node:crypto';
-
 import { expect, test, type Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
+
+import {
+  createTestUser,
+  deleteTestUsers,
+  signInWithSession,
+  signTestSession,
+  type E2eUser,
+} from './helpers';
 
 const GAME = '/games/dorfromantik';
-/** Must match AUTH_STORAGE_KEY in apps/web/src/lib/supabase.ts. */
-const AUTH_STORAGE_KEY = 'tk:auth';
-const auth = { persistSession: false, autoRefreshToken: false };
-
-function supabaseEnv() {
-  const url = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !anonKey || !serviceKey) {
-    throw new Error('Supabase env missing; playwright.config.ts fills it.');
-  }
-  return { url, anonKey, serviceKey };
-}
 
 // Each worker gets its own user (see D-043), removed after.
-const user = { id: '', email: '', password: `pw-${randomUUID()}` };
+let user: E2eUser;
 
 test.beforeAll(async () => {
-  const { url, serviceKey } = supabaseEnv();
-  user.email = `dorfromantik-d2-${randomUUID().slice(0, 8)}@local`;
-  const { data, error } = await createClient(url, serviceKey, { auth }).auth.admin.createUser({
-    email: user.email,
-    password: user.password,
-    email_confirm: true,
-    user_metadata: { full_name: 'Campaign Player' },
-  });
-  if (error) throw error;
-  user.id = data.user.id;
+  user = await createTestUser('dorfromantik-d2', 'Campaign Player');
 });
 
 test.afterAll(async () => {
-  const { url, serviceKey } = supabaseEnv();
-  await createClient(url, serviceKey, { auth }).auth.admin.deleteUser(user.id);
+  await deleteTestUsers([user]);
 });
-
-async function signIn(page: Page): Promise<void> {
-  const { url, anonKey } = supabaseEnv();
-  const { data, error } = await createClient(url, anonKey, { auth }).auth.signInWithPassword({
-    email: user.email,
-    password: user.password,
-  });
-  if (error) throw error;
-  await page.addInitScript(
-    ([key, value]) => {
-      if (!sessionStorage.getItem('tk:e2e-signed-in')) {
-        localStorage.setItem(key, value);
-        sessionStorage.setItem('tk:e2e-signed-in', '1');
-      }
-    },
-    [AUTH_STORAGE_KEY, JSON.stringify(data.session)] as const,
-  );
-}
 
 async function setCount(page: Page, label: string, value: number): Promise<void> {
   await page
@@ -69,7 +33,7 @@ async function setCount(page: Page, label: string, value: number): Promise<void>
 test('finish, rank and unlocks; hearts stop at 3; undo changes future sheets only', async ({
   page,
 }) => {
-  await signIn(page);
+  await signInWithSession(page, await signTestSession(user));
 
   // Game 1: 142 points.
   await page.goto(`${GAME}/score`);
