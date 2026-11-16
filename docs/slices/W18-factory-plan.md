@@ -9,7 +9,9 @@
 - `docs/slices/W11-review-bots.md` (rewritten as the review loop)
 - `docs/slices/W19-merge-authority.md` (new)
 - `docs/slices/W16-session-grading.md` (Privacy line)
-- `docs/AUTOMATION.md` (Target flow, Review policy, Auto-merge policy, Agents and budget)
+- `docs/AUTOMATION.md` (Target flow, Review policy, Auto-merge policy, Agents and budget, Accounts and setup)
+- The other W stubs, expanded into full specs: `docs/slices/W6-effect-hooks.md`, `docs/slices/W7-ci-database.md`, `docs/slices/W8-property-tests.md`, `docs/slices/W9-cv-accuracy-gate.md`, `docs/slices/W10-screen-map.md`, `docs/slices/W12-groomer-metrics.md`, `docs/slices/W13-qa-explorer.md`, `docs/slices/W15-local-screenshots.md`
+- Docs cleanup the owner asked for: `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/CORRECTIONS.md`, and the finished specs folded and removed (`docs/slices/W1-ci-checks.md`, `docs/slices/W2-prose-to-lint.md`, `docs/slices/W3-repo-checks.md`, `docs/slices/W4-pr-workflow.md`, `docs/slices/W5-harden-command.md`, `docs/slices/W17-trace-followups.md`, `docs/slices/P3-patchwork-token-detection.md`, `docs/slices/X2-api-on-vercel.md`, `docs/slices/X3-neon-database.md`, `docs/slices/X4-neon-auth.md`)
 
 ## Scope
 - **Runner:** Claude Code first, on GitHub Actions (not the owner's machine, not Antigravity yet). Fixed schedule every 5 hours. Agent, model, effort and on/off in one config file; one task per run to start.
@@ -27,6 +29,8 @@
 - [x] W14, W11 and W19 specs describe the runner, the review loop and merge authority as above, with dependencies that form no cycle
 - [x] `docs/AUTOMATION.md` matches them, and W16 stores traces only encrypted
 - [x] The roadmap changes `/merge` must make are listed under Decisions
+- [x] Every remaining W stub (W6 to W16, W19) is a full spec from `docs/slices/_TEMPLATE.md`, with its open questions resolved or narrowed
+- [x] Docs cleanup: `docs/ROADMAP.md` matches the specs, finished specs are folded into `docs/DECISIONS.md` and `docs/CORRECTIONS.md` and removed, and `docs/AUTOMATION.md` → Accounts and setup is current
 
 ## Out of scope
 - Building any of it. Codex and Antigravity runners (later, behind the same config).
@@ -34,12 +38,9 @@
 ## Open questions
 
 ## Decisions
-- **Roadmap changes for `/merge`** (`docs/ROADMAP.md` is a shared doc):
-  - W11 row: `Review loop: every factory PR reviewed, findings resumed into the builder's session` · depends on `W14`.
-  - W14 row: `Factory runner: Claude Code on Actions every 5 hours, Project-ordered issue queue` · depends on `W4, W7`.
-  - New W19 row: `Merge authority: reviewer verdict plus fixed rules, shadow mode first, per-area policy file` · depends on `W7, W11, W12`.
-  - Next, step 6: `W7, then W14, then W11; W12, then W13, W16 and W19.` (replacing steps 5 and 6 as they stand; W10 stays after W7).
-- **Decision entry for `/merge`:** the factory runs Claude Code headless on GitHub Actions on a fixed 5-hour schedule, takes `agent-ready` issues in Project order, resumes the builder's session to apply review findings, and merges only within a policy file that starts in shadow mode. Why: no dependence on the owner's machine, everything versioned in the repo, resume verified across runners, and authority widened only with evidence.
+- **Shared docs updated on this branch**, because the owner asked for the docs cleanup here: `docs/ROADMAP.md` (W11, W13, W14, W16 rows and dependencies, new W17 to W19 rows, statuses, Next), the factory decision as D-087, and the folded specs' decisions (D-084 to D-086, D-088) and correction rows. `/merge` only needs to remove this spec.
+- Dependency changes from expanding the stubs: W13 now depends on W7 and W10 (it runs in W7's environment, not on Vercel previews); W16 on W12 and W14 (factory session artifacts).
+- X4 is done: the owner verified production Google sign-in on 2026-11-17, its last open criterion. Folded as D-088.
 
 ## Corrections
 
