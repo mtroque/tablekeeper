@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
 import { expect, test, type Page } from '@playwright/test';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+
+import { createDb } from '../../apps/api/src/db/client';
 
 const SCORE = '/games/dorfromantik/score';
 /** Must match AUTH_STORAGE_KEY in apps/web/src/lib/supabase.ts. */
@@ -12,10 +14,11 @@ function supabaseEnv() {
   const url = process.env.SUPABASE_URL;
   const anonKey = process.env.SUPABASE_ANON_KEY;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !anonKey || !serviceKey) {
-    throw new Error('Supabase env missing; playwright.config.ts fills it.');
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!url || !anonKey || !serviceKey || !databaseUrl) {
+    throw new Error('Test env missing; playwright.config.ts fills it.');
   }
-  return { url, anonKey, serviceKey };
+  return { url, anonKey, serviceKey, databaseUrl };
 }
 
 // Each worker gets its own user (see D-043), removed after.
@@ -35,20 +38,24 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  const { url, serviceKey } = supabaseEnv();
+  const { url, serviceKey, databaseUrl } = supabaseEnv();
+  const db = createDb(databaseUrl);
+  await db`delete from public.play_sessions where user_id = ${user.id}`;
+  await db`delete from public.campaigns where user_id = ${user.id}`;
+  await db`delete from public.profiles where id = ${user.id}`;
   await createClient(url, serviceKey, { auth }).auth.admin.deleteUser(user.id);
 });
 
-/** The user's own Supabase client and session, as the browser stores it. */
-async function userClient(): Promise<{ db: SupabaseClient; session: string }> {
+/** Signs the test user in and returns the serialized session. */
+async function userSession(): Promise<string> {
   const { url, anonKey } = supabaseEnv();
-  const db = createClient(url, anonKey, { auth });
-  const { data, error } = await db.auth.signInWithPassword({
+  const client = createClient(url, anonKey, { auth });
+  const { data, error } = await client.auth.signInWithPassword({
     email: user.email,
     password: user.password,
   });
   if (error) throw error;
-  return { db, session: JSON.stringify(data.session) };
+  return JSON.stringify(data.session);
 }
 
 async function signIn(page: Page, session: string): Promise<void> {
@@ -88,7 +95,9 @@ async function fillRulebookExample(page: Page): Promise<void> {
 test('signed in: fill the sheet, finish, see it in history, and the campaign moves on', async ({
   page,
 }) => {
-  const { db, session } = await userClient();
+  const { databaseUrl } = supabaseEnv();
+  const db = createDb(databaseUrl);
+  const session = await userSession();
   await signIn(page, session);
   await page.goto(SCORE);
 
@@ -118,21 +127,22 @@ test('signed in: fill the sheet, finish, see it in history, and the campaign mov
   await expect(page.getByRole('link', { name: /60/ }).first()).toBeVisible();
 
   // The campaign counts the game; the next sheet is game 2.
-  const stored = await db.from('campaigns').select('state').eq('game_id', 'dorfromantik').single();
-  expect(stored.error).toBeNull();
-  const state = stored.data?.state as { games: unknown[]; unlocked: string[] };
-  expect(state.games).toHaveLength(1);
+  const [stored] = await db<{ state: { games: unknown[]; unlocked: string[] } }>`
+    select state
+    from public.campaigns
+    where user_id = ${user.id} and game_id = 'dorfromantik' and not archived
+  `;
+  expect(stored?.state.games).toHaveLength(1);
 
   await page.goto(SCORE);
   await expect(page.getByRole('heading', { name: 'Game 2' })).toBeVisible();
 
   // Unlocking Circus adds the Circus row.
-  const updated = await db
-    .from('campaigns')
-    .update({ state: { ...state, unlocked: ['DOR-U-CIRCUS'] } })
-    .eq('game_id', 'dorfromantik')
-    .eq('archived', false);
-  expect(updated.error).toBeNull();
+  await db`
+    update public.campaigns
+    set state = ${db.json({ ...stored?.state, unlocked: ['DOR-U-CIRCUS'] })}
+    where user_id = ${user.id} and game_id = 'dorfromantik' and not archived
+  `;
   await page.reload();
   await expect(page.getByTestId('row-DOR-E-CIRCUS')).toBeVisible();
   await expect(page.getByTestId('locked-count')).toHaveText('14 rows still locked.');

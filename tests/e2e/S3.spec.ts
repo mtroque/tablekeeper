@@ -1,7 +1,9 @@
 import { createHash, randomInt } from 'node:crypto';
 
 import { expect, test } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
+
+import { createDb } from '../../apps/api/src/db/client';
+import { findRulebook, replaceRulebook } from '../../apps/api/src/db/rules';
 
 // The API runs with LLM_PROVIDER=fake (playwright.config.ts): it searches the rulebook, reads
 // the best section and cites it. Each run asks from its own forwarded IP, so the guest quota
@@ -14,20 +16,18 @@ const subjectKey = createHash('sha256')
   .digest('hex');
 
 function service() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Supabase env missing; playwright.config.ts fills it.');
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL missing; playwright.config.ts fills it.');
+  return createDb(url);
 }
 
 let createdRulebook: string | null = null;
 
 test.beforeAll(async () => {
   const db = service();
-  const { data } = await db.from('rulebooks').select('id').eq('game_id', GAME).maybeSingle();
-  if (data) return;
+  if (await findRulebook(db, GAME)) return;
   // No ingested rulebook (a fresh database): load a one-section stand-in for this test.
-  const created = await db.rpc('replace_rulebook', {
+  createdRulebook = await replaceRulebook(db, {
     p_rulebook: {
       game_id: GAME,
       edition: 'Test',
@@ -49,39 +49,41 @@ test.beforeAll(async () => {
       },
     ],
   });
-  if (created.error) throw created.error;
-  createdRulebook = created.data as string;
 });
 
 test.afterAll(async () => {
   const db = service();
   const day = new Date().toISOString().slice(0, 10);
-  const { data } = await db
-    .from('llm_usage')
-    .delete()
-    .match({ subject_type: 'ip', subject_key: subjectKey })
-    .select('requests, input_tokens, output_tokens');
-  const used = data?.[0];
+  const [used] = await db<{ requests: number; input_tokens: number; output_tokens: number }>`
+    delete from public.llm_usage
+    where subject_type = 'ip' and subject_key = ${subjectKey}
+    returning requests, input_tokens, output_tokens
+  `;
   if (used) {
-    await db.rpc('llm_record_tokens', {
-      p_subject_type: 'global',
-      p_subject_key: 'global',
-      p_input: -used.input_tokens,
-      p_output: -used.output_tokens,
-    });
-    const global = await db
-      .from('llm_usage')
-      .select('requests')
-      .match({ subject_type: 'global', subject_key: 'global', day })
-      .maybeSingle();
-    if (global.data) {
-      await db
-        .from('llm_usage')
-        .update({ requests: Math.max(0, global.data.requests - used.requests) })
-        .match({ subject_type: 'global', subject_key: 'global', day });
+    await db`
+      select public.llm_record_tokens(
+        'global',
+        'global',
+        ${-used.input_tokens},
+        ${-used.output_tokens}
+      )
+    `;
+    const [global] = await db<{ requests: number }>`
+      select requests
+      from public.llm_usage
+      where subject_type = 'global' and subject_key = 'global' and day = ${day}::date
+    `;
+    if (global) {
+      await db`
+        update public.llm_usage
+        set requests = ${Math.max(0, global.requests - used.requests)}
+        where subject_type = 'global' and subject_key = 'global' and day = ${day}::date
+      `;
     }
   }
-  if (createdRulebook) await db.from('rulebooks').delete().eq('id', createdRulebook);
+  if (createdRulebook) {
+    await db`delete from public.rulebooks where id = ${createdRulebook}`;
+  }
 });
 
 test('ask a starter question, get a cited answer, then run out of questions', async ({ page }) => {
