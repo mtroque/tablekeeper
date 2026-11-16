@@ -2,64 +2,38 @@ import net from 'node:net';
 
 import { describe, expect, it } from 'vitest';
 
-import { fillSupabase, findFreePort, LocalEnvError, NOT_RUNNING, pickPorts } from './local-env.mjs';
+import {
+  fillLocalDefaults,
+  findFreePort,
+  LOCAL_AUTH_TEST_SECRET,
+  LOCAL_AUTH_URL,
+  LOCAL_DATABASE_URL,
+  pickPorts,
+} from './local-env.mjs';
 
-const status = {
-  DB_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
-  API_URL: 'http://127.0.0.1:54321',
-  PUBLISHABLE_KEY: 'pub',
-  SECRET_KEY: 'secret',
-};
-
-describe('fillSupabase', () => {
-  it('fills missing values from supabase status', () => {
+describe('fillLocalDefaults', () => {
+  it('fills missing local database and test-auth values', () => {
     const env = {};
-    fillSupabase(env, () => status);
+    fillLocalDefaults(env);
     expect(env).toEqual({
-      DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/tablekeeper',
-      SUPABASE_URL: 'http://127.0.0.1:54321',
-      SUPABASE_ANON_KEY: 'pub',
-      SUPABASE_SERVICE_ROLE_KEY: 'secret',
-      NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'pub',
+      DATABASE_URL: LOCAL_DATABASE_URL,
+      NEON_AUTH_BASE_URL: LOCAL_AUTH_URL,
+      NEXT_PUBLIC_NEON_AUTH_URL: LOCAL_AUTH_URL,
+      AUTH_TEST_SECRET: LOCAL_AUTH_TEST_SECRET,
     });
-  });
-
-  it('prefers ANON_KEY and SERVICE_ROLE_KEY when both kinds are printed', () => {
-    const env = {};
-    fillSupabase(env, () => ({ ...status, ANON_KEY: 'anon', SERVICE_ROLE_KEY: 'service' }));
-    expect(env.SUPABASE_ANON_KEY).toBe('anon');
-    expect(env.SUPABASE_SERVICE_ROLE_KEY).toBe('service');
   });
 
   it('keeps explicit values', () => {
     const env = {
       DATABASE_URL: 'postgresql://neondb_owner:pw@ep-test.neon.tech/neondb',
-      SUPABASE_URL: 'https://example.supabase.co',
+      NEON_AUTH_BASE_URL: 'https://ep-test.neonauth.us-east-1.aws.neon.tech/neondb/auth',
     };
-    fillSupabase(env, () => status);
+    fillLocalDefaults(env);
     expect(env.DATABASE_URL).toBe('postgresql://neondb_owner:pw@ep-test.neon.tech/neondb');
-    expect(env.SUPABASE_URL).toBe('https://example.supabase.co');
-    expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe('http://127.0.0.1:54321');
-  });
-
-  it('never asks Supabase when everything is set', () => {
-    const env = {
-      DATABASE_URL: 'db',
-      SUPABASE_URL: 'a',
-      SUPABASE_ANON_KEY: 'b',
-      SUPABASE_SERVICE_ROLE_KEY: 'c',
-      NEXT_PUBLIC_SUPABASE_URL: 'd',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'e',
-    };
-    fillSupabase(env, () => {
-      throw new Error('should not be called');
-    });
-    expect(env.SUPABASE_URL).toBe('a');
-  });
-
-  it('fails with the "isn\'t running" message when Supabase is down', () => {
-    expect(() => fillSupabase({}, () => undefined)).toThrow(new LocalEnvError(NOT_RUNNING));
+    expect(env.NEON_AUTH_BASE_URL).toBe(
+      'https://ep-test.neonauth.us-east-1.aws.neon.tech/neondb/auth',
+    );
+    expect(env.NEXT_PUBLIC_NEON_AUTH_URL).toBe(LOCAL_AUTH_URL);
   });
 });
 

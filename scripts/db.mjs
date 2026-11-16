@@ -1,23 +1,24 @@
 // `pnpm db:start | db:reset | db:types` (plus `node scripts/db.mjs migrate` for forward-only
-// migration runs). Start and reset act on the one local database shared by every worktree, so
+// migration runs). Start and reset act on the one local Postgres shared by every worktree, so
 // they only run from the main checkout (AGENTS.md → Parallel sessions).
-import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
-import { loadEnvFile, loadLocalEnv, ROOT } from './lib/local-env.mjs';
+import { LOCAL_DATABASE_URL, loadLocalEnv, ROOT } from './lib/local-env.mjs';
 import { inWorktree } from './lib/worktree.mjs';
 
 const require = createRequire(join(ROOT, 'apps/api/package.json'));
 const { default: postgres } = await import(require.resolve('postgres'));
 
 const command = process.argv[2];
+const CONTAINER = 'tablekeeper-postgres';
+const IMAGE = 'postgres:16-alpine';
 const MIGRATIONS_DIR = join(ROOT, 'db/migrations');
 const SEED_FILE = join(ROOT, 'db/seed.sql');
 const RULEBOOKS_DIR = join(ROOT, 'data/rulebooks');
 const TYPES_FILE = join(ROOT, 'apps/api/src/db/types.ts');
-const OLD_TYPES_FILE = join(ROOT, 'apps/api/src/db/database.types.ts');
 
 if ((command === 'start' || command === 'reset') && inWorktree()) {
   console.error(
@@ -26,9 +27,9 @@ if ((command === 'start' || command === 'reset') && inWorktree()) {
   process.exit(1);
 }
 
-// Ensures historical migrations (which reference Supabase's auth.users, auth.uid() and roles
-// before 20261116120000_neon_database.sql drops them) apply cleanly on vanilla Postgres and Neon.
-const AUTH_COMPAT_SQL = `
+// Ensures historical migrations (auth.*) and local Neon Auth foreign keys (neon_auth."user")
+// apply cleanly on vanilla Postgres.
+const COMPAT_SQL = `
 do $$
 begin
   if not exists (select 1 from pg_namespace where nspname = 'auth') then
@@ -65,9 +66,69 @@ begin
   if not exists (select 1 from pg_roles where rolname = 'service_role') then
     create role service_role nologin;
   end if;
+  if not exists (select 1 from pg_namespace where nspname = 'neon_auth') then
+    create schema neon_auth;
+  end if;
+  if not exists (
+    select 1 from information_schema.tables
+    where table_schema = 'neon_auth' and table_name = 'user'
+  ) then
+    create table neon_auth."user" (
+      id uuid primary key,
+      email text,
+      name text
+    );
+  end if;
 end
 $$;
 `;
+
+async function waitForPostgres(databaseUrl) {
+  for (let i = 0; i < 30; i++) {
+    const sql = postgres(databaseUrl, { max: 1, connect_timeout: 2, onnotice: () => {} });
+    try {
+      await sql`select 1`;
+      await sql.end();
+      return;
+    } catch {
+      await sql.end().catch(() => {});
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  throw new Error('Timed out waiting for local Postgres to accept connections.');
+}
+
+function startLocalPostgres() {
+  const port = new URL(LOCAL_DATABASE_URL).port || '54322';
+  const existing = execFileSync(
+    'docker',
+    ['ps', '-a', '--filter', `name=^/${CONTAINER}$`, '--format', '{{.Names}}'],
+    { encoding: 'utf8' },
+  ).trim();
+  if (existing === CONTAINER) {
+    execFileSync('docker', ['start', CONTAINER], { stdio: 'inherit' });
+  } else {
+    execFileSync(
+      'docker',
+      [
+        'run',
+        '-d',
+        '--name',
+        CONTAINER,
+        '-e',
+        'POSTGRES_USER=postgres',
+        '-e',
+        'POSTGRES_PASSWORD=postgres',
+        '-e',
+        'POSTGRES_DB=tablekeeper',
+        '-p',
+        `${port}:5432`,
+        IMAGE,
+      ],
+      { stdio: 'inherit' },
+    );
+  }
+}
 
 async function connect(databaseUrl) {
   if (!databaseUrl) {
@@ -96,7 +157,7 @@ async function connect(databaseUrl) {
 }
 
 async function applyMigrations(sql) {
-  await sql.unsafe(AUTH_COMPAT_SQL);
+  await sql.unsafe(COMPAT_SQL);
   await sql.unsafe(`
     create table if not exists public.schema_migrations (
       version text primary key,
@@ -185,16 +246,9 @@ function tsType(dataType, isNullable) {
 
 switch (command) {
   case 'start': {
-    // Local Supabase stays up for Auth until X4; Postgres inside it serves DATABASE_URL.
-    loadEnvFile();
-    process.env.SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID ??= '';
-    process.env.SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET ??= '';
-    const result = spawnSync('supabase', ['start'], {
-      cwd: ROOT,
-      stdio: 'inherit',
-      env: process.env,
-    });
-    process.exit(result.status ?? 1);
+    startLocalPostgres();
+    await waitForPostgres(LOCAL_DATABASE_URL);
+    console.log(`Local Postgres ready at ${LOCAL_DATABASE_URL}`);
     break;
   }
   case 'migrate': {
@@ -211,9 +265,8 @@ switch (command) {
     await loadLocalEnv();
     const sql = await connect(process.env.DATABASE_URL);
     try {
-      await sql.unsafe(AUTH_COMPAT_SQL);
+      await sql.unsafe(COMPAT_SQL);
       await sql.unsafe(`
-        drop trigger if exists on_auth_user_created on auth.users;
         drop schema if exists public cascade;
         create schema public;
         grant all on schema public to public;
@@ -253,7 +306,6 @@ switch (command) {
         blocks.push(`export type ${pascalCase(table)}Row = {\n${fields.join('\n')}\n};`);
       }
       writeFileSync(TYPES_FILE, `${blocks.join('\n\n')}\n`);
-      if (existsSync(OLD_TYPES_FILE)) rmSync(OLD_TYPES_FILE);
       console.log(`Wrote ${TYPES_FILE}`);
     } finally {
       await sql.end();

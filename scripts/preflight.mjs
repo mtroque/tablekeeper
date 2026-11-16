@@ -2,9 +2,10 @@
 // (settings deny that). Prints one line per check and exits 1 if a required one fails.
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import net from 'node:net';
 import { join } from 'node:path';
 
-import { NOT_RUNNING, ROOT } from './lib/local-env.mjs';
+import { LOCAL_DATABASE_URL, loadEnvFile, NOT_RUNNING, ROOT } from './lib/local-env.mjs';
 import { inWorktree } from './lib/worktree.mjs';
 
 function quiet(cmd, args) {
@@ -19,6 +20,32 @@ function quiet(cmd, args) {
   }
 }
 
+function canConnect(urlString) {
+  return new Promise((resolve) => {
+    let url;
+    try {
+      url = new URL(urlString);
+    } catch {
+      resolve(false);
+      return;
+    }
+    const port = Number(url.port) || 5432;
+    const socket = net.createConnection({ host: url.hostname, port, timeout: 1500 });
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once('error', () => resolve(false));
+    socket.once('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+  });
+}
+
+const env = {};
+loadEnvFile(env);
+const dbRunning = await canConnect(env.DATABASE_URL || LOCAL_DATABASE_URL);
 const branch = quiet('git', ['branch', '--show-current']) ?? '(detached)';
 const dirty = quiet('git', ['status', '--porcelain']);
 
@@ -30,8 +57,7 @@ const required = [
     existsSync(join(ROOT, '.env.local')),
     'cp .env.example .env.local (README → Run locally).',
   ],
-  // `supabase status` exits non-zero when the stack is down; its output (keys) is never printed.
-  ['local Supabase running', quiet('supabase', ['status', '-o', 'env']) !== undefined, NOT_RUNNING],
+  ['local Postgres running', dbRunning, NOT_RUNNING],
 ];
 
 console.log(`branch      ${branch}${inWorktree() ? ' (worktree)' : ' (main checkout)'}`);

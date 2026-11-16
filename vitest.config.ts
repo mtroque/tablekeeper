@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 
 import { LocalEnvError, loadLocalEnv } from './scripts/lib/local-env.mjs';
 
-// API integration tests run against local Supabase; this fills its URL and keys when running.
+// API integration tests run against local Postgres; this fills local defaults when unset.
 await loadLocalEnv({ exitOnError: false }).catch((error: unknown) => {
   if (!(error instanceof LocalEnvError)) throw error;
 });
