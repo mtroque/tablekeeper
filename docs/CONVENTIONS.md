@@ -58,7 +58,7 @@ Barrel `index.ts` files only at package roots and game-module roots.
 ## Testing
 
 - Every rule in `docs/games/*.md` has a test named with its id: `it('HAR-TREE-1: leaves on two trunks score 7')`.
-- API tests run against local Supabase with `FakeProvider`; each test creates uniquely prefixed data and cleans it up.
+- API tests run against local Postgres with `FakeProvider`; each test creates uniquely prefixed data and cleans it up.
 - E2E tests use seeded local users, never real Google sign-in.
 - CV: geometry unit tests on synthetic images; accuracy through `pnpm eval:cv`.
 - Prefer a cheap integration test over mocking your own code.

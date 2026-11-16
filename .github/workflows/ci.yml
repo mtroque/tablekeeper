@@ -37,7 +37,6 @@ jobs:
         run: pnpm test:unit
       - name: Build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+          NEXT_PUBLIC_NEON_AUTH_URL: http://127.0.0.1:9/auth
           NEXT_PUBLIC_API_URL: http://localhost:4000
         run: pnpm build

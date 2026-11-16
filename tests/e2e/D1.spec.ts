@@ -1,74 +1,27 @@
-import { randomUUID } from 'node:crypto';
-
 import { expect, test, type Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
 
 import { createDb } from '../../apps/api/src/db/client';
 
-const SCORE = '/games/dorfromantik/score';
-/** Must match AUTH_STORAGE_KEY in apps/web/src/lib/supabase.ts. */
-const AUTH_STORAGE_KEY = 'tk:auth';
-const auth = { persistSession: false, autoRefreshToken: false };
+import {
+  createTestUser,
+  deleteTestUsers,
+  signInWithSession,
+  signTestSession,
+  type E2eUser,
+} from './helpers';
 
-function supabaseEnv() {
-  const url = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!url || !anonKey || !serviceKey || !databaseUrl) {
-    throw new Error('Test env missing; playwright.config.ts fills it.');
-  }
-  return { url, anonKey, serviceKey, databaseUrl };
-}
+const SCORE = '/games/dorfromantik/score';
 
 // Each worker gets its own user (see D-043), removed after.
-const user = { id: '', email: '', password: `pw-${randomUUID()}` };
+let user: E2eUser;
 
 test.beforeAll(async () => {
-  const { url, serviceKey } = supabaseEnv();
-  user.email = `dorfromantik-e2e-${randomUUID().slice(0, 8)}@local`;
-  const { data, error } = await createClient(url, serviceKey, { auth }).auth.admin.createUser({
-    email: user.email,
-    password: user.password,
-    email_confirm: true,
-    user_metadata: { full_name: 'Dorfromantik Player' },
-  });
-  if (error) throw error;
-  user.id = data.user.id;
+  user = await createTestUser('dorfromantik-e2e', 'Dorfromantik Player');
 });
 
 test.afterAll(async () => {
-  const { url, serviceKey, databaseUrl } = supabaseEnv();
-  const db = createDb(databaseUrl);
-  await db`delete from public.play_sessions where user_id = ${user.id}`;
-  await db`delete from public.campaigns where user_id = ${user.id}`;
-  await db`delete from public.profiles where id = ${user.id}`;
-  await createClient(url, serviceKey, { auth }).auth.admin.deleteUser(user.id);
+  await deleteTestUsers([user]);
 });
-
-/** Signs the test user in and returns the serialized session. */
-async function userSession(): Promise<string> {
-  const { url, anonKey } = supabaseEnv();
-  const client = createClient(url, anonKey, { auth });
-  const { data, error } = await client.auth.signInWithPassword({
-    email: user.email,
-    password: user.password,
-  });
-  if (error) throw error;
-  return JSON.stringify(data.session);
-}
-
-async function signIn(page: Page, session: string): Promise<void> {
-  await page.addInitScript(
-    ([key, value]) => {
-      if (!sessionStorage.getItem('tk:e2e-signed-in')) {
-        localStorage.setItem(key, value);
-        sessionStorage.setItem('tk:e2e-signed-in', '1');
-      }
-    },
-    [AUTH_STORAGE_KEY, session] as const,
-  );
-}
 
 /** Types a number into a counter (Enter on the value switches it to typing). */
 async function setCount(page: Page, label: string, value: number): Promise<void> {
@@ -95,10 +48,10 @@ async function fillRulebookExample(page: Page): Promise<void> {
 test('signed in: fill the sheet, finish, see it in history, and the campaign moves on', async ({
   page,
 }) => {
-  const { databaseUrl } = supabaseEnv();
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error('DATABASE_URL missing; playwright.config.ts fills it.');
   const db = createDb(databaseUrl);
-  const session = await userSession();
-  await signIn(page, session);
+  await signInWithSession(page, await signTestSession(user));
   await page.goto(SCORE);
 
   await expect(page.getByRole('heading', { name: 'Game 1' })).toBeVisible();

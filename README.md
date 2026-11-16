@@ -22,16 +22,16 @@ Everything except saving works without signing in.
 
 What's built and what's next: [`docs/ROADMAP.md`](docs/ROADMAP.md). What the app does and for whom: [`docs/PRODUCT.md`](docs/PRODUCT.md).
 
-TypeScript throughout: Next.js + Tailwind + shadcn/ui (Vercel), Express 5 (Vercel), Neon (Postgres), Supabase Auth (Google sign-in), opencv.js in a Web Worker, and the Anthropic API.
+TypeScript throughout: Next.js + Tailwind + shadcn/ui (Vercel), Express 5 (Vercel), Neon (Postgres and Google sign-in), opencv.js in a Web Worker, and the Anthropic API.
 
 ## Run locally
 
-Needs Node LTS (`.nvmrc`), pnpm, Docker and the Supabase CLI.
+Needs Node LTS (`.nvmrc`), pnpm and Docker.
 
 ```bash
 pnpm install
-cp .env.example .env.local      # fill in Google OAuth, Anthropic and IP_HASH_SALT; local DB and Auth keys are detected
-pnpm db:start                   # local Postgres + Auth in Docker
+cp .env.example .env.local      # fill in Anthropic and IP_HASH_SALT; local DB and test-auth defaults are automatic
+pnpm db:start                   # local Postgres in Docker
 pnpm db:reset                   # migrations (db/migrations/) + seed (db/seed.sql) + local rulebooks
 pnpm dev                        # web + API on the first free ports from 3000 / 4000; prints the URLs
 ```
@@ -54,9 +54,9 @@ pnpm typecheck
 pnpm lint                       # includes the UI copy rules
 pnpm lint:commits               # Conventional Commits check for this branch
 pnpm check:repo                 # rule ids, immutable migrations, forbidden files, spec ownership
-pnpm preflight                  # branch, clean tree, node_modules, .env.local present, local Supabase up
+pnpm preflight                  # branch, clean tree, node_modules, .env.local present, local Postgres up
 pnpm test:unit                  # unit tests (no database needed)
-pnpm test                       # unit + API integration (needs local Postgres + Auth)
+pnpm test                       # unit + API integration (needs local Postgres)
 pnpm test:e2e                   # Playwright
 pnpm test:build                 # production build of the web app, then S4's e2e test against it
 pnpm db:types                   # regenerate row types (apps/api/src/db/types.ts) after a migration

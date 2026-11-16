@@ -5,13 +5,13 @@
 **Goal:** Move Google sign-in from Supabase Auth to Neon Auth, so users live in the same Neon database and Supabase leaves the stack entirely. Guests notice nothing; signed-in users sign in again once (fresh start).
 
 ## Owns
-- `apps/web/src/lib/auth.ts`, `apps/web/src/lib/supabase.ts` (removed), `apps/web/src/lib/env.ts`, `apps/web/src/lib/api.ts`, `apps/web/src/components/auth-provider.tsx`, `apps/web/src/components/account-menu.tsx`, `apps/web/src/app/auth/callback/page.tsx`, `apps/web/package.json`
-- `apps/api/src/middleware/auth.ts`, `apps/api/src/config.ts`, `apps/api/src/config.test.ts`, `apps/api/src/db/client.ts`, `apps/api/src/routes/me.test.ts`, `apps/api/src/test/helpers.ts`, `apps/api/src/vercel.test.ts`, `apps/api/package.json`
+- `apps/web/src/lib/auth.ts`, `apps/web/src/lib/supabase.ts` (removed), `apps/web/src/lib/env.ts`, `apps/web/src/lib/api.ts`, `apps/web/src/lib/api-client.ts`, `apps/web/src/components/auth-provider.tsx`, `apps/web/src/components/account-menu.tsx`, `apps/web/src/app/auth/callback/page.tsx`, `apps/web/package.json`
+- `apps/api/src/middleware/auth.ts`, `apps/api/src/config.ts`, `apps/api/src/config.test.ts`, `apps/api/src/db/client.ts`, `apps/api/src/llm/setup.ts`, `apps/api/src/routes/`, `apps/api/src/test/helpers.ts`, `apps/api/src/vercel.test.ts`, `apps/api/package.json`
 - `db/migrations/`, `db/seed.sql`, `supabase/` (removed)
-- `scripts/db.mjs`, `scripts/preflight.mjs`, `scripts/lib/local-env.mjs`, `scripts/lib/local-env.d.mts`, `scripts/lib/local-env.test.js`, `scripts/lib/test-users.mjs`, `scripts/lib/test-users.d.mts`
+- `scripts/db.mjs`, `scripts/dev.mjs`, `scripts/preflight.mjs`, `scripts/lib/local-env.mjs`, `scripts/lib/local-env.d.mts`, `scripts/lib/local-env.test.js`, `scripts/lib/test-users.mjs`, `scripts/lib/test-users.d.mts`
 - `tests/e2e/helpers.ts`, `tests/e2e/S0.spec.ts`, `tests/e2e/S1.spec.ts`, `tests/e2e/A1.spec.ts`, `tests/e2e/D1.spec.ts`, `tests/e2e/D2.spec.ts`, `tests/e2e/H1.spec.ts`, `tests/e2e/P1.spec.ts`, `tests/e2e/X3.spec.ts`, `tests/e2e/X4.spec.ts`
 - `.github/workflows/ci.yml`, `.env.example`, `.gitignore`, `.prettierignore`, `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `vitest.config.ts`, `playwright.config.ts`
-- `AGENTS.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md`, `docs/PRODUCT.md`, `docs/UX.md`, `apps/web/src/app/privacy/page.tsx`
+- `AGENTS.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md`, `docs/DEPLOYMENT.md`, `docs/PRODUCT.md`, `docs/UX.md`, `apps/web/src/app/privacy/page.tsx`
 
 ## Scope
 - **Sign-in flow.** Replace `@supabase/supabase-js` in `apps/web` with `@neondatabase/auth` (`createAuthClient` pointed at `NEXT_PUBLIC_NEON_AUTH_URL`). `signInWithGoogle` calls `auth.signIn.social({ provider: 'google', callbackURL: '/auth/callback' })` after saving the return path in `sessionStorage` (`RETURN_TO_KEY`). `/auth/callback` calls `getSession()` (which exchanges Neon Auth's `neon_auth_session_verifier` if present), runs `resumePendingSave()` if a guest save is pending, and redirects back.

@@ -1,42 +1,65 @@
+import { randomUUID } from 'node:crypto';
+
 import type { Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
+import { SignJWT } from 'jose';
 
-import { TEST_PASSWORD, TEST_USER_DETAILS, TEST_USERS } from '../../scripts/lib/test-users.mjs';
+import { createDb } from '../../apps/api/src/db/client';
+import { TEST_USER_DETAILS, type TEST_USERS } from '../../scripts/lib/test-users.mjs';
 
-/** Must match AUTH_STORAGE_KEY in apps/web/src/lib/supabase.ts. */
-const AUTH_STORAGE_KEY = 'tk:auth';
-const auth = { persistSession: false, autoRefreshToken: false };
+/** Must match AUTH_STORAGE_KEY in apps/web/src/lib/auth.ts. */
+export const AUTH_STORAGE_KEY = 'tk:auth';
 
-/** Signs a seeded user in by password (creating the Auth user if missing) and hands the session to the page. */
-export async function signInAs(
-  page: Page,
-  user: keyof typeof TEST_USERS = 'default',
-): Promise<void> {
-  const url = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !anonKey) throw new Error('Supabase env missing; playwright.config.ts fills it.');
-  const client = createClient(url, anonKey, { auth });
-  let { data, error } = await client.auth.signInWithPassword({
-    email: TEST_USERS[user],
-    password: TEST_PASSWORD,
-  });
-  if (error && serviceKey) {
-    const detail = TEST_USER_DETAILS[user];
-    const admin = createClient(url, serviceKey, { auth });
-    await admin.auth.admin.createUser({
-      id: detail.id,
-      email: detail.email,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-      user_metadata: { full_name: detail.name },
-    });
-    ({ data, error } = await client.auth.signInWithPassword({
-      email: TEST_USERS[user],
-      password: TEST_PASSWORD,
-    }));
+export type E2eUser = { id: string; email: string; name: string };
+
+function authEnv() {
+  const databaseUrl = process.env.DATABASE_URL;
+  const issuer = process.env.NEON_AUTH_BASE_URL;
+  const secret = process.env.AUTH_TEST_SECRET;
+  if (!databaseUrl || !issuer || !secret) {
+    throw new Error('Test auth env missing; playwright.config.ts fills it.');
   }
-  if (error || !data.session) throw error ?? new Error('Failed to sign in test user');
+  return { databaseUrl, issuer: issuer.replace(/\/$/, ''), secret };
+}
+
+/** Mints a local test JWT and serializes the browser session object. */
+export async function signTestSession(user: E2eUser): Promise<string> {
+  const { issuer, secret } = authEnv();
+  const token = await new SignJWT({ email: user.email, name: user.name })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(user.id)
+    .setIssuer(issuer)
+    .setIssuedAt()
+    .setExpirationTime('1h')
+    .sign(new TextEncoder().encode(secret));
+  return JSON.stringify({ token, user });
+}
+
+/** Inserts a test user into `neon_auth."user"`. Delete with `deleteTestUsers`. */
+export async function createTestUser(prefix: string, name = 'Test Player'): Promise<E2eUser> {
+  const { databaseUrl } = authEnv();
+  const id = randomUUID();
+  const email = `${prefix}-${id.slice(0, 8)}@local`;
+  const db = createDb(databaseUrl);
+  await db`
+    insert into neon_auth."user" (id, email, name)
+    values (${id}::uuid, ${email}, ${name})
+  `;
+  return { id, email, name };
+}
+
+export async function deleteTestUsers(users: E2eUser[]): Promise<void> {
+  const { databaseUrl } = authEnv();
+  const ids = users.map((u) => u.id);
+  if (ids.length === 0) return;
+  const db = createDb(databaseUrl);
+  await db`delete from public.play_sessions where user_id = any(${ids}::uuid[])`;
+  await db`delete from public.campaigns where user_id = any(${ids}::uuid[])`;
+  await db`delete from public.profiles where id = any(${ids}::uuid[])`;
+  await db`delete from neon_auth."user" where id = any(${ids}::uuid[])`;
+}
+
+/** Injects a serialized test session into `localStorage` once per tab. */
+export async function signInWithSession(page: Page, session: string): Promise<void> {
   await page.addInitScript(
     ([key, value]) => {
       if (!sessionStorage.getItem('tk:e2e-signed-in')) {
@@ -44,6 +67,16 @@ export async function signInAs(
         sessionStorage.setItem('tk:e2e-signed-in', '1');
       }
     },
-    [AUTH_STORAGE_KEY, JSON.stringify(data.session)] as const,
+    [AUTH_STORAGE_KEY, session] as const,
   );
+}
+
+/** Signs a seeded user in using a minted test JWT (never real Google). */
+export async function signInAs(
+  page: Page,
+  user: keyof typeof TEST_USERS = 'default',
+): Promise<void> {
+  const detail = TEST_USER_DETAILS[user];
+  const session = await signTestSession(detail);
+  await signInWithSession(page, session);
 }

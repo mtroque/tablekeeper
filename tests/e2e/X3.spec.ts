@@ -1,77 +1,36 @@
-import { randomUUID } from 'node:crypto';
-
-import { expect, test, type Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
+import { expect, test } from '@playwright/test';
 
 import { createDb } from '../../apps/api/src/db/client';
 
-/** Must match AUTH_STORAGE_KEY in apps/web/src/lib/supabase.ts. */
-const AUTH_STORAGE_KEY = 'tk:auth';
-const auth = { persistSession: false, autoRefreshToken: false };
+import {
+  createTestUser,
+  deleteTestUsers,
+  signInWithSession,
+  signTestSession,
+  type E2eUser,
+} from './helpers';
 
-function testEnv() {
-  const url = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!url || !anonKey || !serviceKey || !databaseUrl) {
-    throw new Error('Test env missing; playwright.config.ts fills it.');
-  }
-  return { url, anonKey, serviceKey, databaseUrl };
-}
-
-const user = { id: '', email: '', password: `pw-${randomUUID()}` };
+let user: E2eUser;
 
 test.beforeAll(async () => {
-  const { url, serviceKey } = testEnv();
-  user.email = `x3-e2e-${randomUUID().slice(0, 8)}@local`;
-  const { data, error } = await createClient(url, serviceKey, { auth }).auth.admin.createUser({
-    email: user.email,
-    password: user.password,
-    email_confirm: true,
-    user_metadata: { full_name: 'Neon Player' },
-  });
-  if (error) throw error;
-  user.id = data.user.id;
+  user = await createTestUser('x3-e2e', 'Neon Player');
 });
 
 test.afterAll(async () => {
-  const { url, serviceKey, databaseUrl } = testEnv();
-  const db = createDb(databaseUrl);
-  await db`delete from public.play_sessions where user_id = ${user.id}`;
-  await db`delete from public.campaigns where user_id = ${user.id}`;
-  await db`delete from public.profiles where id = ${user.id}`;
-  await createClient(url, serviceKey, { auth }).auth.admin.deleteUser(user.id);
+  await deleteTestUsers([user]);
 });
-
-async function signIn(page: Page): Promise<void> {
-  const { url, anonKey } = testEnv();
-  const { data, error } = await createClient(url, anonKey, { auth }).auth.signInWithPassword({
-    email: user.email,
-    password: user.password,
-  });
-  if (error) throw error;
-  await page.addInitScript(
-    ([key, value]) => {
-      if (!sessionStorage.getItem('tk:e2e-signed-in')) {
-        localStorage.setItem(key, value);
-        sessionStorage.setItem('tk:e2e-signed-in', '1');
-      }
-    },
-    [AUTH_STORAGE_KEY, JSON.stringify(data.session)] as const,
-  );
-}
 
 test('a signed-in user’s first request creates their profile, and saving a play and a campaign works end to end', async ({
   page,
 }) => {
-  const { databaseUrl } = testEnv();
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error('DATABASE_URL missing; playwright.config.ts fills it.');
   const db = createDb(databaseUrl);
 
   // No sign-up trigger: before the first authenticated API request, no profile row exists.
   expect(await db`select id from public.profiles where id = ${user.id}`).toEqual([]);
 
-  await signIn(page);
+  await signInWithSession(page, await signTestSession(user));
   await page.goto('/');
 
   // The header calls GET /v1/me, which creates the profile row on first authenticated request.
