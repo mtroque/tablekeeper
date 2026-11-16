@@ -1,11 +1,12 @@
-import { createClient, type User } from '@supabase/supabase-js';
 import type { RequestHandler } from 'express';
+import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify, type JWTPayload } from 'jose';
+import { z } from 'zod';
 
 import { createUserDb, type Clients } from '../db/client';
 import { ensureProfile } from '../db/profiles';
 import { AppError, unauthenticated } from '../errors';
 
-const serverAuth = { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false };
+const UuidSchema = z.uuid();
 
 function bearerToken(header: string | undefined): string | undefined {
   if (!header) return undefined;
@@ -14,38 +15,53 @@ function bearerToken(header: string | undefined): string | undefined {
   return match[1];
 }
 
-function displayNameFor(user: User): string {
-  const meta: Record<string, unknown> = user.user_metadata;
-  const fullName = typeof meta.full_name === 'string' ? meta.full_name.trim() : '';
-  const name = typeof meta.name === 'string' ? meta.name.trim() : '';
-  const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
-  return fullName || name || emailLocal || 'Player';
+function displayNameFor(payload: JWTPayload, email: string | null): string {
+  const name = typeof payload.name === 'string' ? payload.name.trim() : '';
+  const emailLocal = email?.split('@')[0]?.trim() ?? '';
+  return name || emailLocal || 'Player';
 }
 
 /**
- * Verifies a Supabase access token when one is sent, ensures the user's profile row exists,
- * and sets `req.auth` with a user-scoped database client.
- * A missing token means a guest; an invalid or expired one is a 401, so the client refreshes it.
+ * Verifies a Neon Auth JWT when one is sent (using JWKS, or `AUTH_TEST_SECRET` in test mode),
+ * ensures the user's profile row exists, and sets `req.auth` with a user-scoped database client.
+ * A missing token means a guest; an invalid or expired one is a 401.
  */
 export function optionalAuth(clients: Clients): RequestHandler {
-  const anon = createClient(clients.supabase.url, clients.supabase.anonKey, { auth: serverAuth });
+  const issuer = clients.auth.baseUrl.replace(/\/$/, '');
+  const jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
+  const testKey = clients.auth.testSecret
+    ? new TextEncoder().encode(clients.auth.testSecret)
+    : undefined;
+
   return async (req, _res, next) => {
     const token = bearerToken(req.get('authorization'));
     if (!token) {
       next();
       return;
     }
-    const { data, error } = await anon.auth.getUser(token);
-    if (error) {
+
+    let payload: JWTPayload;
+    try {
+      const header = decodeProtectedHeader(token);
+      const verified =
+        testKey && header.alg === 'HS256'
+          ? await jwtVerify(token, testKey, { issuer, algorithms: ['HS256'] })
+          : await jwtVerify(token, jwks, { issuer });
+      payload = verified.payload;
+    } catch {
       throw new AppError('UNAUTHENTICATED', 401, 'Your sign-in has expired. Sign in again.');
     }
-    const db = createUserDb(clients.service, data.user.id);
-    await ensureProfile(db, data.user.id, displayNameFor(data.user));
-    req.auth = {
-      userId: data.user.id,
-      email: data.user.email ?? null,
-      db,
-    };
+
+    const sub = UuidSchema.safeParse(payload.sub);
+    if (!sub.success) {
+      throw new AppError('UNAUTHENTICATED', 401, 'Your sign-in has expired. Sign in again.');
+    }
+
+    const userId = sub.data;
+    const email = typeof payload.email === 'string' ? payload.email : null;
+    const db = createUserDb(clients.service, userId);
+    await ensureProfile(db, userId, displayNameFor(payload, email));
+    req.auth = { userId, email, db };
     next();
   };
 }

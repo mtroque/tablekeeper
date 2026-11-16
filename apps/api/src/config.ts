@@ -24,8 +24,8 @@ const EnvSchema = z.object({
   WEB_ORIGINS: z.preprocess(emptyAsUndefined, z.string().default('http://localhost:3000')),
 
   DATABASE_URL: z.url(),
-  SUPABASE_URL: z.url(),
-  SUPABASE_ANON_KEY: z.string().min(1),
+  NEON_AUTH_BASE_URL: z.url(),
+  AUTH_TEST_SECRET: optionalString,
 
   LLM_ENABLED: bool(true),
   LLM_PROVIDER: z.preprocess(emptyAsUndefined, z.enum(['anthropic', 'fake']).default('anthropic')),
@@ -51,7 +51,7 @@ export type Config = {
   logLevel: z.infer<typeof EnvSchema>['LOG_LEVEL'];
   webOrigins: string[];
   databaseUrl: string;
-  supabase: { url: string; anonKey: string };
+  auth: { baseUrl: string; testSecret: string | undefined };
   llm: {
     enabled: boolean;
     provider: 'anthropic' | 'fake';
@@ -84,6 +84,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (e.NODE_ENV === 'production' && e.IP_HASH_SALT === 'change-me') {
     throw new Error('Invalid API environment:\n  IP_HASH_SALT: set a real salt in production');
   }
+  if (e.NODE_ENV === 'production' && e.AUTH_TEST_SECRET) {
+    throw new Error('Invalid API environment:\n  AUTH_TEST_SECRET: not allowed in production');
+  }
   enableExampleGame(e.NODE_ENV === 'test' || env.NEXT_PUBLIC_ENABLE_EXAMPLE_GAME === 'true');
   return {
     env: e.NODE_ENV,
@@ -93,9 +96,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       .map((origin) => origin.trim())
       .filter(Boolean),
     databaseUrl: e.DATABASE_URL,
-    supabase: {
-      url: e.SUPABASE_URL,
-      anonKey: e.SUPABASE_ANON_KEY,
+    auth: {
+      baseUrl: e.NEON_AUTH_BASE_URL,
+      testSecret: e.NODE_ENV === 'test' ? e.AUTH_TEST_SECRET : undefined,
     },
     llm: {
       enabled: e.LLM_ENABLED,

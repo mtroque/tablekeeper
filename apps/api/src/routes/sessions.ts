@@ -6,13 +6,13 @@ import {
 } from '@tablekeeper/core';
 import { Router } from 'express';
 
-import type { SupabaseClients } from '../db/client';
+import type { Clients } from '../db/client';
 import { unauthenticated } from '../errors';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getSession, listSessions, patchSession, saveSession } from '../services/sessions';
 
-export function sessionsRouter(clients: SupabaseClients): Router {
+export function sessionsRouter(clients: Clients): Router {
   const router = Router();
   const auth = requireAuth(clients);
 
