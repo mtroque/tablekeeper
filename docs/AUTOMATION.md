@@ -21,7 +21,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | UI copy: no dashes, emoji, banned phrases | `eslint-rules/ui-copy.js` | ✅ |
 | Conventional Commits | commit-msg hook, `pnpm lint:commits` | ✅ |
 | CV worker never reaches UI code | `cv-worker-imports.test.ts` (D-060) | ✅ |
-| Every check runs before anything reaches `main` | `.github/workflows/ci.yml` (W1 ✅), required checks on `main` (W4) | W4 |
+| Every check runs before anything reaches `main` | `.github/workflows/ci.yml` (`Checks` job), branch protection on `main` (`enforce_admins: true`, linear history, rebase-only merge) | ✅ |
 | Only config reads `process.env` | `eslint-rules/rules.js` (`rules/no-env-outside-config`) | ✅ |
 | Every LLM call goes through the gateway | `eslint.config.js` (`@typescript-eslint/no-restricted-imports` for `@anthropic-ai/sdk` outside `apps/api/src/llm/`) | ✅ |
 | Scorers are pure | `eslint.config.js` (`no-restricted-globals` and `no-restricted-properties` in `packages/core/src/games/`) | ✅ |
@@ -47,7 +47,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 1. **Queue.** Work is a slice spec (product or W) or, later, a GitHub issue labeled `agent-ready` that links one (W14).
 2. **Build.** An agent builds it on its own branch: a local worktree (`/parallel`), or a cloud agent. Never on `main`.
 3. **PR.** The agent pushes and opens a PR whose body links the spec and lists how each acceptance criterion was verified (W4).
-4. **Checks.** CI runs every deterministic check; `main` requires them (W1, W4, W7).
+4. **Checks.** CI runs every deterministic check; `main` requires them (`Checks` status check, PR required, linear history, rebase-only merge, `enforce_admins: true` so local sessions sharing the owner's GitHub credentials cannot push to `main` or merge a failing PR; emergency owner bypass is `gh api -X DELETE repos/mtroque/tablekeeper/branches/main/protection/enforce_admins` and `-X POST` to restore).
 5. **Review.** By policy below (W11). Accepted review findings are logged in `docs/CORRECTIONS.md`; patterns that recur become checks (principle 2).
 6. **Merge.** `/merge` rebases, adds the shared-doc commit (`docs/ROADMAP.md` status, `docs/DECISIONS.md`), waits for CI and rebase-merges, one PR at a time (W4).
 7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them. Session transcripts are graded for silent failures (W16), and findings become `trace` rows in `docs/CORRECTIONS.md`.
