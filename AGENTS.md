@@ -28,39 +28,40 @@ Read the first five before any work. Put each fact in its home and link to it fr
 
 Work is built in **slices**: one feature end to end (database, core logic, API, UI, tests). Never build all of one layer first.
 
-1. **Check dependencies:** each must be ✅ in `docs/ROADMAP.md`, or ✅ in its own spec earlier on this branch.
-2. **Spec:** if the slice's spec is a stub, expand it from `docs/slices/_TEMPLATE.md`, resolving open questions from the docs. Commit it alone (`docs(<scope>): spec <id>`). Set its status to 🟨.
-3. **Build in this order**, editing only what the spec owns:
+1. **Branch and preflight:** run `pnpm preflight`. Never commit directly to `main`: in the main checkout, create `slice/<id>` from `main` (`git switch -c slice/<id>`); in a worktree, keep `worktree-<name>`.
+2. **Check dependencies:** each must be ✅ in its own `docs/slices/<dep>-*.md` earlier on this branch, or ✅ in `docs/ROADMAP.md`.
+3. **Spec:** if the slice's spec is a stub, expand it from `docs/slices/_TEMPLATE.md`, resolving open questions from the docs. Commit it alone (`docs(<scope>): spec <id>`). Set its status to 🟨.
+4. **Build in this order**, editing only what the spec owns:
    1. Migration (if any) → `pnpm db:reset` → `pnpm db:types`
    2. Core logic in `packages/core` / `packages/cv` with unit tests
    3. Contracts in `packages/core/src/contracts`
    4. API routes with integration tests
    5. UI
    6. One Playwright test of the main flow, `tests/e2e/<id>.spec.ts`
-4. **Commit** small Conventional Commits as you go.
-5. **Finish** by meeting the definition of done below.
+5. **Commit** small Conventional Commits as you go.
+6. **Finish** by meeting the definition of done below.
 
-**Log corrections; repeats become checks.** When you're corrected, or find a rule broken, fix it and log it in `docs/CORRECTIONS.md` (on a branch: in your spec's `## Corrections`). Turn it into a check only when its pattern has been logged before, or when it's high-stakes, and then propose it first (`docs/CORRECTIONS.md` → When a pattern becomes a check).
+**Log corrections; repeats become checks.** When you're corrected, or find a rule broken, fix it and log it in your spec's `## Corrections` (`/merge` moves it to `docs/CORRECTIONS.md`). Turn it into a check only when its pattern has been logged before, or when it's high-stakes, and then propose it first (`docs/CORRECTIONS.md` → When a pattern becomes a check).
 
 **Stop and ask** (after finishing whatever else you can, with the spec set to ⏸ and the reason written in it) only when a rule the slice needs is marked ⚠️ or VERIFY in `docs/games/`, required assets are missing (`docs/DATA_ASSETS.md`), or a needed shared change blocks all remaining work. Never guess game rules.
 
 ## Definition of done
 
-1. `pnpm typecheck && pnpm lint && pnpm lint:commits && pnpm test && pnpm test:e2e` pass. Fix what this slice broke; report anything else.
+1. `pnpm typecheck && pnpm lint && pnpm lint:commits && pnpm check:repo && pnpm test && pnpm test:e2e` pass. Fix what this slice broke; report anything else.
 2. Every acceptance criterion in the spec is checked, each one actually verified (test, script output, or a manual run you describe).
 3. Every screen state from the spec and `docs/UX.md` → Screen states is implemented, and all UI text and visuals follow `docs/UX.md` → Look and voice (no em or en dashes, no emoji, no AI-template styling).
 4. A measurable target that can't be reached (e.g. CV accuracy) doesn't block done if the feature still works end to end: record the numbers and the gap in the spec.
-5. The spec's `**Status:**` is ✅ and its `## Decisions` lists anything worth remembering.
-6. **Shared docs** (`docs/ROADMAP.md` status, `docs/DECISIONS.md`): update them now if you're on `main`; on any other branch leave them alone, and `/merge` updates them.
+5. The spec's `**Status:**` is ✅ and its `## Decisions` and `## Corrections` list anything worth remembering.
+6. **Shared docs** (`docs/ROADMAP.md` status, `docs/DECISIONS.md`, `docs/CORRECTIONS.md`): leave them alone on the branch; `/merge` updates them in `docs: merge <branch>` before rebase-merging the PR.
 7. Every commit follows Conventional Commits (`docs/CONVENTIONS.md` → Git). The commit-msg hook rejects bad messages; `pnpm lint:commits` checks the whole branch. Reword any that slipped through before finishing.
-8. Final commit `docs(<scope>): finish <id>`, then report what was built, how it was verified, and what's left.
+8. Final commit `docs(<scope>): finish <id>`, push the branch (`git push -u origin HEAD`), and open a PR (`gh pr create`) using `.github/pull_request_template.md` (spec link, verification list, runner and session id), then report the PR URL, what was built, how it was verified, and what's left.
 
 ## Parallel sessions
 
-Parallel work runs in Claude Code worktrees (`claude --worktree <name>`: `.claude/worktrees/<name>/`, branch `worktree-<name>`, from local `main`; gitignored files in `.worktreeinclude` are copied in). Use `/parallel` to start them and `/merge` to bring them back.
+Parallel work runs in Claude Code worktrees (`claude --worktree <name>`: `.claude/worktrees/<name>/`, branch `worktree-<name>`, from local `main`; gitignored files in `.worktreeinclude` are copied in). Use `/parallel` to start them and `/merge` to rebase and merge their PRs.
 
 - **Ownership:** a slice edits only what its spec lists under `## Owns`; slices running at the same time never overlap. A game slice owns that game's folders: `{packages/core,packages/cv,apps/web}/src/games/<gameId>/`, `docs/games/<gameId>.md`, `data/fixtures/<gameId>/`, `apps/web/public/samples/<gameId>/`, plus its spec and tests. Games are pre-registered, so game slices never edit registries; other slices may add registry entries as additive wiring.
-- **Shared code** (anything you don't own): write the change you need under `## Shared change requests` in your spec (what, where, why) and carry on with the rest. To apply requests, a session on `main` implements them with tests, commits `feat(<area>): <change> (requested by <id>)`, and runs `scripts/worktrees.sh sync`.
+- **Shared code** (anything you don't own): write the change you need under `## Shared change requests` in your spec (what, where, why) and carry on with the rest. To apply requests, open and merge a small PR `feat(<area>): <change> (requested by <id>)` first, then run `scripts/worktrees.sh sync`.
 - **Additive wiring:** a slice may add lines to shared hub files to connect its own code: export lines in `packages/core/src/index.ts` and `packages/cv/src/index.ts`, route mounts in `apps/api/src/app.ts`, entries in the game registries, a call to its own function from an existing page or hook, and env flags in test configs. It may not change or remove existing lines, and `packages/core/src/kit/types.ts` stays frozen. List each wiring edit in the spec's `## Decisions`. When `/merge` hits a conflict in these lines, it keeps both sides.
 - **Database:** one local Supabase for all worktrees, started from the main checkout. Never run `pnpm db:start`, `db:reset` or `supabase stop` from a worktree. Prefix test data with your slice's area (e.g. the game id).
 - **Ports** are picked automatically by `pnpm dev` and `pnpm test:e2e`; never hard-code them.

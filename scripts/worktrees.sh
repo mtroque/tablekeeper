@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Helpers for parallel Claude Code sessions in git worktrees.
+# Helpers for parallel Claude Code sessions in git worktrees and open PR status.
 # Worktrees are created by Claude Code itself (`claude --worktree <name>`) under .claude/worktrees/<name>
 # on branch worktree-<name>, branched from the local HEAD (see worktree.baseRef in .claude/settings.json).
 # Run from the main checkout with `main` checked out.
 #
 #   scripts/worktrees.sh launch <name> <slice ids...>   start `claude --worktree <name> "/build <ids>"` (tmux window, or print the command)
-#   scripts/worktrees.sh status                         every worktree: branch, ahead/behind main, dirty, last commit, statuses of the slice specs it changed
+#   scripts/worktrees.sh status                         every worktree and open PR: branch, ahead/behind main, dirty, last commit, slice spec statuses, PR check state
 #   scripts/worktrees.sh sync                           rebase every clean worktree on main (and reinstall deps)
 #   scripts/worktrees.sh clean                          remove worktrees whose branch is merged into main and whose changed specs are all finished (✅, ⬜ or deferred)
 set -euo pipefail
@@ -20,6 +20,15 @@ require_main() {
 worktrees() { # dir|branch for every worktree except the main checkout
   git -C "$MAIN_DIR" worktree list --porcelain |
     awk -v main="$MAIN_DIR" '/^worktree /{d=$2} /^branch /{b=$2; sub("refs/heads/","",b); if (d!=main) print d "|" b}'
+}
+is_merged() { # true when branch is an ancestor of main or its PR was rebase-merged with all patches in main
+  local branch="$1"
+  if git -C "$MAIN_DIR" merge-base --is-ancestor "$branch" main; then return 0; fi
+  if [ -n "$(git -C "$MAIN_DIR" cherry main "$branch" 2>/dev/null | grep '^+')" ]; then return 1; fi
+  command -v gh >/dev/null 2>&1 || return 1
+  local merged_count
+  merged_count="$(gh pr list --head "$branch" --state merged --json number --jq 'length' 2>/dev/null || echo 0)"
+  [ "${merged_count:-0}" -gt 0 ]
 }
 branch_base() { # where a branch's own commits start
   local branch="$1" base=""
@@ -80,6 +89,32 @@ cmd_status() {
     spec_statuses "$dir" "$branch" | sed 's/^/    /'
   done < <(worktrees)
   [ "$found" -eq 1 ] || echo "(no worktrees)"
+
+  if command -v gh >/dev/null 2>&1; then
+    echo ""
+    printf "%-6s %-26s %-10s %s\n" PR BRANCH CHECKS TITLE
+    local prs
+    prs="$(gh pr list --state open --json number,headRefName,title,isDraft,statusCheckRollup --jq '
+      if length == 0 then "(no open PRs)"
+      else .[] | [
+        "#\(.number)",
+        .headRefName,
+        (if .isDraft then "DRAFT"
+         elif (.statusCheckRollup | length) == 0 then "PENDING"
+         elif any(.statusCheckRollup[]; .conclusion == "FAILURE" or .conclusion == "TIMED_OUT" or .conclusion == "CANCELLED" or .conclusion == "ACTION_REQUIRED") then "FAIL"
+         elif any(.statusCheckRollup[]; .status != "COMPLETED") then "PENDING"
+         else "PASS" end),
+        .title
+      ] | @tsv end
+    ' 2>/dev/null || echo "(could not query PRs)")"
+    if [ "$prs" = "(no open PRs)" ] || [ "$prs" = "(could not query PRs)" ]; then
+      echo "$prs"
+    else
+      while IFS=$'\t' read -r num br chk title; do
+        printf "%-6s %-26s %-10s %s\n" "$num" "$br" "$chk" "$title"
+      done <<< "$prs"
+    fi
+  fi
 }
 
 cmd_sync() {
@@ -102,10 +137,10 @@ cmd_clean() {
   local dir branch
   while IFS='|' read -r dir branch; do
     if [ -n "$(git -C "$dir" status --porcelain)" ]; then echo "⏭  $branch: uncommitted changes, kept"; continue; fi
-    if ! git -C "$MAIN_DIR" merge-base --is-ancestor "$branch" main; then echo "⏭  $branch: not merged into main, kept"; continue; fi
+    if ! is_merged "$branch"; then echo "⏭  $branch: not merged into main, kept"; continue; fi
     if [ -n "$(spec_statuses "$dir" "$branch" | unfinished)" ]; then echo "⏭  $branch: has unfinished slices, kept"; continue; fi
     if git -C "$MAIN_DIR" worktree remove "$dir" 2>/dev/null; then
-      git -C "$MAIN_DIR" branch -d "$branch" >/dev/null 2>&1 || true
+      git -C "$MAIN_DIR" branch -D "$branch" >/dev/null 2>&1 || true
       echo "🧹 removed $(basename "$dir") ($branch)"
     else
       echo "⚠️  $branch: could not remove $dir (still open in a session, or locked: git worktree unlock $dir)"

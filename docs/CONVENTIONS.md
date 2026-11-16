@@ -71,4 +71,4 @@ Barrel `index.ts` files only at package roots and game-module roots.
   - Examples: `feat(harmonies): score side A river`, `fix(api): reset quotas at UTC midnight`, `docs(roadmap): plan X1`.
   - Enforced by commitlint (`@commitlint/config-conventional` plus the scope list) in a commit-msg hook, and across a branch by `pnpm lint:commits`.
 - One logical change per commit; a slice's spec is committed before its code.
-- Work goes to `main` directly (`/build` in the main checkout) or through worktree branches `worktree-<name>`, merged only by `/merge`.
+- `main` is protected (PR required, `Checks` status check required, linear history, no force pushes). All work runs on a branch (`slice/<id>` from `/build` in the main checkout, or `worktree-<name>` in a worktree), opens a PR formatted with `.github/pull_request_template.md`, and reaches `main` through `/merge` (rebase merge after adding the shared-doc commit `docs: merge <branch>`). There is no docs-only exception on `main`; emergency admin bypass is documented in `docs/AUTOMATION.md`.
