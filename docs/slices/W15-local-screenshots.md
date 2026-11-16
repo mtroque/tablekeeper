@@ -8,7 +8,7 @@
 - `scripts/shot.ts`, `package.json` (one script line), `README.md` (Commands), `AGENTS.md` (Definition of done, item 3: point at `pnpm shot`)
 
 ## Scope (must cover)
-- `pnpm shot <route> [--state <name>] [--dark] [--signed-in]` starts or reuses `pnpm dev` (ports picked as usual), opens the route at 390×844 with Playwright, and writes PNGs to `.scratch/shots/` (gitignored), printing their paths.
+- `pnpm shot <route> [--state <name>] [--dark] [--signed-in]` starts or reuses `pnpm dev` (ports picked as usual), opens the route at 390×844 with Playwright, and writes PNGs to `.scratch/<session or slice>/shots/` (gitignored; the folder name defaults to the branch name), printing their paths. It never clears anything outside that folder (AGENTS.md → Parallel sessions).
 - States it can reach without a screen map: guest, signed in as a seeded test user (`scripts/lib/test-users.mjs`), offline, light and dark. Anything else is W10's map.
 - Works from a worktree as one plain command (AGENTS.md → Parallel sessions).
 - Why: the 2026-11-16 transcript pass found 6 build sessions writing temporary `tests/e2e/zz-shot.spec.ts` files just to look at screens; several were refused by the worktree guard, and 6 reads failed on screenshots that were never written (`docs/CORRECTIONS.md`, `scratch-files-in-repo`).

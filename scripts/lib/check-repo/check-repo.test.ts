@@ -117,7 +117,7 @@ describe('checkForbiddenFiles', () => {
       { path: 'tests/e2e/S1.spec.ts', sizeBytes: 100 },
     ]);
     const hint =
-      'looks like an agent scratch file. Put throwaway scripts and screenshot specs in .scratch/ (gitignored) instead (AGENTS.md → Parallel sessions).';
+      'looks like an agent scratch file. Put throwaway scripts and screenshot specs in your own .scratch/<session or slice>/ (gitignored) instead (AGENTS.md → Parallel sessions).';
     expect(failures).toEqual([
       `.scratch/find.mts: ${hint}`,
       `scripts/.x2tmp/run.ts: ${hint}`,

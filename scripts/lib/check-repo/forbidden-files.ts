@@ -46,7 +46,7 @@ export function checkForbiddenFiles(files: readonly FileEntry[]): string[] {
 
     if (isScratchPath(normalized)) {
       failures.push(
-        `${normalized}: looks like an agent scratch file. Put throwaway scripts and screenshot specs in .scratch/ (gitignored) instead (AGENTS.md → Parallel sessions).`,
+        `${normalized}: looks like an agent scratch file. Put throwaway scripts and screenshot specs in your own .scratch/<session or slice>/ (gitignored) instead (AGENTS.md → Parallel sessions).`,
       );
       continue;
     }
