@@ -80,7 +80,7 @@ Set per area in `.github/factory/merge-policy.json` (W19): each path group (docs
 
 ## Accounts and setup
 
-State as of 2026-11-15. No secret values here; only names.
+State as of 2026-11-17. No secret values here; only names.
 
 | Item | State |
 |---|---|
@@ -88,7 +88,8 @@ State as of 2026-11-15. No secret values here; only names.
 | `CLAUDE_CODE_OAUTH_TOKEN` | Repo secret, from `claude setup-token` |
 | Claude GitHub app | Installed on this repo only |
 | Claude cloud agents | GitHub connected at claude.ai/code |
-| Antigravity and `agy` | Installed and signed in with Google AI Pro; headless `agy -p --output-format json` works |
+| Antigravity and `agy` | Installed and signed in with Google AI Pro; headless `agy -p --output-format json` works, and `agy --conversation <id> -p='...'` resumes a conversation headless (attach the prompt to `-p`) |
 | Vercel CLI | Signed in |
-| Neon | Not yet; X3 creates it through the Vercel Marketplace |
+| Neon | Database `tablekeeper-db` and Neon Auth, through the Vercel Marketplace (X3, X4); setup in `docs/DEPLOYMENT.md` |
+| Factory (W14) | Not yet: the GitHub App `tablekeeper-factory`, `FACTORY_SESSION_KEY`, the "Factory" Project and the `FACTORY_ENABLED` variable are created in W14 |
 | Gemini CLI and Gemini Code Assist on GitHub | Retired for consumer accounts in 2026; don't use |
