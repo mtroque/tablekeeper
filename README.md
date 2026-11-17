@@ -65,6 +65,10 @@ pnpm rules:smoke <gameId> "<question>"   # one real rules-assistant call
 scripts/worktrees.sh status|sync|clean|launch   # parallel Claude Code sessions (AGENTS.md)
 ```
 
+### CI
+
+Every push to `main` and every pull request runs three jobs in [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `Checks` (typecheck, lint, commits, repo checks, unit tests, build), `API` (Vitest integration suite against `postgres:16-alpine`), and `E2E` (Playwright against `postgres:16-alpine` with `LLM_PROVIDER=fake` and test JWTs).
+
 ## Docs
 
 Start with [`AGENTS.md`](AGENTS.md): it's the contributor guide (features are built in slices by Claude Code agents, in parallel worktrees) and lists which doc covers what.
