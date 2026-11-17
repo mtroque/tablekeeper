@@ -1,6 +1,6 @@
 # W7: CI database jobs
 
-**Status:** ⬜ · **Depends on:** W1, X3
+**Status:** 🟨 · **Depends on:** W1, X3
 
 **Goal:** API integration tests and Playwright e2e tests run in CI against a real Postgres, so a PR can't break saving, quotas or a main flow without CI noticing. The factory (W14) reuses the same environment, and merge authority (W19) requires these jobs.
 
