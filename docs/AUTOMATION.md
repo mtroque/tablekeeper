@@ -36,7 +36,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | No secrets, `.env*`, PDFs, rulebook text or photos over 2MB | pre-commit hook (`pnpm check:repo --staged`) and `pnpm check:repo` (`scripts/lib/check-repo/forbidden-files.ts`) | ✅ |
 | Agent scratch files stay in `.scratch/<session or slice>/` | `.gitignore`, and `pnpm check:repo` rejects `zz-*` e2e specs and `scripts/_*`, `scripts/.*` (`scripts/lib/check-repo/forbidden-files.ts`) | ✅ |
 | A slice edits only what its spec owns | `pnpm check:repo` against the spec's `## Owns` (`scripts/lib/check-repo/ownership.ts`) | ✅ |
-| API integration and e2e tests pass | CI database jobs | W7 |
+| API integration and e2e tests pass | CI database jobs (`.github/workflows/ci.yml`: `API`, `E2E`) | ✅ |
 | Score invariants (breakdown sums to total, schema round trip, API agrees with UI) | fast-check property tests | W8 |
 | CV accuracy never drops below the recorded numbers | `pnpm eval:cv` gate in CI | W9 |
 | Every screen state renders | screen map and screenshot job | W10 |
@@ -48,7 +48,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 1. **Queue.** Work is a slice spec (product or W). For the factory (W14), it's a GitHub issue labeled `agent-ready` that links a spec or carries its own acceptance list, taken in the order of the "Factory" Project.
 2. **Build.** An agent builds it on its own branch: a local worktree (`/parallel`), or the factory's headless Claude Code run on GitHub Actions every 5 hours (W14). Never on `main`.
 3. **PR.** The agent pushes and opens a PR whose body links the spec and lists how each acceptance criterion was verified (W4).
-4. **Checks.** CI runs every deterministic check; `main` requires them (`Checks` status check, PR required, linear history, rebase-only merge, `enforce_admins: true` so local sessions sharing the owner's GitHub credentials cannot push to `main` or merge a failing PR; emergency owner bypass is `gh api -X DELETE repos/mtroque/tablekeeper/branches/main/protection/enforce_admins` and `-X POST` to restore).
+4. **Checks.** CI runs every deterministic check; `main` requires `Checks`, `API` and `E2E` (plus PR required, linear history, rebase-only merge, `enforce_admins: true` so local sessions sharing the owner's GitHub credentials cannot push to `main` or merge a failing PR; emergency owner bypass is `gh api -X DELETE repos/mtroque/tablekeeper/branches/main/protection/enforce_admins` and `-X POST` to restore). Required checks are set with `gh api --method PUT repos/mtroque/tablekeeper/branches/main/protection/required_status_checks -F strict=true -f 'contexts[]=Checks' -f 'contexts[]=API' -f 'contexts[]=E2E'`.
 5. **Review.** By policy below (W11). Findings on a factory PR go back to the session that built it (`claude --resume`), which fixes them with its full context. Accepted review findings are logged in `docs/CORRECTIONS.md`; patterns that recur become checks (principle 2).
 6. **Merge.** The PR already carries its shared-doc updates (its finish commit sets the roadmap row, appends decisions and corrections, and removes the spec), so merging is a rebase merge in GitHub by the owner. A PR behind `main` rebases first; `pnpm check:repo` catches clashing decision ids. For factory PRs, the merge-authority policy decides merge or escalate (W19).
 7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them. Session transcripts are graded for silent failures (W16), and findings become `trace` rows in `docs/CORRECTIONS.md`.
