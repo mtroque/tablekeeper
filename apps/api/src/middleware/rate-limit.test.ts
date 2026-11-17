@@ -6,7 +6,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../app';
 import { createDb } from '../db/client';
-import { findRulebook } from '../db/rules';
+import { findRulebook, replaceRulebook } from '../db/rules';
 import { guestSubject } from '../services/quota';
 import { errorBody, testConfig } from '../test/helpers';
 
@@ -14,6 +14,7 @@ import { errorBody, testConfig } from '../test/helpers';
 const service = createDb(testConfig().databaseUrl);
 const burstKeys: string[] = [];
 const usageKeys: string[] = [];
+let createdRulebook: string | null = null;
 
 function sharedStoreConfig(overrides: Record<string, string> = {}) {
   return testConfig({
@@ -34,6 +35,9 @@ const games = (app: ReturnType<typeof createApp>, ip: string) =>
   request(app).get('/v1/games').set('x-forwarded-for', ip);
 
 afterAll(async () => {
+  if (createdRulebook) {
+    await service`delete from public.rulebooks where id = ${createdRulebook}`;
+  }
   if (burstKeys.length) {
     await service`delete from public.rate_limit_hits where key = any(${burstKeys}::text[])`;
   }
@@ -140,8 +144,29 @@ describe("client IP behind Vercel's proxy", () => {
       LLM_PROVIDER: 'fake',
       LLM_GUEST_DAILY_REQUESTS: '1',
     });
-    if (!(await findRulebook(service, 'azul'))) {
-      throw new Error('Load the Azul rulebook first (pnpm ingest azul --load).');
+    if (!(await findRulebook(service, 'patchwork'))) {
+      createdRulebook = await replaceRulebook(service, {
+        p_rulebook: {
+          game_id: 'patchwork',
+          edition: 'Test',
+          title: 'rate-limit test rulebook',
+          publisher_url: 'https://example.com/rate-limit-test.pdf',
+          source_version: 'rate-limit-test',
+        },
+        p_sections: [
+          {
+            key: 's1',
+            parent_key: null,
+            ordinal: 1,
+            number: null,
+            title: 'End of the game',
+            pdf_page_start: 1,
+            pdf_page_end: 1,
+            printed_pages: '1',
+            body: 'The game ends when both time tokens reach the final space.',
+          },
+        ],
+      });
     }
     const app = createApp(config);
     const [a, b] = ['198.51.100.41', '198.51.100.42'];
@@ -151,7 +176,7 @@ describe("client IP behind Vercel's proxy", () => {
     }
     const ask = (ip: string) =>
       request(app)
-        .post('/v1/games/azul/rules/ask')
+        .post('/v1/games/patchwork/rules/ask')
         .set('x-forwarded-for', ip)
         .send({ question: 'How does the game end?' });
 

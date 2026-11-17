@@ -5,7 +5,7 @@
 **Goal:** API integration tests and Playwright e2e tests run in CI against a real Postgres, so a PR can't break saving, quotas or a main flow without CI noticing. The factory (W14) reuses the same environment, and merge authority (W19) requires these jobs.
 
 ## Owns
-- `.github/workflows/ci.yml` (new jobs only; the `Checks` job stays as it is), `playwright.config.ts` (CI-only settings), `README.md` (CI section), `docs/AUTOMATION.md` (the W7 row and the required-checks list in Target flow → Checks)
+- `.github/workflows/ci.yml` (new jobs only; the `Checks` job stays as it is), `playwright.config.ts` (CI-only settings), `apps/api/src/middleware/rate-limit.test.ts` (stand-in rulebook when uningested), `README.md` (CI section), `docs/AUTOMATION.md` (the W7 row and the required-checks list in Target flow → Checks)
 
 ## Scope
 - **Service:** `postgres:16-alpine` as a job service on port 54322 with database `tablekeeper`, matching `LOCAL_DATABASE_URL` (`scripts/lib/local-env.mjs`), so no new env plumbing. Then `pnpm db:reset` (migrations and `db/seed.sql`; a CI runner isn't a worktree, so the main-checkout guard doesn't apply). Rulebooks aren't in git; tests that need one already load a stand-in (`tests/e2e/S3.spec.ts`).
