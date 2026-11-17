@@ -36,7 +36,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W4 | PR workflow: protected `main`, `/build` opens PRs, merged in GitHub | W1, W3 | ✅ |
 | W5 | `/harden`: turn a correction into a check | W2 | ✅ |
 | W6 | Effects only through named hooks; raw `useEffect` banned | W2 | ⬜ |
-| W7 | CI database jobs: API integration and e2e tests in CI | W1, X3 | ⬜ |
+| W7 | CI database jobs: API integration and e2e tests in CI | W1, X3 | ✅ |
 | W8 | Property-based tests for scorers and contracts | W1 | ⬜ |
 | W9 | CV accuracy gate in CI | W1 | ⬜ |
 | W10 | Screen map and screenshots on every PR | W7, W15 | ⬜ |
