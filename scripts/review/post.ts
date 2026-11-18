@@ -94,3 +94,38 @@ export function extractSessionIdFromPrBody(body: string): string | null {
   const id = match?.[1]?.trim();
   return id && id !== '<session-id>' ? id : null;
 }
+
+function readExecStream(value: unknown): string {
+  if (value instanceof Buffer) return value.toString('utf8');
+  return typeof value === 'string' ? value : '';
+}
+
+function formatExecError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const extra = error as Error & { stderr?: unknown; stdout?: unknown };
+  return `${error.message}\n${readExecStream(extra.stderr)}\n${readExecStream(extra.stdout)}`;
+}
+
+/**
+ * Posts a review with inline comments, falling back to body-only findings when GitHub
+ * rejects inline line resolution (HTTP 422 "Line could not be resolved").
+ */
+export function postReviewWithFallback(
+  postFn: (payload: BuiltReviewPayload) => void,
+  result: ReviewFindings,
+  diffLines: ReadonlyMap<string, ReadonlySet<number>>,
+): void {
+  const payload = buildReviewPayload(result, diffLines);
+  try {
+    postFn(payload);
+  } catch (error) {
+    const details = formatExecError(error);
+    if (
+      payload.comments.length === 0 ||
+      (!details.includes('422') && !details.includes('Line could not be resolved'))
+    ) {
+      throw error;
+    }
+    postFn(buildReviewPayload(result, new Map()));
+  }
+}
