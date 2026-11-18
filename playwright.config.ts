@@ -1,6 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 
+import { describeRunning, runningDevServer } from './scripts/lib/dev-lock.mjs';
 import { loadLocalEnv } from './scripts/lib/local-env.mjs';
+
+// Next allows one dev server per app. Say so before Playwright starts its own and buries the error
+// in web server output (workers re-read this file while the suite's own server runs, so skip them).
+const running = process.env.TEST_WORKER_INDEX === undefined ? runningDevServer() : undefined;
+if (running) {
+  throw new Error(describeRunning(running, { reuseHint: 'Stop it, then run the tests again.' }));
+}
 
 // Picks free ports once and stores them in process.env, so test workers (which re-read this
 // file) inherit the same ports instead of picking new ones.
