@@ -52,13 +52,10 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 
 ## Next
 
-Workflow before features; direction in `docs/AUTOMATION.md`. Done so far: W1 to W5, W17, W18.
+Workflow before features; direction in `docs/AUTOMATION.md`. Done so far: W1 to W9, W11, W12, W14, W15, W17, W18.
 
-1. W7 first: W10, W13, W14 and W19 build on its CI environment.
-2. Alongside it, in any order: W6, W8, W9, W12, W15.
-3. W14, then W11. From here the factory can build the remaining slices itself from the queue.
-4. W10 (after W15), then W13.
-5. W16 and W19.
+1. W10 (screen map and screenshots on every PR), then W13 (exploratory QA).
+2. W16 (session grading) and W19 (merge authority).
 
 Product slices can run alongside; they get the new checks for free.
 
