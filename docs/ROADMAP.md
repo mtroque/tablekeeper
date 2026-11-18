@@ -49,13 +49,23 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W17 | Trace follow-ups: Antigravity transcript paths, per-session `.scratch/` | - | ✅ |
 | W18 | Factory plan: runner, review loop and merge authority replanned; W specs expanded; docs cleanup | - | ✅ |
 | W19 | Merge authority: reviewer verdict plus fixed rules, shadow mode first, per-area policy file | W7, W11, W12 | ⬜ |
+| W20 | Trace pass 2: every Antigravity session read, fixes specced as W21 to W26 | - | ✅ |
+| W21 | Dependency security: patch advisories on the sign-in path and Next.js, `pnpm audit` required in CI | - | ⬜ |
+| W22 | Agent commands: `pnpm verify` with short output, `pnpm fix`, dev servers that clean up | - | ⬜ |
+| W23 | Antigravity environment: pnpm, git and Docker in the sandbox, a checked-in permission profile, `gh` upgrade | - | ⬜ |
+| W24 | Factory go-live: dry run, Project access, current models, the live checks W11, W12 and W14 left open | - | ⬜ |
+| W25 | Finish gate: `check:repo` refuses to fold a spec with unchecked criteria | - | ⬜ |
+| W26 | Production safety: issuer contract test, post-deploy smoke, approved migration workflow | W7 | ⬜ |
 
 ## Next
 
-Workflow before features; direction in `docs/AUTOMATION.md`. Done so far: W1 to W9, W11, W12, W14, W15, W17, W18.
+Workflow before features; direction in `docs/AUTOMATION.md`. Done so far: W1 to W9, W11, W12, W14, W15, W17, W18, W20.
 
-1. W10 (screen map and screenshots on every PR), then W13 (exploratory QA).
-2. W16 (session grading) and W19 (merge authority).
+1. W21 (security fixes on the sign-in path) first.
+2. W25 and W22, so later slices are gated and quieter; W23 alongside (mostly owner setup).
+3. W24: the factory's first live runs, starting with a dry run.
+4. W26, then W10 (screen map), then W13 (QA).
+5. W16 (session grading) and W19 (merge authority).
 
 Product slices can run alongside; they get the new checks for free.
 
