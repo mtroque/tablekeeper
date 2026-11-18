@@ -1,6 +1,6 @@
 # W22: Agent commands
 
-**Status:** ⬜ · **Depends on:** none
+**Status:** 🟨 · **Depends on:** none
 
 **Goal:** The commands agents run most give short, readable output and leave nothing running behind them. The 2026-11-18 pass found 69 steps in 6 of 9 sessions where truncated output hid the failing line, so the agent reran a whole chain to find it. It also found import-order lint failures right after formatting, and stray dev servers blocking the next run.
 
