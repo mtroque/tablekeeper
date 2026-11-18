@@ -1,11 +1,16 @@
 ## Slice
 
 - Spec: `docs/slices/<id>-<slug>.md`
+- `Closes #<n>` if the slice is finished, `Refs #<n>` if it stays ⏸ (factory runs)
 
 ## Verification
 
-- [ ] `pnpm typecheck && pnpm lint && pnpm lint:commits && pnpm check:repo && pnpm test && pnpm test:e2e`
+- [ ] `pnpm verify --full`
 - [ ] <acceptance criterion from spec>: <how it was verified (test, script output, or manual run)>
+
+## Also found
+
+- <problem outside the slice>: <issue link> (or "Nothing.")
 
 ## Session
 

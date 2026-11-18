@@ -5,11 +5,11 @@
 **Goal:** The factory's first live runs (2026-11-18: PR #24 W26, PR #28 W10, their review loops) failed in ways nobody saw at the time. This slice fixes the ones that can be built and checked locally, so the next runs leave a transcript, keep paused slices in the queue, and post reviews whose verdict matches the gate. Found by decrypting the three builder transcripts and reading every factory and review run log. The audit was first written into W24 (66c88a8) and dropped from it by 7f88a3c; this spec restores it.
 
 ## Owns
-- `scripts/factory/run.ts`, `scripts/factory/project.ts`, `scripts/factory/finish.ts` (new) and their tests in `scripts/factory/factory.test.ts`
+- `scripts/factory/run.ts`, `scripts/factory/project.ts`, `scripts/factory/finish.ts` and `scripts/factory/stream.ts` (new) and their tests in `scripts/factory/factory.test.ts`
 - `scripts/review/run.ts`, `scripts/review/findings.ts` and `scripts/review/review.test.ts` (verdict gate only)
 - `.github/workflows/review.yml` (concurrency only), `.github/factory/config.json` (`builder.maxTurns`)
 - `scripts/preflight.mjs`
-- `.claude/skills/build/SKILL.md`, `.agents/skills/build/SKILL.md`
+- `.claude/skills/build/SKILL.md`, `.agents/skills/build/SKILL.md`, `.github/pull_request_template.md` (`Refs`, `## Also found`)
 
 W24 owns the same factory files for its live checks; it is ⏸ with no build work left, so the two don't run at the same time.
 
