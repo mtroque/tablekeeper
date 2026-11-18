@@ -6,7 +6,8 @@ on:
 
 concurrency:
   group: review-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  # A fix round pushes to this PR; cancelling would kill the round that pushed (W27).
+  cancel-in-progress: false
 
 jobs:
   review:
