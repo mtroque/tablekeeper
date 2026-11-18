@@ -4,6 +4,7 @@ import type { Page } from '@playwright/test';
 import { SignJWT } from 'jose';
 
 import { createDb } from '../../apps/api/src/db/client';
+import { neonAuthEndpoints } from '../../apps/api/src/middleware/auth';
 import { TEST_USER_DETAILS, type TEST_USERS } from '../../scripts/lib/test-users.mjs';
 
 /** Must match AUTH_STORAGE_KEY in apps/web/src/lib/auth.ts. */
@@ -27,7 +28,7 @@ export async function signTestSession(user: E2eUser): Promise<string> {
   const token = await new SignJWT({ email: user.email, name: user.name })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(user.id)
-    .setIssuer(new URL(issuer).origin)
+    .setIssuer(neonAuthEndpoints(issuer).issuer)
     .setIssuedAt()
     .setExpirationTime('1h')
     .sign(new TextEncoder().encode(secret));
