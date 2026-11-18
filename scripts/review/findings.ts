@@ -40,6 +40,31 @@ export function hasBlockingFindings(
   return findings.some((f) => SEVERITY_RANK[f.severity] >= threshold);
 }
 
+/**
+ * The posted verdict follows the gate: with a finding at or above `blockingSeverity`, a `merge`
+ * from the model becomes `fix`, with a reason saying so. `escalate` is kept.
+ */
+export function applyVerdictGate(
+  result: ReviewFindings,
+  blockingSeverity: FindingSeverity = 'should-fix',
+): ReviewFindings {
+  if (result.verdict.recommendation !== 'merge') return result;
+  const threshold = SEVERITY_RANK[blockingSeverity];
+  const blocking = result.findings.filter((f) => SEVERITY_RANK[f.severity] >= threshold).length;
+  if (blocking === 0) return result;
+  return {
+    ...result,
+    verdict: {
+      ...result.verdict,
+      recommendation: 'fix',
+      reasons: [
+        `Changed from \`merge\`: ${blocking} finding${blocking === 1 ? '' : 's'} at \`${blockingSeverity}\` or above block merging.`,
+        ...result.verdict.reasons,
+      ],
+    },
+  };
+}
+
 export type PrReviewRecord = {
   commitId: string | null;
   body: string;
