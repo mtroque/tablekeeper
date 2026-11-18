@@ -15,6 +15,7 @@
 
 ## Acceptance criteria
 - [ ] <observable behavior>
+<A criterion that can't be verified in this slice ends with "(moved to <id>)" and is copied into that follow-up spec; `pnpm check:repo` checks it when the spec is removed.>
 
 ## Tests
 <Anything beyond the standard ones in docs/CONVENTIONS.md → Testing.>
