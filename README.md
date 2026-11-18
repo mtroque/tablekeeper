@@ -51,6 +51,7 @@ pnpm ingest <gameId> --load     # load the reviewed sections
 
 ```bash
 pnpm verify [--full]            # the checks in one go, one line each (--full adds test and e2e); logs in .scratch/<branch>/verify/
+pnpm audit:prod                 # fails on high or critical advisories in production dependencies (CI's Audit job)
 pnpm fix                        # Prettier and eslint --fix on the files this branch changed (--staged: staged only)
 pnpm typecheck
 pnpm lint                       # includes the UI copy rules
