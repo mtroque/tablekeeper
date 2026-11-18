@@ -14,5 +14,13 @@
     "effort": "medium",
     "maxTurns": 25,
     "timeoutMinutes": 15
+  },
+  "review": {
+    "maxRounds": 2,
+    "blockingSeverity": "should-fix",
+    "labels": {
+      "review": "review",
+      "needsHuman": "needs-human"
+    }
   }
 }
