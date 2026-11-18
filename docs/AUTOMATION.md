@@ -32,6 +32,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | `useEffect` only through named hooks | `eslint.config.js` (`@typescript-eslint/no-restricted-imports` and `no-restricted-properties` outside `apps/web/src/lib/hooks/`) | ✅ |
 | Every game rule id has a test, and every cited id exists | `pnpm check:repo` (`scripts/lib/check-repo/rule-ids.ts`) | ✅ |
 | Applied migrations are never edited | `pnpm check:repo` (`scripts/lib/check-repo/migrations.ts`) | ✅ |
+| No high or critical advisory in production dependencies | `Audit` job in `.github/workflows/ci.yml` (`pnpm audit:prod`); moderate and low counts in the weekly metrics report | ✅ (required on `main` once W26 adds it to branch protection) |
 | Shared docs: a slice edits only its roadmap row and appends to decisions and corrections; decision ids unique and increasing | `pnpm check:repo` (`scripts/lib/check-repo/ownership.ts`, `decisions.ts`) | ✅ |
 | A slice isn't folded or marked ✅ with unchecked acceptance criteria (moved ones name an existing follow-up spec) | `pnpm check:repo` (`scripts/lib/check-repo/finish-gate.ts`) | ✅ |
 | No secrets, `.env*`, PDFs, rulebook text or photos over 2MB | pre-commit hook (`pnpm check:repo --staged`) and `pnpm check:repo` (`scripts/lib/check-repo/forbidden-files.ts`) | ✅ |

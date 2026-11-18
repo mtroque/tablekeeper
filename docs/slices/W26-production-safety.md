@@ -8,6 +8,7 @@
 - `apps/api/src/middleware/auth.test.ts`, `apps/api/src/test/helpers.ts`, `tests/e2e/helpers.ts` (issuer only)
 - `scripts/smoke.ts` with tests, `.github/workflows/smoke.yml`, `.github/workflows/migrate.yml`
 - `docs/DEPLOYMENT.md`, `AGENTS.md` (Hard rules: one line on production changes), `README.md` (Commands)
+- Branch protection on `main` (adding `Audit` to the required checks, with `gh api`, recorded in `docs/AUTOMATION.md`)
 
 ## Scope
 - **Issuer contract test:**
@@ -32,6 +33,8 @@
 - [ ] A production deploy triggers `smoke.yml`, which passes (link the run); a smoke against a wrong URL opens a `needs-human` issue
 - [ ] `migrate.yml` waits for the owner's approval and, approved, reports "no pending migrations" on production (link the run)
 - [ ] `AGENTS.md` → Hard rules has the production rule, and `docs/DEPLOYMENT.md` points at `migrate.yml`
+- [ ] `Audit` is a required check on `main` (show the protection settings) (from W21)
+- [ ] The owner confirms production sign-in, a signed-in save and history after the W21 dependency changes deploy (from W21)
 
 ## Tests
 - `auth.test.ts`: documented issuer accepted, base-URL issuer rejected, expired token rejected.
