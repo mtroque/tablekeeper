@@ -6,6 +6,7 @@ import { join, relative } from 'node:path';
 
 import {
   checkDecisionIds,
+  checkFinishGate,
   checkForbiddenFiles,
   checkMigrations,
   checkOwnership,
@@ -96,6 +97,22 @@ function loadTestFiles(): Record<string, string> {
   return files;
 }
 
+/** Every slice spec at HEAD, path → content. */
+function loadSpecs(): Record<string, string> {
+  const specs: Record<string, string> = {};
+  for (const name of readdirSync(join(ROOT, 'docs/slices'))) {
+    const rel = `docs/slices/${name}`;
+    if (SPEC_PATH.test(rel)) specs[rel] = readFileSync(join(ROOT, rel), 'utf8');
+  }
+  return specs;
+}
+
+/** A file's content at a ref, or undefined when it didn't exist there. */
+function gitShow(ref: string, path: string): string | undefined {
+  const result = spawnSync('git', ['show', `${ref}:${path}`], { cwd: ROOT, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout : undefined;
+}
+
 const SPEC_PATH = /^docs\/slices\/[A-Z0-9]+-.*\.md$/;
 
 function countRemovedLines(baseRef: string, path: string): number {
@@ -111,11 +128,13 @@ function diffSinceBase(baseRef: string): {
   migrationEntries: MigrationDiffEntry[];
   changedFiles: ChangedFile[];
   specs: Record<string, string>;
+  deletedSpecs: Record<string, string>;
 } {
   const raw = git('diff', '--name-status', `${baseRef}..HEAD`);
   const migrationEntries: MigrationDiffEntry[] = [];
   const changedFiles: ChangedFile[] = [];
   const specs: Record<string, string> = {};
+  const deletedSpecs: Record<string, string> = {};
 
   for (const line of raw.split(/\r?\n/)) {
     if (!line.trim()) continue;
@@ -137,7 +156,10 @@ function diffSinceBase(baseRef: string): {
           '--',
           firstPath,
         );
-        if (deletedIn) specs[firstPath] = git('show', `${deletedIn}^:${firstPath}`);
+        if (deletedIn) {
+          specs[firstPath] = git('show', `${deletedIn}^:${firstPath}`);
+          deletedSpecs[firstPath] = specs[firstPath];
+        }
       }
       continue;
     }
@@ -152,7 +174,7 @@ function diffSinceBase(baseRef: string): {
     }
   }
 
-  return { migrationEntries, changedFiles, specs };
+  return { migrationEntries, changedFiles, specs, deletedSpecs };
 }
 
 const stagedOnly = process.argv.includes('--staged');
@@ -168,11 +190,19 @@ if (!stagedOnly) {
   const baseRef = resolveBaseRef();
   if (baseRef) {
     const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
-    const { migrationEntries, changedFiles, specs } = diffSinceBase(baseRef);
+    const { migrationEntries, changedFiles, specs, deletedSpecs } = diffSinceBase(baseRef);
     failures.push(...checkMigrations(migrationEntries, MIGRATIONS_DIR));
     const ownership = checkOwnership({ branch, changedFiles, specs });
     failures.push(...ownership.failures);
     notes.push(...ownership.notes);
+    failures.push(
+      ...checkFinishGate({
+        deletedSpecs,
+        currentSpecs: loadSpecs(),
+        roadmapBase: gitShow(baseRef, 'docs/ROADMAP.md'),
+        roadmapHead: readFileSync(join(ROOT, 'docs/ROADMAP.md'), 'utf8'),
+      }),
+    );
   }
 }
 
