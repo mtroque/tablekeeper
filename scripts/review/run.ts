@@ -66,7 +66,12 @@ function runReviewer(
         String(maxTurns),
         '--dangerously-skip-permissions',
       ],
-      { cwd: ROOT, encoding: 'utf8', timeout: timeoutMinutes * 60_000 },
+      {
+        cwd: ROOT,
+        encoding: 'utf8',
+        maxBuffer: 64 * 1024 * 1024,
+        timeout: timeoutMinutes * 60_000,
+      },
     );
     if (!existsSync(outPath)) continue;
     try {
@@ -233,7 +238,12 @@ function main(): void {
       String(config.builder.maxTurns),
       '--dangerously-skip-permissions',
     ],
-    { cwd: ROOT, encoding: 'utf8', timeout: config.builder.timeoutMinutes * 60_000 },
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      timeout: config.builder.timeoutMinutes * 60_000,
+    },
   );
 
   encryptSessionDir(sessionDir, encFile, sessionKey);
