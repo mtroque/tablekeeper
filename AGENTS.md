@@ -78,3 +78,4 @@ Parallel work runs in Claude Code worktrees (`claude --worktree <name>`: `.claud
 - Every detected value is a draft with a confidence that the user can override.
 - Never commit secrets, `.env*` (except `.env.example`), rulebook PDFs or extracted rulebook text, or photos over 2MB.
 - Don't add a dependency when a few lines will do; justify new ones in the commit message.
+- Never change production (migrations, env vars, data) from a local script or `.scratch/`: use a workflow, or give the owner the exact command to run.
