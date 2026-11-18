@@ -90,7 +90,10 @@ jobs:
         env:
           SCREENS: '1'
         run: pnpm test:e2e tests/e2e/screens.spec.ts
+      # A failed run on main never replaces the baseline: a partial `main/` set would make every
+      # later PR's comment list most screens as changed. PR runs still publish what they shot.
       - name: Check out the screens branch
+        if: github.event_name == 'pull_request' || steps.shoot.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -104,6 +107,7 @@ jobs:
           git -C screens-branch config user.name 'github-actions[bot]'
           git -C screens-branch config user.email '41898282+github-actions[bot]@users.noreply.github.com'
       - name: Publish the shots
+        if: github.event_name == 'pull_request' || steps.shoot.outcome == 'success'
         env:
           PR: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha || github.sha }}
