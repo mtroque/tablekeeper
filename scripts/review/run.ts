@@ -55,7 +55,17 @@ function runReviewer(
         : `/review ${prNumber}\nPrevious findings.json was missing or invalid JSON; write valid JSON to .scratch/review-${prNumber}/findings.json.`;
     spawnSync(
       'claude',
-      ['-p', prompt, '--model', model, '--effort', effort, '--max-turns', String(maxTurns)],
+      [
+        '-p',
+        prompt,
+        '--model',
+        model,
+        '--effort',
+        effort,
+        '--max-turns',
+        String(maxTurns),
+        '--dangerously-skip-permissions',
+      ],
       { cwd: ROOT, encoding: 'utf8', timeout: timeoutMinutes * 60_000 },
     );
     if (!existsSync(outPath)) continue;
@@ -216,6 +226,7 @@ function main(): void {
       config.builder.effort,
       '--max-turns',
       String(config.builder.maxTurns),
+      '--dangerously-skip-permissions',
     ],
     { cwd: ROOT, encoding: 'utf8', timeout: config.builder.timeoutMinutes * 60_000 },
   );
