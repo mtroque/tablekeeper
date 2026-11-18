@@ -1,5 +1,5 @@
 // Headless factory runner invoked by .github/workflows/factory.yml.
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,9 +7,11 @@ import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
 import { loadFactoryConfig } from './config';
+import { pausedSliceFollowUp } from './finish';
 import { readFactoryProjectOrder } from './project';
 import { explainQueue, extractSliceId, type QueueIssue } from './queue';
 import { claudeProjectDir, encryptSessionDir } from './session';
+import { sessionIdFromStreamFile, spawnToFiles, tailOfFile } from './stream';
 import { markCheckoutTrusted } from './trust';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -36,20 +38,6 @@ function slugify(text: string): string {
       .replaceAll(/^-+|-+$/g, '')
       .slice(0, 32) || 'task'
   );
-}
-
-function parseSessionIdFromStream(jsonl: string): string | null {
-  for (const line of jsonl.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    try {
-      const obj = JSON.parse(trimmed) as { session_id?: unknown };
-      if (typeof obj.session_id === 'string' && obj.session_id) return obj.session_id;
-    } catch {
-      // Ignore non-JSON lines.
-    }
-  }
-  return null;
 }
 
 function listOpenIssues(): QueueIssue[] {
@@ -79,6 +67,77 @@ function listOpenIssues(): QueueIssue[] {
   }));
 }
 
+/** Encrypts the builder's session for the upload step; a no-op without an id or key. */
+function saveSession(sessionId: string | null): void {
+  const sessionKey = process.env.FACTORY_SESSION_KEY ?? '';
+  if (!sessionId || !sessionKey) return;
+  const sessionDir = claudeProjectDir(ROOT);
+  if (!existsSync(sessionDir)) return;
+  const encPath = join(ROOT, '.scratch', `session-${sessionId}.tar.gz.enc`);
+  encryptSessionDir(sessionDir, encPath, sessionKey);
+  if (process.env.GITHUB_OUTPUT) {
+    writeFileSync(process.env.GITHUB_OUTPUT, `session_id=${sessionId}\nsession_file=${encPath}\n`, {
+      flag: 'a',
+    });
+  }
+}
+
+/** The slice spec still on the pushed branch, or null when the slice was folded. */
+function specOnBranch(branch: string, sliceId: string): string | null {
+  execFileSync('git', ['fetch', '-q', 'origin', branch], { cwd: ROOT });
+  const files = execFileSync('git', ['ls-tree', '--name-only', 'FETCH_HEAD', 'docs/slices/'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .filter((file) => file.startsWith(`docs/slices/${sliceId}-`) && file.endsWith('.md'));
+  const [file] = files;
+  if (!file) return null;
+  return execFileSync('git', ['show', `FETCH_HEAD:${file}`], { cwd: ROOT, encoding: 'utf8' });
+}
+
+/** A ⏸ slice's PR refers to its issue instead of closing it, and the issue goes to a human. */
+function followUpPausedSlice(
+  repoFull: string,
+  pr: { number: number },
+  branch: string,
+  sliceId: string,
+  issueNumber: number,
+): void {
+  const body = execFileSync(
+    'gh',
+    ['pr', 'view', String(pr.number), '--json', 'body', '-q', '.body'],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+    },
+  );
+  const followUp = pausedSliceFollowUp(body, issueNumber, specOnBranch(branch, sliceId));
+  if (!followUp) return;
+  if (followUp.bodyChanged) {
+    execFileSync(
+      'gh',
+      ['api', '-X', 'PATCH', `repos/${repoFull}/pulls/${pr.number}`, '-f', `body=${followUp.body}`],
+      { cwd: ROOT, stdio: 'ignore' },
+    );
+  }
+  execFileSync(
+    'gh',
+    [
+      'issue',
+      'comment',
+      String(issueNumber),
+      '--body',
+      `${sliceId} isn't finished, so PR #${pr.number} refers to this issue instead of closing it. Status: ${followUp.reason}`,
+    ],
+    { cwd: ROOT },
+  );
+  execFileSync('gh', ['issue', 'edit', String(issueNumber), '--add-label', 'needs-human'], {
+    cwd: ROOT,
+  });
+  console.log(`#${issueNumber}: ${sliceId} is not finished; labeled needs-human.`);
+}
+
 function main(): void {
   const config = loadFactoryConfig(join(ROOT, '.github/factory/config.json'));
   if (!config.enabled) {
@@ -96,8 +155,8 @@ function main(): void {
   const issues = listOpenIssues();
   const project =
     owner && repo ? readFactoryProjectOrder(owner, repo) : { projectId: null, order: [] };
-  if (project.usedFallbackToken) {
-    console.log('Read Factory Project using FACTORY_PROJECT_TOKEN fallback.');
+  if (project.usedProjectToken) {
+    console.log('Read the Factory Project with FACTORY_PROJECT_TOKEN.');
   }
   const roadmap = readFileSync(join(ROOT, 'docs/ROADMAP.md'), 'utf8');
   const explanation = explainQueue(issues, project.order, roadmap);
@@ -143,7 +202,8 @@ function main(): void {
     const streamPath = join(ROOT, '.scratch', `factory-${picked.number}`, 'stream.jsonl');
     mkdirSync(dirname(streamPath), { recursive: true });
 
-    const res = spawnSync(
+    const stderrPath = join(dirname(streamPath), 'stderr.log');
+    const res = spawnToFiles(
       'claude',
       [
         '-p',
@@ -161,38 +221,17 @@ function main(): void {
       ],
       {
         cwd: ROOT,
-        encoding: 'utf8',
-        maxBuffer: 64 * 1024 * 1024,
-        timeout: config.builder.timeoutMinutes * 60_000,
+        timeoutMs: config.builder.timeoutMinutes * 60_000,
         env: { ...process.env, FACTORY_ISSUE_NUMBER: String(picked.number) },
+        stdoutPath: streamPath,
+        stderrPath,
       },
     );
 
-    if (res.error) {
-      writeFileSync(streamPath, res.error.message);
-      throw res.error;
-    }
-    const output = `${res.stdout}\n${res.stderr}`;
-    writeFileSync(streamPath, output);
-
-    const sessionId = parseSessionIdFromStream(res.stdout);
-    const sessionKey = process.env.FACTORY_SESSION_KEY ?? '';
-    if (sessionId && sessionKey) {
-      const sessionDir = claudeProjectDir(ROOT);
-      if (existsSync(sessionDir)) {
-        const encPath = join(ROOT, '.scratch', `session-${sessionId}.tar.gz.enc`);
-        encryptSessionDir(sessionDir, encPath, sessionKey);
-        if (process.env.GITHUB_OUTPUT) {
-          writeFileSync(
-            process.env.GITHUB_OUTPUT,
-            `session_id=${sessionId}\nsession_file=${encPath}\n`,
-            {
-              flag: 'a',
-            },
-          );
-        }
-      }
-    }
+    // Save the transcript first, so a crash or time-out still leaves one to read.
+    saveSession(sessionIdFromStreamFile(streamPath));
+    if (res.error) throw res.error;
+    const output = [...tailOfFile(stderrPath, 15), ...tailOfFile(streamPath, 15)].join('\n');
 
     if (/rate limit|usage limit|quota/i.test(output) && res.status !== 0) {
       console.log(`Usage limit hit on #${picked.number}; returning issue to queue.`);
@@ -223,18 +262,26 @@ function main(): void {
           cwd: ROOT,
         },
       );
-      console.log(`Opened PR ${openedPrs[0]?.url ?? ''} for #${picked.number}`);
+      const [opened] = openedPrs;
+      console.log(`Opened PR ${opened?.url ?? ''} for #${picked.number}`);
+      if (opened && sliceId) {
+        try {
+          followUpPausedSlice(repoFull, opened, branch, sliceId, picked.number);
+        } catch (error) {
+          // The PR is open either way; say so loudly rather than mark the run crashed.
+          console.error(
+            `Could not check whether ${sliceId} is finished: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          process.exitCode = 1;
+        }
+      }
       return;
     }
 
     const runUrl = process.env.GITHUB_RUN_ID
       ? `https://github.com/${repoFull}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : '';
-    const tailLines = output
-      .split(/\r?\n/)
-      .filter((line) => line.trim().length > 0)
-      .slice(-15)
-      .join('\n');
+    const tailLines = output;
     console.error(
       `Factory run did not open a PR (exit ${res.status ?? 'null'}). Last output lines:\n${tailLines}`,
     );
@@ -264,6 +311,21 @@ function main(): void {
     );
     process.exitCode = 1;
   } catch (error) {
+    const runUrl = process.env.GITHUB_RUN_ID
+      ? ` Run: https://github.com/${repoFull}/actions/runs/${process.env.GITHUB_RUN_ID}`
+      : '';
+    const message = error instanceof Error ? error.message : String(error);
+    execFileSync(
+      'gh',
+      [
+        'issue',
+        'comment',
+        String(picked.number),
+        '--body',
+        `Factory run crashed: ${message.slice(0, 500)}.${runUrl}`,
+      ],
+      { cwd: ROOT },
+    );
     execFileSync('gh', ['issue', 'edit', String(picked.number), '--remove-label', 'in-progress'], {
       cwd: ROOT,
     });

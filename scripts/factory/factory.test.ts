@@ -5,9 +5,11 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { parseFactoryConfig } from './config';
+import { pausedSliceFollowUp, specStatusLine } from './finish';
 import { readFactoryProjectOrder } from './project';
 import { explainQueue, pickNextIssue, type QueueIssue } from './queue';
 import { decryptSessionDir, encryptSessionDir } from './session';
+import { sessionIdFromStreamFile, spawnToFiles, tailOfFile } from './stream';
 
 const SAMPLE_ROADMAP = [
   '| ID | Slice | Depends on | Status |',
@@ -123,16 +125,43 @@ describe('readFactoryProjectOrder', () => {
     },
   });
 
-  it('falls back to FACTORY_PROJECT_TOKEN when the primary token is refused', () => {
+  it('reads with FACTORY_PROJECT_TOKEN first when it is set, without trying the App token', () => {
+    const tried: (string | undefined)[] = [];
     const result = readFactoryProjectOrder('mtroque', 'tablekeeper', 1, {
       primaryToken: 'app-tok',
       projectToken: 'pat-tok',
       execGraphql: (_q, token) => {
-        if (token === 'app-tok') throw new Error('Resource not accessible by integration');
+        tried.push(token);
         return okPayload;
       },
     });
-    expect(result).toEqual({ projectId: 'PVT_1', order: [12, 7], usedFallbackToken: true });
+    expect(result).toEqual({ projectId: 'PVT_1', order: [12, 7], usedProjectToken: true });
+    expect(tried).toEqual(['pat-tok']);
+  });
+
+  it('falls back to the App token when FACTORY_PROJECT_TOKEN is refused', () => {
+    const result = readFactoryProjectOrder('mtroque', 'tablekeeper', 1, {
+      primaryToken: 'app-tok',
+      projectToken: 'pat-tok',
+      execGraphql: (_q, token) => {
+        if (token === 'pat-tok') throw new Error('Bad credentials');
+        return okPayload;
+      },
+    });
+    expect(result).toEqual({ projectId: 'PVT_1', order: [12, 7] });
+  });
+
+  it('uses the App token alone when FACTORY_PROJECT_TOKEN is not set', () => {
+    const tried: (string | undefined)[] = [];
+    readFactoryProjectOrder('mtroque', 'tablekeeper', 1, {
+      primaryToken: 'app-tok',
+      projectToken: '',
+      execGraphql: (_q, token) => {
+        tried.push(token);
+        return okPayload;
+      },
+    });
+    expect(tried).toEqual(['app-tok']);
   });
 
   it('throws a clear error when neither token can read the Project', () => {
@@ -171,5 +200,69 @@ describe('session encrypt/decrypt', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('spawnToFiles', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tk-stream-'));
+  // A child that prints a session id, then 70MB, then exits 3: past PR #26's 64MB buffer.
+  const script = [
+    "process.stdout.write(JSON.stringify({ type: 'system', session_id: 'sess-123' }) + '\\n');",
+    "const line = 'x'.repeat(1024 * 1024 - 1) + '\\n';",
+    'for (let i = 0; i < 70; i++) process.stdout.write(line);',
+    "process.stderr.write('boom\\n');",
+    'process.exitCode = 3;',
+  ].join('\n');
+
+  it('writes output of any size to files and still yields the session id on failure', () => {
+    const stdoutPath = join(dir, 'stream.jsonl');
+    const stderrPath = join(dir, 'stderr.log');
+    const res = spawnToFiles(process.execPath, ['-e', script], {
+      cwd: dir,
+      stdoutPath,
+      stderrPath,
+    });
+    expect(res.error).toBeUndefined();
+    expect(res.status).toBe(3);
+    expect(readFileSync(stdoutPath).length).toBeGreaterThan(70 * 1024 * 1024);
+    expect(sessionIdFromStreamFile(stdoutPath)).toBe('sess-123');
+    expect(tailOfFile(stderrPath, 5)).toEqual(['boom']);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('finds no session id in a missing or non-JSON file', () => {
+    expect(sessionIdFromStreamFile(join(tmpdir(), 'tk-no-such-file.jsonl'))).toBeNull();
+  });
+});
+
+describe('pausedSliceFollowUp', () => {
+  const spec =
+    '# W10: Screen map\n\n**Status:** ⏸ (waiting on the owner: move screens.yml) · **Depends on:** W7\n';
+
+  it('turns Closes into Refs and gives the status as the reason while the spec is on the branch', () => {
+    const result = pausedSliceFollowUp('## Slice\n\n- Closes #16\n- See #160', 16, spec);
+    expect(result).toEqual({
+      body: '## Slice\n\n- Refs #16\n- See #160',
+      bodyChanged: true,
+      reason: '⏸ (waiting on the owner: move screens.yml)',
+    });
+  });
+
+  it('also catches Fixes and Resolves, and only for this issue', () => {
+    expect(pausedSliceFollowUp('fixes #16, resolves #16, closes #17', 16, spec)?.body).toBe(
+      'Refs #16, Refs #16, closes #17',
+    );
+  });
+
+  it('still hands a paused slice to a human when the body never said Closes', () => {
+    expect(pausedSliceFollowUp('Refs #16', 16, spec)).toMatchObject({ bodyChanged: false });
+  });
+
+  it('leaves a folded slice alone', () => {
+    expect(pausedSliceFollowUp('Closes #16', 16, null)).toBeNull();
+  });
+
+  it('reads the status line without its dependencies', () => {
+    expect(specStatusLine('**Status:** 🟨 · **Depends on:** none')).toBe('🟨');
   });
 });
