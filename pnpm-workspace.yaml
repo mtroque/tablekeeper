@@ -6,3 +6,17 @@ allowBuilds:
   esbuild: true
   simple-git-hooks: true
   unrs-resolver: true
+# Security overrides (W21). @neondatabase/auth 0.7.0-beta pins vulnerable versions; remove each
+# override once a Neon release ships the fix itself (check with `pnpm audit --prod`).
+overrides:
+  # better-auth: OAuth proxy and magic-link sign-in as another user (critical, high), and
+  # GHSA-44jh-23m7-hpcf, all fixed in 1.7.7. The whole family moves to exactly 1.7.7, one patch
+  # above Neon's 1.7.6 pin, so core and plugins stay on one version.
+  better-auth: 1.7.7
+  '@better-auth/core': 1.7.7
+  '@better-auth/api-key': 1.7.7
+  '@better-auth/oauth-provider': 1.7.7
+  '@better-auth/passkey': 1.7.7
+  '@better-auth/drizzle-adapter': 1.7.7
+  # Zod memory exhaustion on oversized constrained collections, fixed in 4.6.6; our own zod is 4.6.7; only older pins (in @neondatabase/auth-ui) move.
+  'zod@<4.6.6': ^4.6.6
