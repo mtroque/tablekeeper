@@ -1,12 +1,13 @@
 # W21: Dependency security
 
-**Status:** 🟨 · **Depends on:** none
+**Status:** ✅ · **Depends on:** none
 
 **Goal:** No known high or critical advisory ships in production dependencies, and CI says so on every PR instead of an agent seeing a warning and moving on. As of 2026-11-18, `pnpm audit --prod` reports 1 critical, 2 high, 2 moderate and 2 low, all on the sign-in path or the web framework.
 
 ## Owns
 - `apps/web/package.json`, `pnpm-workspace.yaml` (`overrides`), `pnpm-lock.yaml`
-- `.github/workflows/ci.yml` (an `Audit` job), `package.json` (`audit` script), `README.md` (Commands)
+- `.github/workflows/ci.yml` (an `Audit` job), `package.json` (`audit:prod` script, `@next/eslint-plugin-next`), `README.md` (Commands)
+- `scripts/metrics.ts`, `scripts/lib/metrics/audit.ts`, `scripts/lib/metrics/metrics.test.ts` (the audit line)
 - `docs/AUTOMATION.md` (enforcement map row; required checks)
 
 ## Scope
@@ -21,10 +22,10 @@
 - **Verify sign-in:** sign-in libraries changed, so after deploy the owner confirms Google sign-in, a signed-in save and history on production. This is the X4 check, repeated.
 
 ## Acceptance criteria
-- [ ] `pnpm audit --prod --audit-level high` passes locally and in the `Audit` job (link the run)
-- [ ] `pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e` pass with the new versions, and the first e2e run doesn't stop on Next's upgrade notice
-- [ ] `Audit` is a required check on `main` (show the protection settings)
-- [ ] The owner confirms production sign-in, a signed-in save and history after deploy
+- [x] `pnpm audit --prod --audit-level high` passes locally and in the `Audit` job: locally `No known vulnerabilities found` at any level; the `Audit` job passed in [run 44263985480](https://github.com/mtroque/tablekeeper/actions/runs/44263985480), with `Checks`, `API`, `E2E` and `CV`
+- [x] `pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e` pass with the new versions, and the first e2e run doesn't stop on Next's upgrade notice (`pnpm verify --full`: all six ok, the e2e log has no notice; `pnpm build` passes on Next 16.4.6)
+- [ ] `Audit` is a required check on `main` (show the protection settings) (moved to W26)
+- [ ] The owner confirms production sign-in, a signed-in save and history after deploy (moved to W26)
 
 ## Tests
 No new tests; the existing suites cover the upgraded paths.
@@ -35,6 +36,11 @@ No new tests; the existing suites cover the upgraded paths.
 ## Open questions
 
 ## Decisions
+- The `better-auth` family is pinned to exactly 1.7.7 (`better-auth`, `@better-auth/core`, `api-key`, `oauth-provider`, `passkey`, `drizzle-adapter`), not `^1.7.7`: a caret range pulled 1.7.25 for some packages while `@neondatabase/auth` kept `@better-auth/core` at 1.7.6, mixing versions. One patch above Neon's pin is the smallest change that fixes the advisories.
+- `zod` uses a version-scoped override (`zod@<4.6.6`), so only the old 4.5.4 pins inside `@neondatabase/auth-ui` move; our own `^4.6.7` is untouched.
+- The remaining `pnpm peers check` warnings (`@neondatabase/auth-ui` wanting an older `@neondatabase/auth`, `better-call`, TypeScript 5 for `@triplit/logger`) all predate this slice; `better-call` resolves to the same versions as before.
+- The script is `audit:prod`, not `audit`, which pnpm reserves for its built-in command.
+- Making `Audit` required and the owner's production sign-in check moved to W26, which owns branch protection and post-deploy checks; requiring a check before the PR that adds it merges would block every other PR.
 
 ## Corrections
 
