@@ -43,7 +43,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W11 | Review loop: every factory PR reviewed, findings resumed into the builder's session | W14 | ⬜ |
 | W12 | Groomer loop and workflow metrics | W2, W4 | ✅ |
 | W13 | Exploratory QA: an agent walks the screen map in CI and files issues | W7, W10 | ⬜ |
-| W14 | Factory runner: Claude Code on Actions every 5 hours, Project-ordered issue queue | W4, W7 | ⬜ |
+| W14 | Factory runner: Claude Code on Actions every 5 hours, Project-ordered issue queue | W4, W7 | ✅ |
 | W15 | Local screenshots: `pnpm shot` for agents checking screen states | - | ✅ |
 | W16 | Session grading: silent failures in transcripts become `trace` corrections and metrics | W12, W14 | ⬜ |
 | W17 | Trace follow-ups: Antigravity transcript paths, per-session `.scratch/` | - | ✅ |
