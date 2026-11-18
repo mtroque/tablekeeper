@@ -59,6 +59,7 @@ pnpm test:unit                  # unit tests (no database needed)
 pnpm test                       # unit + API integration (needs local Postgres)
 pnpm test:e2e                   # Playwright
 pnpm test:build                 # production build of the web app, then S4's e2e test against it
+pnpm shot <route>               # phone screenshot (390x844) into .scratch/<branch>/shots/ (--signed-in, --offline, --dark)
 pnpm db:types                   # regenerate row types (apps/api/src/db/types.ts) after a migration
 pnpm eval:cv <gameId>           # board-reading accuracy on labeled photos (--calibrate, --record)
 pnpm eval:cv:check              # check every detector game against its recorded baseline.json

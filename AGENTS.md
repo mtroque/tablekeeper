@@ -49,7 +49,7 @@ Work is built in **slices**: one feature end to end (database, core logic, API, 
 
 1. `pnpm typecheck && pnpm lint && pnpm lint:commits && pnpm check:repo && pnpm test && pnpm test:e2e` pass. Fix what this slice broke; report anything else.
 2. Every acceptance criterion in the spec is checked, each one actually verified (test, script output, or a manual run you describe).
-3. Every screen state from the spec and `docs/UX.md` → Screen states is implemented, and all UI text and visuals follow `docs/UX.md` → Look and voice (no em or en dashes, no emoji, no AI-template styling).
+3. Every screen state from the spec and `docs/UX.md` → Screen states is implemented (check them with `pnpm shot`), and all UI text and visuals follow `docs/UX.md` → Look and voice (no em or en dashes, no emoji, no AI-template styling).
 4. A measurable target that can't be reached (e.g. CV accuracy) doesn't block done if the feature still works end to end: record the numbers and the gap in the spec.
 5. The spec's `## Decisions` and `## Corrections` list anything worth remembering.
 6. **Fold the spec** (Parallel sessions → Shared docs): rebase on `origin/main`, set the slice's row in `docs/ROADMAP.md` to ✅, append its decisions to `docs/DECISIONS.md` (next ids after the last one on `main`) and its correction rows to `docs/CORRECTIONS.md`, move anything else worth keeping (how a detector works, screen states, contracts, CI numbers) to its home doc and point references there, then delete the spec.

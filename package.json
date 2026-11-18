@@ -21,6 +21,7 @@
     "test:unit": "vitest run --project core --project cv --project tooling --project web",
     "test:e2e": "playwright test",
     "test:build": "node scripts/test-build.mjs",
+    "shot": "tsx scripts/shot.ts",
     "db:start": "node scripts/db.mjs start",
     "db:reset": "node scripts/db.mjs reset",
     "db:types": "node scripts/db.mjs types",
