@@ -1,6 +1,6 @@
 # W12: Groomer and metrics
 
-**Status:** ⬜ · **Depends on:** W2, W4
+**Status:** 🟨 · **Depends on:** W2, W4
 
 **Goal:** Two things that tell the factory how it's doing and give it small, safe work. Metrics show whether agent work is getting better or worse, and W19 reads the revert rate from them. The groomer turns lint-baseline leftovers into small issues in W14's queue instead of running a loop of its own.
 
