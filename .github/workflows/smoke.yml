@@ -55,12 +55,15 @@ jobs:
           SHA: ${{ github.event.sha }}
         run: |
           for _ in $(seq 30); do
-            pending=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/status" --jq '[.statuses[] | select((.context | startswith("Vercel – ")) and .state == "pending")] | length')
-            [ "$pending" = "0" ] && exit 0
-            echo "$pending Vercel deploy(s) still pending for $SHA; waiting."
+            done_count=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/status" --jq '[.statuses[] | select((.context == "Vercel – tablekeeper" or .context == "Vercel – tablekeeper-api") and .state != "pending")] | length')
+            [ "$done_count" -ge 2 ] && exit 0
+            echo "$done_count/2 Vercel deploy(s) settled for $SHA; waiting."
             sleep 30
           done
-          echo "Still pending after 15 minutes; smoking what is live now."
+          # Smoke anyway (the deploy that already finished still needs checking), but say so in any
+          # issue; the slow deploy's own status starts another run when it finishes.
+          echo "Still waiting on Vercel deploys after 15 minutes; smoking what is live now."
+          echo "STILL_PENDING=1" >> "$GITHUB_ENV"
       - name: Smoke
         id: smoke
         run: |
@@ -77,6 +80,10 @@ jobs:
           {
             echo "The post-deploy smoke failed ($TRIGGER)."
             echo
+            if [ -n "${STILL_PENDING:-}" ]; then
+              echo "Note: not all Vercel deploys of this commit had settled after 15 minutes, so this may be a half-deployed state. The pending deploy reruns the smoke when it finishes; check that run before acting."
+              echo
+            fi
             echo '```'
             cat smoke.txt
             echo '```'
@@ -85,6 +92,8 @@ jobs:
             echo
             echo 'Fix forward or roll back (docs/DEPLOYMENT.md → Rollback), then close this issue.'
           } > body.md
+          # The factory creates this label; create it here too so a missing label can't swallow the alert.
+          gh label create needs-human --color d93f0b --description 'Blocked or stopped; needs human attention' 2>/dev/null || true
           existing=$(gh issue list --state open --label needs-human --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body-file body.md
