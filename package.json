@@ -27,6 +27,8 @@
     "ingest": "tsx scripts/ingest-rulebook.ts",
     "eval:cv": "tsx scripts/eval-vision.ts",
     "eval:cv:check": "tsx scripts/eval-vision.ts --check",
+    "metrics": "tsx scripts/metrics.ts",
+    "groom": "tsx scripts/groom.ts",
     "rules:smoke": "tsx scripts/rules-smoke.ts"
   },
   "simple-git-hooks": {

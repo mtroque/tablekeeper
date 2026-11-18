@@ -62,6 +62,8 @@ pnpm test:build                 # production build of the web app, then S4's e2e
 pnpm db:types                   # regenerate row types (apps/api/src/db/types.ts) after a migration
 pnpm eval:cv <gameId>           # board-reading accuracy on labeled photos (--calibrate, --record)
 pnpm eval:cv:check              # check every detector game against its recorded baseline.json
+pnpm metrics                    # weekly PR, revert, baseline and correction metrics (--weeks 4)
+pnpm groom                      # open up to 3 agent-ready issues for lint baseline leftovers
 pnpm rules:smoke <gameId> "<question>"   # one real rules-assistant call
 scripts/worktrees.sh status|sync|clean|launch   # parallel Claude Code sessions (AGENTS.md)
 ```
