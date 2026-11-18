@@ -1,6 +1,6 @@
 # W26: Production safety
 
-**Status:** ⬜ · **Depends on:** W7
+**Status:** 🟨 · **Depends on:** W7
 
 **Goal:** A change that breaks production is caught by something other than the owner trying the live site, and production changes go through a reviewed, repeatable path instead of throwaway scripts. After X4 merged, every signed-in save and history request in production failed with 401 because the API checked the wrong JWT issuer. The tests passed because their tokens made the same assumption.
 
