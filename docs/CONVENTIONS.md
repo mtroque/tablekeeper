@@ -8,6 +8,7 @@ Code style and patterns. The hard rules in `AGENTS.md` and the boundaries in `do
 - TypeScript: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, shared `tsconfig.base.json`.
 - ESLint + Prettier (`eslint.config.js`, `eslint-rules/`; see `docs/AUTOMATION.md` → Enforcement map).
 - Vitest everywhere, Supertest for the API, Playwright end to end.
+- **Commands for agents:** prefer commands with short output, since long output gets truncated and hides the failing line. `pnpm verify [--full]` instead of chaining checks; `pnpm fix` (Prettier, then `eslint --fix` on changed files) instead of `pnpm format`, which doesn't fix import order; wait for CI with `gh pr checks <n> --watch --interval 30 > /dev/null; gh pr checks <n>` so the spinner stays out of the output. `pnpm dev`, `pnpm shot` and `pnpm test:e2e` stop if a `next dev` already runs for `apps/web` (Next allows one) and say how to stop it.
 
 ## Naming
 

@@ -26,4 +26,4 @@ Promote a correction pattern from `docs/CORRECTIONS.md` → Log into an automate
 7. **Update docs and statuses:**
    - Add or update the row in `docs/AUTOMATION.md` → Enforcement map (status `✅` for an automated check).
    - Set every matching row's `Status` in `docs/CORRECTIONS.md` → Log to `promoted: <check>` (or `promoted: <doc> (prose: <why no check is possible>)` for prose-only).
-8. **Verify and commit:** run the relevant checks (`pnpm typecheck`, `pnpm lint`, `pnpm check:repo`, `pnpm test`, `pnpm lint:commits`) and commit with Conventional Commits using the matching scope (e.g. `workflow` for tooling/skills/docs).
+8. **Verify and commit:** run `pnpm fix` and `pnpm verify --full` and commit with Conventional Commits using the matching scope (e.g. `workflow` for tooling/skills/docs).
