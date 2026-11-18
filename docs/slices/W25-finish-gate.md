@@ -1,6 +1,6 @@
 # W25: Finish gate
 
-**Status:** ⬜ · **Depends on:** none
+**Status:** 🟨 · **Depends on:** none
 
 **Goal:** A slice can't be folded away with acceptance criteria still unchecked. Twice an agent finished anyway: X4 merged with production sign-in unverified, and production then broke; W11, W12 and W14 were folded with their live criteria open, so nothing tracked them. Every criterion must be checked, moved to a named follow-up spec, or the slice stays open.
 
