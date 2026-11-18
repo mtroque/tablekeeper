@@ -1,5 +1,3 @@
-# DRAFT (W26): the factory's GitHub App token cannot push to .github/workflows/. Before merging,
-# the owner moves this file there and deletes these two lines (commands in the W26 PR).
 name: Migrate production
 
 # Applies pending migrations in `db/migrations/` to the production database (W26). Manual only,
