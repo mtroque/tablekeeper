@@ -4,6 +4,8 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
+import { SCREEN_ROUTES, SCREENS, SHARED_STATES } from '../tests/e2e/screens';
+
 import {
   checkDecisionIds,
   checkFinishGate,
@@ -11,7 +13,9 @@ import {
   checkMigrations,
   checkOwnership,
   checkRuleIds,
+  checkScreenMap,
   MIGRATIONS_DIR,
+  parseUxRoutes,
   type ChangedFile,
   type FileEntry,
   type MigrationDiffEntry,
@@ -196,6 +200,17 @@ failures.push(...checkForbiddenFiles(listFiles(stagedOnly)));
 if (!stagedOnly) {
   failures.push(...checkRuleIds(loadGameDocs(), loadTestFiles()));
   failures.push(...checkDecisionIds(readFileSync(join(ROOT, 'docs/DECISIONS.md'), 'utf8')));
+  failures.push(
+    ...checkScreenMap({
+      pageFiles: git('ls-files', '--cached', '--others', '--exclude-standard', 'apps/web/src/app')
+        .split(/\r?\n/)
+        .filter((path) => path.endsWith('/page.tsx')),
+      uxRoutes: parseUxRoutes(readFileSync(join(ROOT, 'docs/UX.md'), 'utf8')),
+      sharedStates: SHARED_STATES,
+      screens: SCREEN_ROUTES,
+      entries: SCREENS,
+    }),
+  );
 
   const baseRef = resolveBaseRef();
   if (baseRef) {
