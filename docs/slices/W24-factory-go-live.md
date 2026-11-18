@@ -37,6 +37,7 @@
 ## Open questions
 
 ## Decisions
+- Done early on the W20 branch: `.github/factory/config.json` names `claude-opus-5-5` (builder) and `claude-sonnet-5-5` (reviewer) instead of `claude-sonnet-4-6`. The models criterion stays open until the first real factory PR records them.
 
 ## Corrections
 
