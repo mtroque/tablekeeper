@@ -60,7 +60,8 @@ pnpm test                       # unit + API integration (needs local Postgres)
 pnpm test:e2e                   # Playwright
 pnpm test:build                 # production build of the web app, then S4's e2e test against it
 pnpm db:types                   # regenerate row types (apps/api/src/db/types.ts) after a migration
-pnpm eval:cv <gameId>           # board-reading accuracy on labeled photos (--calibrate to rebuild the profile)
+pnpm eval:cv <gameId>           # board-reading accuracy on labeled photos (--calibrate, --record)
+pnpm eval:cv:check              # check every detector game against its recorded baseline.json
 pnpm rules:smoke <gameId> "<question>"   # one real rules-assistant call
 scripts/worktrees.sh status|sync|clean|launch   # parallel Claude Code sessions (AGENTS.md)
 ```

@@ -104,6 +104,23 @@ Labels are written with a separate local labeling tool, which computes any deriv
 - `harmonies/references/side-a.jpg`, `side-b.jpg`: one empty board per side.
 - `harmonies/images/`: finished boards on both sides, named `NN-<side>-<description>.jpg`.
 
+### `baseline.json` format
+
+Each game with a detector records its `main` CV baseline in `data/fixtures/<gameId>/baseline.json` via `pnpm eval:cv <gameId> --record`:
+
+```json
+{
+  "cellAccuracy": 0.975,
+  "boardFoundRate": 1,
+  "flaggedErrorRate": 0.5,
+  "meanCornerError": 0.012,
+  "recordedAt": "2026-11-18T00:00:00.000Z",
+  "commit": "abc1234"
+}
+```
+
+`flaggedErrorRate` and `meanCornerError` are `null` when there are no cell errors or no labeled corners. `pnpm eval:cv:check` fails if cell accuracy or board-found rate drops more than 0.5 percentage points below the baseline, or if mean corner error rises more than 10%.
+
 ## Sample photos (in-app "Try Sample Photo")
 
 2-3 fixture photos per photo game, downscaled to ≤ 1200px, in `apps/web/public/samples/<gameId>/` and listed in the game's UI module `samples`.

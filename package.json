@@ -26,6 +26,7 @@
     "db:types": "node scripts/db.mjs types",
     "ingest": "tsx scripts/ingest-rulebook.ts",
     "eval:cv": "tsx scripts/eval-vision.ts",
+    "eval:cv:check": "tsx scripts/eval-vision.ts --check",
     "rules:smoke": "tsx scripts/rules-smoke.ts"
   },
   "simple-git-hooks": {

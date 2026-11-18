@@ -38,7 +38,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | A slice edits only what its spec owns | `pnpm check:repo` against the spec's `## Owns` (`scripts/lib/check-repo/ownership.ts`) | ✅ |
 | API integration and e2e tests pass | CI database jobs (`.github/workflows/ci.yml`: `API`, `E2E`) | ✅ |
 | Score invariants (breakdown sums to total, schema round trip, API agrees with UI) | fast-check property tests (`packages/core/src/kit/properties.ts`, per-game `*.property.test.ts`, `contracts.property.test.ts`) | ✅ |
-| CV accuracy never drops below the recorded numbers | `pnpm eval:cv` gate in CI | W9 |
+| CV accuracy never drops below the recorded numbers | `pnpm eval:cv:check` and `CV` job in `.github/workflows/ci.yml` (`data/fixtures/*/baseline.json`) | ✅ |
 | Every screen state renders | screen map and screenshot job | W10 |
 | Validate external input with Zod | review (no general check yet) | |
 | Every detected value is an overridable draft with confidence | types (`Draft<T>`) and review | |
