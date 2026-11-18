@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyVerdictGate,
   countReviewRounds,
   hasBlockingFindings,
   REVIEW_MARKER,
@@ -109,5 +110,28 @@ describe('buildReviewPayload & extractSessionIdFromPrBody', () => {
       diffLines,
     );
     expect(calls).toEqual([1, 0]);
+  });
+});
+
+describe('applyVerdictGate', () => {
+  const verdict = (recommendation: 'merge' | 'fix' | 'escalate') => ({
+    ...VALID_RESULT,
+    verdict: { ...VALID_RESULT.verdict, recommendation },
+  });
+
+  it('turns merge into fix when a finding is at or above the blocking severity', () => {
+    const gated = applyVerdictGate(verdict('merge'), 'should-fix');
+    expect(gated.verdict.recommendation).toBe('fix');
+    expect(gated.verdict.reasons[0]).toMatch(/Changed from `merge`: 1 finding at `should-fix`/);
+  });
+
+  it('keeps merge when only lower findings remain', () => {
+    expect(applyVerdictGate(verdict('merge'), 'blocking').verdict.recommendation).toBe('merge');
+  });
+
+  it('keeps escalate', () => {
+    expect(applyVerdictGate(verdict('escalate'), 'should-fix').verdict.recommendation).toBe(
+      'escalate',
+    );
   });
 });

@@ -12,6 +12,7 @@ import { markCheckoutTrusted } from '../factory/trust';
 
 import {
   countReviewRounds,
+  applyVerdictGate,
   hasBlockingFindings,
   ReviewFindingsSchema,
   shouldSkipReviewForCommit,
@@ -123,7 +124,7 @@ function main(): void {
     return;
   }
 
-  const findings = runReviewer(
+  const rawFindings = runReviewer(
     prNumber,
     config.reviewer.model,
     config.reviewer.effort,
@@ -131,6 +132,7 @@ function main(): void {
     config.reviewer.timeoutMinutes,
   );
 
+  const findings = rawFindings && applyVerdictGate(rawFindings, reviewCfg.blockingSeverity);
   if (!findings) {
     execFileSync(
       'gh',
@@ -195,6 +197,17 @@ function main(): void {
 
   const roundsAfterThis = countReviewRounds(reviews) + 1;
   if (roundsAfterThis > reviewCfg.maxRounds) {
+    execFileSync(
+      'gh',
+      [
+        'pr',
+        'comment',
+        String(prNumber),
+        '--body',
+        `Labeled \`${reviewCfg.labels.needsHuman}\`: this review still has blocking findings (\`${reviewCfg.blockingSeverity}\` or above) after ${reviewCfg.maxRounds} fix rounds, the most \`.github/factory/config.json\` allows. Fix or dispute them by hand, or raise \`review.maxRounds\`.`,
+      ],
+      { cwd: ROOT },
+    );
     execFileSync(
       'gh',
       ['pr', 'edit', String(prNumber), '--add-label', reviewCfg.labels.needsHuman],
