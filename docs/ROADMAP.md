@@ -38,7 +38,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W6 | Effects only through named hooks; raw `useEffect` banned | W2 | ✅ |
 | W7 | CI database jobs: API integration and e2e tests in CI | W1, X3 | ✅ |
 | W8 | Property-based tests for scorers and contracts | W1 | ✅ |
-| W9 | CV accuracy gate in CI | W1 | ⬜ |
+| W9 | CV accuracy gate in CI | W1 | ✅ |
 | W10 | Screen map and screenshots on every PR | W7, W15 | ⬜ |
 | W11 | Review loop: every factory PR reviewed, findings resumed into the builder's session | W14 | ⬜ |
 | W12 | Groomer loop and workflow metrics | W2, W4 | ⬜ |
