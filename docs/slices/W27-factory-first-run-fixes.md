@@ -1,6 +1,6 @@
 # W27: Factory first-run fixes
 
-**Status:** 🟨 · **Depends on:** W24
+**Status:** ✅ · **Depends on:** W24
 
 **Goal:** The factory's first live runs (2026-11-18: PR #24 W26, PR #28 W10, their review loops) failed in ways nobody saw at the time. This slice fixes the ones that can be built and checked locally, so the next runs leave a transcript, keep paused slices in the queue, and post reviews whose verdict matches the gate. Found by decrypting the three builder transcripts and reading every factory and review run log. The audit was first written into W24 (66c88a8) and dropped from it by 7f88a3c; this spec restores it.
 
@@ -24,14 +24,14 @@ W24 owns the same factory files for its live checks; it is ⏸ with no build wor
 - **Turn budget:** builder `maxTurns` goes from 80 to 150. The W10 builder wrote "Turn budget is limited, so I'm moving fast" after about 35 turns of reading, then batched edits into long shell chains.
 
 ## Acceptance criteria
-- [ ] Builder output goes to files, not a buffer: a test runs a child that writes more than 64MB and the stream file holds it all, with the session id parsed from it; a child that exits non-zero still yields the id
-- [ ] `Closes`/`Refs`: a body with `Closes #n` and the spec still on the branch becomes `Refs #n` with the status line as the reason; a folded spec keeps `Closes` (tests); the build skill says so
-- [ ] A review whose model verdict is `merge` but has a should-fix finding is posted as `fix` (test), and the `maxRounds` label comes with a comment (code path shown)
-- [ ] `review.yml` has `cancel-in-progress: false`
-- [ ] With `FACTORY_PROJECT_TOKEN` set, the Project is read with it first and the App token isn't tried (test); without it, the App token is used as before
-- [ ] `CI=true pnpm preflight` without `.env.local` exits 0 and says `info`; without `CI` it still fails
-- [ ] The build skill tells agents to file outside findings as issues, and the offline-save bug from W10 is filed
-- [ ] `builder.maxTurns` is 150
+- [x] Builder output goes to files, not a buffer: a test runs a child that writes more than 64MB and the stream file holds it all, with the session id parsed from it; a child that exits non-zero still yields the id (`spawnToFiles` test: 70MB, exit 3, id `sess-123`, stderr tail)
+- [x] `Closes`/`Refs`: a body with `Closes #n` and the spec still on the branch becomes `Refs #n` with the status line as the reason; a folded spec keeps `Closes` (tests); the build skill says so (5 `pausedSliceFollowUp` tests; build skill step 4 and the PR template)
+- [x] A review whose model verdict is `merge` but has a should-fix finding is posted as `fix` (test), and the `maxRounds` label comes with a comment (code path shown) (3 `applyVerdictGate` tests; `scripts/review/run.ts` posts the comment before adding the label)
+- [x] `review.yml` has `cancel-in-progress: false`
+- [x] With `FACTORY_PROJECT_TOKEN` set, the Project is read with it first and the App token isn't tried (test); without it, the App token is used as before (3 `readFactoryProjectOrder` tests, plus the existing neither-works test)
+- [x] `CI=true pnpm preflight` without `.env.local` exits 0 and says `info`; without `CI` it still fails (run in the W27 worktree, which has no `.env.local`: exit 0 with the `info` line, exit 1 without `CI`)
+- [x] The build skill tells agents to file outside findings as issues, and the offline-save bug from W10 is filed (skill step 4 `## Also found`; the bug is #30, now labeled `bug`)
+- [x] `builder.maxTurns` is 150
 - [ ] The live parts (a crash leaves a transcript and an issue comment; a ⏸ factory PR says `Refs #n`; a fix round isn't cancelled) are checked on the next factory runs (moved to W28)
 
 ## Tests
