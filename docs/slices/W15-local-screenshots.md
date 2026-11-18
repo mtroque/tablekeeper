@@ -1,6 +1,6 @@
 # W15: Local screenshots
 
-**Status:** ⬜ · **Depends on:** none
+**Status:** 🟨 · **Depends on:** none
 
 **Goal:** Agents can see the screens they build without writing throwaway Playwright specs. One command screenshots a route in a given state at phone size, so the definition of done's screen-state check is a step, not an improvisation. W10 later builds its screen map and CI job on top of it.
 
