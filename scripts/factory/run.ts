@@ -157,6 +157,7 @@ function main(): void {
         '--output-format',
         'stream-json',
         '--verbose',
+        '--dangerously-skip-permissions',
       ],
       {
         cwd: ROOT,
@@ -228,6 +229,14 @@ function main(): void {
     const runUrl = process.env.GITHUB_RUN_ID
       ? `https://github.com/${repoFull}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : '';
+    const tailLines = output
+      .split(/\r?\n/)
+      .filter((line) => line.trim().length > 0)
+      .slice(-15)
+      .join('\n');
+    console.error(
+      `Factory run did not open a PR (exit ${res.status ?? 'null'}). Last output lines:\n${tailLines}`,
+    );
     execFileSync(
       'gh',
       [
