@@ -34,7 +34,8 @@
     "metrics": "tsx scripts/metrics.ts",
     "groom": "tsx scripts/groom.ts",
     "queue:sync": "tsx scripts/factory/project.ts --sync",
-    "rules:smoke": "tsx scripts/rules-smoke.ts"
+    "rules:smoke": "tsx scripts/rules-smoke.ts",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm check:repo --staged",

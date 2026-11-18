@@ -70,6 +70,7 @@ pnpm metrics                    # weekly PR, revert, baseline and correction met
 pnpm groom                      # open up to 3 agent-ready issues for lint baseline leftovers
 pnpm queue:sync                 # open unlabeled issues for planned roadmap slices
 pnpm rules:smoke <gameId> "<question>"   # one real rules-assistant call
+pnpm smoke --api <url> --web <url>       # read-only post-deploy checks against a deployed API and web app
 scripts/worktrees.sh status|sync|clean|launch   # parallel Claude Code sessions (AGENTS.md)
 ```
 
