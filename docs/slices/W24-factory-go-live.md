@@ -1,6 +1,6 @@
 # W24: Factory go-live
 
-**Status:** 🟨 · **Depends on:** none
+**Status:** ⏸ (code & unit tests ready; awaiting merge to `main` for live `dry_run`, `factory.yml`, `review.yml`, and `metrics.yml` runs) · **Depends on:** none
 
 **Goal:** The factory, review loop and metrics actually run on GitHub, and every live acceptance criterion W11, W12 and W14 left unchecked is verified. Those slices were finished with unit tests only (PR #13), so as of 2026-11-18 no factory, review or metrics workflow has ever run for real.
 

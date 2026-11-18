@@ -44,45 +44,69 @@ export function extractSliceId(
   return titleMatch?.[1] ?? null;
 }
 
-export function isIssueEligible(
+export function skipReason(
   issue: QueueIssue,
   roadmap: ReadonlyMap<string, { status: RoadmapStatus; deps: string[] }>,
   openIssueNumbers: ReadonlySet<number>,
-): boolean {
-  if (!issue.labels.includes('agent-ready')) return false;
-  if (issue.labels.includes('needs-human')) return false;
-  if (issue.labels.includes('in-progress')) return false;
-  if (issue.hasOpenPr) return false;
+): string | null {
+  if (!issue.labels.includes('agent-ready')) return 'missing agent-ready label';
+  if (issue.labels.includes('needs-human')) return 'labeled needs-human';
+  if (issue.labels.includes('in-progress')) return 'labeled in-progress';
+  if (issue.hasOpenPr) return 'already has an open PR';
 
   for (const blocker of issue.blockedBy ?? []) {
-    if (openIssueNumbers.has(blocker)) return false;
+    if (openIssueNumbers.has(blocker)) return `blocked by open issue #${blocker}`;
   }
 
   const sliceId = extractSliceId(issue);
   if (sliceId) {
     const entry = roadmap.get(sliceId);
     if (entry) {
-      if (entry.status === '✅' || entry.status === '⏸') return false;
+      if (entry.status === '✅' || entry.status === '⏸') {
+        return `slice ${sliceId} is ${entry.status}`;
+      }
       for (const dep of entry.deps) {
-        if (roadmap.get(dep)?.status !== '✅') return false;
+        const depStatus = roadmap.get(dep)?.status ?? 'missing';
+        if (depStatus !== '✅') return `slice ${sliceId} depends on ${dep} (${depStatus})`;
       }
     }
   }
 
-  return true;
+  return null;
 }
 
+export function isIssueEligible(
+  issue: QueueIssue,
+  roadmap: ReadonlyMap<string, { status: RoadmapStatus; deps: string[] }>,
+  openIssueNumbers: ReadonlySet<number>,
+): boolean {
+  return skipReason(issue, roadmap, openIssueNumbers) === null;
+}
+
+export type QueueStep = {
+  issue: QueueIssue;
+  position: number | null;
+  status: 'picked' | 'skipped';
+  reason?: string;
+};
+
+export type QueueExplanation = {
+  picked: QueueIssue | null;
+  steps: QueueStep[];
+};
+
 /**
- * Pure queue picker: selects the first eligible `agent-ready` issue in Project order.
+ * Orders issues by `projectOrder` and explains why each earlier issue is picked or skipped.
  */
-export function pickNextIssue(
+export function explainQueue(
   issues: readonly QueueIssue[],
   projectOrder: readonly number[],
   roadmapMarkdown: string,
-): QueueIssue | null {
+): QueueExplanation {
   const roadmap = parseRoadmapStatuses(roadmapMarkdown);
   const openNumbers = new Set(issues.map((i) => i.number));
   const byNumber = new Map(issues.map((i) => [i.number, i]));
+  const positionByNumber = new Map(projectOrder.map((num, i) => [num, i + 1]));
 
   const ordered: QueueIssue[] = [];
   const seen = new Set<number>();
@@ -97,5 +121,33 @@ export function pickNextIssue(
     if (!seen.has(issue.number)) ordered.push(issue);
   }
 
-  return ordered.find((issue) => isIssueEligible(issue, roadmap, openNumbers)) ?? null;
+  let picked: QueueIssue | null = null;
+  const steps: QueueStep[] = [];
+  for (const issue of ordered) {
+    const position = positionByNumber.get(issue.number) ?? null;
+    if (picked !== null) {
+      steps.push({ issue, position, status: 'skipped', reason: `queued after #${picked.number}` });
+      continue;
+    }
+    const reason = skipReason(issue, roadmap, openNumbers);
+    if (reason === null) {
+      picked = issue;
+      steps.push({ issue, position, status: 'picked' });
+    } else {
+      steps.push({ issue, position, status: 'skipped', reason });
+    }
+  }
+
+  return { picked, steps };
+}
+
+/**
+ * Pure queue picker: selects the first eligible `agent-ready` issue in Project order.
+ */
+export function pickNextIssue(
+  issues: readonly QueueIssue[],
+  projectOrder: readonly number[],
+  roadmapMarkdown: string,
+): QueueIssue | null {
+  return explainQueue(issues, projectOrder, roadmapMarkdown).picked;
 }

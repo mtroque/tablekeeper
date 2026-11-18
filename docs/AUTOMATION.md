@@ -100,5 +100,5 @@ State as of 2026-11-17. No secret values here; only names.
 | Antigravity and `agy` | Installed and signed in with Google AI Pro; headless `agy -p --output-format json` works, and `agy --conversation <id> -p='...'` resumes a conversation headless (attach the prompt to `-p`) |
 | Vercel CLI | Signed in |
 | Neon | Database `tablekeeper-db` and Neon Auth, through the Vercel Marketplace (X3, X4); setup in `docs/DEPLOYMENT.md` |
-| Factory (W14) | `.github/workflows/factory.yml`, `.github/factory/config.json`, `scripts/factory/`; owner setup: GitHub App `tablekeeper-factory` (`FACTORY_APP_ID`, `FACTORY_APP_PRIVATE_KEY`), `FACTORY_SESSION_KEY`, "Factory" Project, `FACTORY_ENABLED` variable |
+| Factory (W14, W24) | `.github/workflows/factory.yml` (supports `dry_run`), `.github/factory/config.json`, `scripts/factory/`; owner setup: GitHub App `tablekeeper-factory` (`FACTORY_APP_ID`, `FACTORY_APP_PRIVATE_KEY`), `FACTORY_SESSION_KEY`, optional `FACTORY_PROJECT_TOKEN` (`read:project` fallback for personal-account Projects), "Factory" Project, `FACTORY_ENABLED` variable |
 | Gemini CLI and Gemini Code Assist on GitHub | Retired for consumer accounts in 2026; don't use |
