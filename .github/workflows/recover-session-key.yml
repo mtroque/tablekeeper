@@ -1,0 +1,41 @@
+# One-off: hands the owner a copy of FACTORY_SESSION_KEY, which was set without a local copy.
+# The key is encrypted to the owner's RSA public key (an input), so the artifact on this public
+# repo is useless to anyone else. Never print the key itself. Delete this workflow after use.
+name: Recover session key
+
+on:
+  workflow_dispatch:
+    inputs:
+      public_key:
+        description: Base64 of your RSA public key PEM (`openssl pkey -pubout | base64 -w0`)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    name: Export encrypted key
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Encrypt the key to the owner's public key
+        env:
+          SESSION_KEY: ${{ secrets.FACTORY_SESSION_KEY }}
+          PUBLIC_KEY_B64: ${{ inputs.public_key }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p out
+          if [ -z "$SESSION_KEY" ]; then echo "FACTORY_SESSION_KEY is empty." >&2; exit 1; fi
+          printf '%s' "$PUBLIC_KEY_B64" | base64 -d > owner.pub.pem
+          openssl pkey -pubin -in owner.pub.pem -noout
+          printf '%s' "$SESSION_KEY" | openssl pkeyutl -encrypt -pubin -inkey owner.pub.pem \
+            -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -out out/session-key.enc
+          rm owner.pub.pem
+      - uses: actions/upload-artifact@v4
+        with:
+          name: session-key-encrypted
+          path: out/session-key.enc
+          retention-days: 1
