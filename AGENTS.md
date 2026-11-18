@@ -47,7 +47,7 @@ Work is built in **slices**: one feature end to end (database, core logic, API, 
 
 ## Definition of done
 
-1. `pnpm typecheck && pnpm lint && pnpm lint:commits && pnpm check:repo && pnpm test && pnpm test:e2e` pass. Fix what this slice broke; report anything else.
+1. `pnpm verify --full` passes (typecheck, lint, lint:commits, check:repo, test, test:e2e, one line each; a failure prints its error lines and the full log path). Use `pnpm verify` (unit tests only) while working and `pnpm fix` before committing. Fix what this slice broke; report anything else.
 2. Every acceptance criterion in the spec is checked, each one actually verified (test, script output, or a manual run you describe). One that can't be verified yet (it needs owner setup, a deploy or a live run) is never folded away: end its line with `(moved to <id>)` and copy it into that follow-up spec, or keep the slice ⏸ with the reason. `pnpm check:repo` enforces this when a spec is removed or its roadmap row turns ✅.
 3. Every screen state from the spec and `docs/UX.md` → Screen states is implemented (check them with `pnpm shot`), and all UI text and visuals follow `docs/UX.md` → Look and voice (no em or en dashes, no emoji, no AI-template styling).
 4. A measurable target that can't be reached (e.g. CV accuracy) doesn't block done if the feature still works end to end: record the numbers and the gap in the spec.
