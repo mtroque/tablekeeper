@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseShotArgs, routeSlug, sanitizeBranchName, shotFilename } from './shot-args';
+import {
+  parseShotArgs,
+  parseShotRequest,
+  routeSlug,
+  sanitizeBranchName,
+  shotFilename,
+} from './shot-args';
 
 describe('parseShotArgs', () => {
   it('parses route and flags with default signed-in user', () => {
@@ -59,5 +65,26 @@ describe('routeSlug & shotFilename', () => {
       }),
     ).toBe('games-patchwork-history-signed-in-patchwork-offline-light.png');
     expect(sanitizeBranchName('slice/W15')).toBe('slice-W15');
+  });
+});
+
+describe('parseShotRequest', () => {
+  const ids = new Set(['history-empty', 'privacy']);
+
+  it('shoots a screen map entry by id', () => {
+    expect(parseShotRequest(['history-empty'], ids)).toEqual({
+      kind: 'entry',
+      id: 'history-empty',
+    });
+  });
+
+  it('treats anything else as a route, including an entry id with flags', () => {
+    expect(parseShotRequest(['/privacy'], ids)).toMatchObject({ kind: 'route', route: '/privacy' });
+    expect(parseShotRequest(['privacy', '--dark'], ids)).toMatchObject({
+      kind: 'route',
+      route: '/privacy',
+      dark: true,
+    });
+    expect(() => parseShotRequest([], ids)).toThrow(/screen map entry id/);
   });
 });

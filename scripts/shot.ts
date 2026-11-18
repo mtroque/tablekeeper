@@ -1,16 +1,24 @@
+// pnpm shot <screen map entry id>
 // pnpm shot <route> [--signed-in [user]] [--offline] [--dark] [--wait <selector>]
-// Screenshots a route at phone size (390x844) into .scratch/<branch>/shots/.
+// Screenshots a screen map entry (tests/e2e/screens.ts) or a route at phone size (390x844)
+// into .scratch/<branch>/shots/.
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { chromium } from '@playwright/test';
+import { chromium, type Browser } from '@playwright/test';
 
 import { signInAs } from '../tests/e2e/helpers';
+import { SCREENS, shootScreen } from '../tests/e2e/screens';
 
 import { describeRunning, runningDevServer, waitUntilStopped } from './lib/dev-lock.mjs';
 import { loadLocalEnv, ROOT } from './lib/local-env.mjs';
-import { parseShotArgs, sanitizeBranchName, shotFilename } from './lib/shot-args';
+import {
+  parseShotRequest,
+  sanitizeBranchName,
+  shotFilename,
+  type ShotOptions,
+} from './lib/shot-args';
 
 const VIEWPORT = { width: 390, height: 844 };
 
@@ -134,9 +142,9 @@ async function startServers() {
   }
 }
 
-let opts;
+let request;
 try {
-  opts = parseShotArgs(process.argv.slice(2));
+  request = parseShotRequest(process.argv.slice(2), new Set(SCREENS.map((entry) => entry.id)));
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(2);
@@ -153,50 +161,63 @@ if (shotUrl) {
 const branchDir = sanitizeBranchName(currentBranch());
 const outDir = join(ROOT, '.scratch', branchDir, 'shots');
 mkdirSync(outDir, { recursive: true });
-const outFile = join(outDir, shotFilename(opts));
+const outFile = join(
+  outDir,
+  request.kind === 'entry' ? `${request.id}.png` : shotFilename(request),
+);
 
 try {
   const browser = await chromium.launch();
   try {
-    const context = await browser.newContext({
-      viewport: VIEWPORT,
-      colorScheme: opts.dark ? 'dark' : 'light',
-    });
-    const page = await context.newPage();
-    if (opts.signedInUser) {
-      await signInAs(page, opts.signedInUser);
+    const entry = request.kind === 'entry' ? SCREENS.find((e) => e.id === request.id) : undefined;
+    if (entry) {
+      await shootScreen(entry, { browser, baseURL: server.baseUrl, path: outFile });
+      console.log(outFile);
+    } else if (request.kind === 'route') {
+      await shootRoute(browser, request);
     }
-    const targetUrl = `${server.baseUrl}${opts.route}`;
-    const waitUntil = opts.waitSelector ? 'domcontentloaded' : 'networkidle';
-    try {
-      await page.goto(targetUrl, { waitUntil });
-    } catch {
-      await page.waitForTimeout(500);
-      await page.goto(targetUrl, { waitUntil });
-    }
-    if (opts.waitSelector) {
-      await page.locator(opts.waitSelector).first().waitFor({ state: 'visible', timeout: 15_000 });
-    } else {
-      // Wait for client hydration and loading skeletons to settle.
-      await page
-        .waitForFunction(
-          () => !document.querySelector('[aria-busy="true"], [data-slot="skeleton"]'),
-          undefined,
-          { timeout: 10_000 },
-        )
-        .catch(() => {});
-      await page.waitForTimeout(200);
-    }
-    if (opts.offline) {
-      await context.setOffline(true);
-      await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-      await page.waitForTimeout(300);
-    }
-    await page.screenshot({ path: outFile, fullPage: true });
-    console.log(outFile);
   } finally {
     await browser.close();
   }
 } finally {
   await server.stop();
+}
+
+async function shootRoute(browser: Browser, opts: ShotOptions): Promise<void> {
+  const context = await browser.newContext({
+    viewport: VIEWPORT,
+    colorScheme: opts.dark ? 'dark' : 'light',
+  });
+  const page = await context.newPage();
+  if (opts.signedInUser) {
+    await signInAs(page, opts.signedInUser);
+  }
+  const targetUrl = `${server.baseUrl}${opts.route}`;
+  const waitUntil = opts.waitSelector ? 'domcontentloaded' : 'networkidle';
+  try {
+    await page.goto(targetUrl, { waitUntil });
+  } catch {
+    await page.waitForTimeout(500);
+    await page.goto(targetUrl, { waitUntil });
+  }
+  if (opts.waitSelector) {
+    await page.locator(opts.waitSelector).first().waitFor({ state: 'visible', timeout: 15_000 });
+  } else {
+    // Wait for client hydration and loading skeletons to settle.
+    await page
+      .waitForFunction(
+        () => !document.querySelector('[aria-busy="true"], [data-slot="skeleton"]'),
+        undefined,
+        { timeout: 10_000 },
+      )
+      .catch(() => {});
+    await page.waitForTimeout(200);
+  }
+  if (opts.offline) {
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+    await page.waitForTimeout(300);
+  }
+  await page.screenshot({ path: outFile, fullPage: true });
+  console.log(outFile);
 }
