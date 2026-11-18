@@ -43,7 +43,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | Production changes go through a reviewed workflow, not a local script | `.github/workflows/migrate.yml` in the `production` environment (owner approval); other production changes are owner commands (`AGENTS.md` → Hard rules) | ✅ |
 | Score invariants (breakdown sums to total, schema round trip, API agrees with UI) | fast-check property tests (`packages/core/src/kit/properties.ts`, per-game `*.property.test.ts`, `contracts.property.test.ts`) | ✅ |
 | CV accuracy never drops below the recorded numbers | `pnpm eval:cv:check` and `CV` job in `.github/workflows/ci.yml` (`data/fixtures/*/baseline.json`) | ✅ |
-| Every screen state renders | screen map and screenshot job | W10 |
+| Every screen state renders, and every route has a map entry | `pnpm check:repo` (`scripts/lib/check-repo/screens.ts` against `tests/e2e/screens.ts`) and `.github/workflows/screens.yml` (each entry must reach its state) | ✅ |
 | Validate external input with Zod | review (no general check yet) | |
 | Every detected value is an overridable draft with confidence | types (`Draft<T>`) and review | |
 
@@ -82,6 +82,14 @@ Set per area in `.github/factory/merge-policy.json` (W19): each path group (docs
 - The Anthropic API key in production pays for the app's rules assistant only; workflow automation never uses it.
 
 **Commands** (`/build`, `/harden`, `/parallel`, `/plan`, `/status` and any new ones) are Agent Skills with one copy each, at `.agents/skills/<name>/SKILL.md`. Antigravity reads that folder directly; `.claude/skills` is a symlink to it, so Claude Code reads the same files. To add one, create the folder there, never under `.claude/`. Keep them tool-neutral: frontmatter `name` and `description` (plus Claude's optional `argument-hint` and `disable-model-invocation: true`, which Antigravity ignores), and refer to "the ids given with this command" rather than `$ARGUMENTS`, which only Claude Code substitutes. `/parallel` and `scripts/worktrees.sh launch` still start Claude Code sessions.
+
+## Screens
+
+The screen map, `tests/e2e/screens.ts`, lists every screen (`SCREEN_ROUTES`: the rows of `docs/UX.md` → Routes, the app shell and not-found, each with the `page.tsx` that renders it and a reason for each shared state it doesn't have) and every state as an entry `{ id, screen, route, state, reach, dark? }`. `reach` uses existing test tooling: a minted test JWT for a fresh `screens`-prefixed user (deleted after the shot), data through the API, `page.route` holding a call (loading) or failing it (error), `context.setOffline(true)`, and held JavaScript for the server render before hydration (header and callback loading).
+
+- `pnpm shot <entry id>` reproduces one entry locally; `SCREENS=1 pnpm test:e2e screens` runs them all into `test-results/screens/<id>.png` (390x844, light unless the entry is `dark`). The normal e2e run skips them.
+- `.github/workflows/screens.yml` runs on PRs touching `apps/web/`, `packages/core/src/games/` or the map, in the same environment as the `E2E` job. It pushes the PNGs to the orphan `screens` branch under `pr-<number>/<sha>/` (only the latest run is kept, with a README showing all of them), and updates one PR comment (`<!-- screens -->`, `scripts/screens-report.ts`) embedding the screens whose PNG differs from the `main/` set, which pushes to `main` refresh. Closing the PR removes its folder. An entry that fails to reach its state fails the job and is named in the comment.
+- No visual diffs: fonts, photos and timing make them flaky, so a person or W13 judges the shots. Animations are disabled in the shots so unchanged screens hash the same.
 
 ## Metrics
 

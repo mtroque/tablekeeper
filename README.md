@@ -56,13 +56,15 @@ pnpm fix                        # Prettier and eslint --fix on the files this br
 pnpm typecheck
 pnpm lint                       # includes the UI copy rules
 pnpm lint:commits               # Conventional Commits check for this branch
-pnpm check:repo                 # rule ids, immutable migrations, forbidden files, spec ownership
+pnpm check:repo                 # rule ids, immutable migrations, forbidden files, spec ownership, screen map routes
 pnpm preflight                  # branch, clean tree, node_modules, .env.local present, local Postgres up
 pnpm test:unit                  # unit tests (no database needed)
 pnpm test                       # unit + API integration (needs local Postgres)
 pnpm test:e2e                   # Playwright
 pnpm test:build                 # production build of the web app, then S4's e2e test against it
 pnpm shot <route>               # phone screenshot (390x844) into .scratch/<branch>/shots/ (--signed-in, --offline, --dark)
+pnpm shot <entry id>            # one screen map entry (tests/e2e/screens.ts), state and all
+SCREENS=1 pnpm test:e2e screens # every screen map entry into test-results/screens/
 pnpm db:types                   # regenerate row types (apps/api/src/db/types.ts) after a migration
 pnpm eval:cv <gameId>           # board-reading accuracy on labeled photos (--calibrate, --record)
 pnpm eval:cv:check              # check every detector game against its recorded baseline.json
