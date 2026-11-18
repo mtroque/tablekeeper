@@ -30,6 +30,7 @@
     "eval:cv:check": "tsx scripts/eval-vision.ts --check",
     "metrics": "tsx scripts/metrics.ts",
     "groom": "tsx scripts/groom.ts",
+    "queue:sync": "tsx scripts/factory/project.ts --sync",
     "rules:smoke": "tsx scripts/rules-smoke.ts"
   },
   "simple-git-hooks": {

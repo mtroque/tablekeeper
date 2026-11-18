@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "tasksPerRun": 1,
+  "builder": {
+    "agent": "claude",
+    "model": "claude-sonnet-4-6",
+    "effort": "high",
+    "maxTurns": 80,
+    "timeoutMinutes": 45
+  },
+  "reviewer": {
+    "agent": "claude",
+    "model": "claude-sonnet-4-6",
+    "effort": "medium",
+    "maxTurns": 25,
+    "timeoutMinutes": 15
+  }
+}

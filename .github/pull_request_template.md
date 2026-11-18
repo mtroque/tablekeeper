@@ -9,5 +9,5 @@
 
 ## Session
 
-- Runner: `<claude-local | claude-cloud | agy>`
+- Runner: `<claude-local | claude-cloud | claude-actions | agy>`
 - Session: `<session-id>`
