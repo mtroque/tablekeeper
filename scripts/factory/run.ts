@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import { loadFactoryConfig } from './config';
 import { readFactoryProjectOrder } from './project';
-import { extractSliceId, pickNextIssue, type QueueIssue } from './queue';
+import { explainQueue, extractSliceId, type QueueIssue } from './queue';
 import { claudeProjectDir, encryptSessionDir } from './session';
 import { markCheckoutTrusted } from './trust';
 
@@ -88,17 +88,41 @@ function main(): void {
 
   const repoFull = process.env.GITHUB_REPOSITORY ?? '';
   const [owner = '', repo = ''] = repoFull.split('/');
+  const dryRun = process.env.FACTORY_DRY_RUN === 'true' || process.argv.includes('--dry-run');
   const requestedNum = process.env.FACTORY_ISSUE_NUMBER
     ? Number.parseInt(process.env.FACTORY_ISSUE_NUMBER, 10)
     : null;
 
   const issues = listOpenIssues();
-  const { order } = owner && repo ? readFactoryProjectOrder(owner, repo) : { order: [] };
+  const project =
+    owner && repo ? readFactoryProjectOrder(owner, repo) : { projectId: null, order: [] };
+  if (project.usedFallbackToken) {
+    console.log('Read Factory Project using FACTORY_PROJECT_TOKEN fallback.');
+  }
   const roadmap = readFileSync(join(ROOT, 'docs/ROADMAP.md'), 'utf8');
+  const explanation = explainQueue(issues, project.order, roadmap);
 
   const picked = requestedNum
     ? (issues.find((i) => i.number === requestedNum) ?? null)
-    : pickNextIssue(issues, order, roadmap);
+    : explanation.picked;
+
+  if (dryRun) {
+    console.log(
+      `Dry run: ${explanation.steps.length} open issue(s) inspected (projectId=${project.projectId ?? 'none'}).`,
+    );
+    for (const step of explanation.steps) {
+      const pos = step.position === null ? 'unranked' : `#${step.position}`;
+      const detail =
+        step.status === 'picked' ? 'PICKED' : `SKIPPED (${step.reason ?? 'ineligible'})`;
+      console.log(`- [${pos}] #${step.issue.number} ${step.issue.title}: ${detail}`);
+    }
+    if (requestedNum) {
+      console.log(
+        `Requested issue #${requestedNum}: ${picked ? 'found' : 'not found among open issues'}.`,
+      );
+    }
+    return;
+  }
 
   if (!picked) {
     console.log('No eligible agent-ready issue in the queue.');

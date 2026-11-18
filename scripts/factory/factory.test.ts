@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { parseFactoryConfig } from './config';
-import { pickNextIssue, type QueueIssue } from './queue';
+import { readFactoryProjectOrder } from './project';
+import { explainQueue, pickNextIssue, type QueueIssue } from './queue';
 import { decryptSessionDir, encryptSessionDir } from './session';
 
 const SAMPLE_ROADMAP = [
@@ -89,6 +90,61 @@ describe('pickNextIssue', () => {
       { number: 4, title: 'has pr', body: '', labels: ['agent-ready'], hasOpenPr: true },
     ];
     expect(pickNextIssue(filtered, [1, 2, 4], SAMPLE_ROADMAP)).toBeNull();
+  });
+
+  it('explainQueue returns ordered steps with skip reasons for dry run', () => {
+    const explanation = explainQueue(base, [2, 3, 1, 99], SAMPLE_ROADMAP);
+    expect(explanation.picked?.number).toBe(1);
+    expect(explanation.steps.map((s) => [s.issue.number, s.status, s.reason])).toEqual([
+      [2, 'skipped', 'slice H5 depends on H4 (⬜)'],
+      [3, 'skipped', 'blocked by open issue #99'],
+      [1, 'picked', undefined],
+      [99, 'skipped', 'queued after #1'],
+    ]);
+  });
+});
+
+describe('readFactoryProjectOrder', () => {
+  const okPayload = JSON.stringify({
+    data: {
+      repository: {
+        owner: {
+          projectV2: {
+            id: 'PVT_1',
+            items: {
+              nodes: [
+                { id: '1', rank: null, content: { number: 12 } },
+                { id: '2', rank: null, content: { number: 7 } },
+              ],
+            },
+          },
+        },
+      },
+    },
+  });
+
+  it('falls back to FACTORY_PROJECT_TOKEN when the primary token is refused', () => {
+    const result = readFactoryProjectOrder('mtroque', 'tablekeeper', 1, {
+      primaryToken: 'app-tok',
+      projectToken: 'pat-tok',
+      execGraphql: (_q, token) => {
+        if (token === 'app-tok') throw new Error('Resource not accessible by integration');
+        return okPayload;
+      },
+    });
+    expect(result).toEqual({ projectId: 'PVT_1', order: [12, 7], usedFallbackToken: true });
+  });
+
+  it('throws a clear error when neither token can read the Project', () => {
+    expect(() =>
+      readFactoryProjectOrder('mtroque', 'tablekeeper', 1, {
+        primaryToken: 'app-tok',
+        projectToken: '',
+        execGraphql: () => {
+          throw new Error('Resource not accessible by integration');
+        },
+      }),
+    ).toThrow(/FACTORY_PROJECT_TOKEN/);
   });
 });
 

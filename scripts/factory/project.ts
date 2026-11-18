@@ -39,18 +39,82 @@ const ProjectItemsSchema = z.object({
   }),
 });
 
+export type ProjectOrderResult = {
+  projectId: string | null;
+  order: number[];
+  usedFallbackToken?: boolean;
+};
+
+type GraphqlExecutor = (query: string, token?: string) => string;
+
+function defaultGraphqlExecutor(
+  owner: string,
+  repo: string,
+  projectNumber: number,
+): GraphqlExecutor {
+  return (query, token) =>
+    execFileSync(
+      'gh',
+      [
+        'api',
+        'graphql',
+        '-f',
+        `query=${query}`,
+        '-f',
+        `owner=${owner}`,
+        '-f',
+        `repo=${repo}`,
+        '-F',
+        `number=${projectNumber}`,
+      ],
+      {
+        cwd: ROOT,
+        encoding: 'utf8',
+        env: token ? { ...process.env, GH_TOKEN: token } : process.env,
+      },
+    );
+}
+
+function parseProjectOrderResponse(raw: string): { projectId: string | null; order: number[] } {
+  const parsed = ProjectItemsSchema.parse(JSON.parse(raw));
+  const project = parsed.data.repository?.owner.projectV2;
+  if (!project) return { projectId: null, order: [] };
+
+  const items = project.items.nodes
+    .filter((n) => typeof n.content?.number === 'number')
+    .map((n, index) => ({
+      number: n.content?.number ?? 0,
+      index,
+      rank: n.rank?.number ?? null,
+    }));
+
+  const hasRanks = items.some((i) => i.rank !== null);
+  if (hasRanks) {
+    items.sort(
+      (a, b) =>
+        (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER) ||
+        a.index - b.index,
+    );
+  }
+
+  return { projectId: project.id, order: items.map((i) => i.number) };
+}
+
 /**
  * Reads the issue numbers in the "Factory" GitHub Project in manual drag order (`POSITION`),
- * falling back to a numeric `Rank` field if any items carry one.
+ * falling back to `projectToken` (`FACTORY_PROJECT_TOKEN`) when the App token cannot read a
+ * personal-account Project.
  */
 export function readFactoryProjectOrder(
   owner: string,
   repo: string,
   projectNumber = 1,
-): {
-  projectId: string | null;
-  order: number[];
-} {
+  opts?: {
+    primaryToken?: string;
+    projectToken?: string;
+    execGraphql?: GraphqlExecutor;
+  },
+): ProjectOrderResult {
   const query = `
     query($owner: String!, $repo: String!, $number: Int!) {
       repository(owner: $owner, name: $repo) {
@@ -76,48 +140,38 @@ export function readFactoryProjectOrder(
     }
   `;
 
+  const execGraphql = opts?.execGraphql ?? defaultGraphqlExecutor(owner, repo, projectNumber);
+  const primaryToken = opts?.primaryToken ?? process.env.GH_TOKEN;
+  const projectToken = opts?.projectToken ?? process.env.FACTORY_PROJECT_TOKEN;
+
+  let primaryError: unknown = null;
   try {
-    const raw = execFileSync(
-      'gh',
-      [
-        'api',
-        'graphql',
-        '-f',
-        `query=${query}`,
-        '-f',
-        `owner=${owner}`,
-        '-f',
-        `repo=${repo}`,
-        '-F',
-        `number=${projectNumber}`,
-      ],
-      { cwd: ROOT, encoding: 'utf8' },
-    );
-    const parsed = ProjectItemsSchema.parse(JSON.parse(raw));
-    const project = parsed.data.repository?.owner.projectV2;
-    if (!project) return { projectId: null, order: [] };
+    const result = parseProjectOrderResponse(execGraphql(query, primaryToken));
+    if (result.projectId !== null) return result;
+  } catch (error) {
+    primaryError = error;
+  }
 
-    const items = project.items.nodes
-      .filter((n) => typeof n.content?.number === 'number')
-      .map((n, index) => ({
-        number: n.content?.number ?? 0,
-        index,
-        rank: n.rank?.number ?? null,
-      }));
-
-    const hasRanks = items.some((i) => i.rank !== null);
-    if (hasRanks) {
-      items.sort(
-        (a, b) =>
-          (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER) ||
-          a.index - b.index,
+  if (projectToken) {
+    try {
+      const fallback = parseProjectOrderResponse(execGraphql(query, projectToken));
+      if (fallback.projectId !== null) {
+        return { ...fallback, usedFallbackToken: true };
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to read Factory Project #${projectNumber} with both primary token and FACTORY_PROJECT_TOKEN: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-
-    return { projectId: project.id, order: items.map((i) => i.number) };
-  } catch {
-    return { projectId: null, order: [] };
   }
+
+  if (primaryError) {
+    throw new Error(
+      `Failed to read Factory Project #${projectNumber} with primary token (and FACTORY_PROJECT_TOKEN is not set): ${primaryError instanceof Error ? primaryError.message : 'unknown error'}`,
+    );
+  }
+
+  return { projectId: null, order: [] };
 }
 
 function findSpecPath(sliceId: string): string | null {
