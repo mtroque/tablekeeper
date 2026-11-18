@@ -182,6 +182,11 @@ function main(): void {
     return;
   }
 
+  if (!pr.headRefName.startsWith('factory/')) {
+    console.log(`PR #${prNumber}: not a factory branch; skipping fix round.`);
+    return;
+  }
+
   const sessionId = extractSessionIdFromPrBody(pr.body);
   if (!sessionId) {
     console.log(`PR #${prNumber}: no session id in PR body; skipping fix round.`);

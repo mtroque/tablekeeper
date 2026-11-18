@@ -102,6 +102,13 @@ State as of 2026-11-17. No secret values here; only names.
 | Antigravity and `agy` | Installed and signed in with Google AI Pro; headless `agy -p --output-format json` works, and `agy --conversation <id> -p='...'` resumes a conversation headless (attach the prompt to `-p`) |
 | Vercel CLI | Signed in |
 | Neon | Database `tablekeeper-db` and Neon Auth, through the Vercel Marketplace (X3, X4); setup in `docs/DEPLOYMENT.md` |
-| Factory (W14, W24) | `.github/workflows/factory.yml` (supports `dry_run`), `.github/factory/config.json`, `scripts/factory/`; owner setup: GitHub App `tablekeeper-factory` (`FACTORY_APP_ID`, `FACTORY_APP_PRIVATE_KEY`), `FACTORY_SESSION_KEY`, optional `FACTORY_PROJECT_TOKEN` (`read:project` fallback for personal-account Projects), "Factory" Project, `FACTORY_ENABLED` variable |
+| Factory (W14, W24) | `.github/workflows/factory.yml` (supports `dry_run`), `.github/factory/config.json`, `scripts/factory/`; owner setup: GitHub App `tablekeeper-factory` (`FACTORY_APP_ID`, `FACTORY_APP_PRIVATE_KEY`), `FACTORY_SESSION_KEY`, `FACTORY_PROJECT_TOKEN` (`read:project` fallback, required for personal-account Projects), "Factory" Project (#1), `FACTORY_ENABLED` variable |
 | `FACTORY_SESSION_KEY` | Repo secret that encrypts session artifacts. Keep the owner's copy at `~/.config/tablekeeper/factory-session-key` (mode 600) and in a password manager, because GitHub never shows a secret again; to audit factory transcripts, decrypt with it (`scripts/factory/session.ts`). To rotate: `(umask 077 && openssl rand -base64 32 > ~/.config/tablekeeper/factory-session-key)`, then `gh secret set FACTORY_SESSION_KEY < ~/.config/tablekeeper/factory-session-key`; artifacts encrypted with the old key become unreadable |
 | Gemini CLI and Gemini Code Assist on GitHub | Retired for consumer accounts in 2026; don't use |
+
+### First-run record (W24, 2026-11-18)
+
+- **Project access:** The `tablekeeper-factory` GitHub App token cannot resolve user-owned `ProjectV2` #1 (`mtroque`); `scripts/factory/project.ts` uses `FACTORY_PROJECT_TOKEN` as a read-only fallback (`PVT_kwHOCs72xs4BsI0O`).
+- **Models:** `.github/factory/config.json` uses `claude-opus-5-5` (builder) and `claude-sonnet-5-5` (reviewer).
+- **Verified live:** `dry_run` queue order (`44274745199`), Project drag-to-reorder (`44275212233`), `metrics.yml` (`44275219305`, issue #21), `FACTORY_ENABLED=false` kill switch (`44342148513`), live build + encrypted session restore + `claude --resume` fix loop + `maxRounds` `needs-human` (`44297797747` → PR #24 → `44326746493`), second live build (`44337220749` → PR #28), and owner PR `review` label + same-commit no-op rerun (`44342809794` on PR #31).
+- **App permission note:** `tablekeeper-factory` lacks `workflows` write permission, so factory PRs that touch `.github/workflows/` stage drafts in `.github/workflow-drafts/` for the owner to move before merging.
