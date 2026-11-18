@@ -6,7 +6,8 @@ name: Smoke
 # after each deploy). Vercel reports this repo's deploys as commit statuses ("Vercel – tablekeeper",
 # "Vercel – tablekeeper-api"), not GitHub Deployments, so the trigger is `status` on a commit at the
 # tip of `main` (production), not `deployment_status`. A failure opens (or comments on) one
-# `needs-human` issue. No secrets: only the public URLs.
+# `needs-human` issue. No secrets: only the public URLs. Each deploy reports one status per
+# project, so the smoke waits until neither is pending and may run twice for one commit.
 on:
   status:
   workflow_dispatch:
@@ -21,21 +22,23 @@ on:
 permissions:
   contents: read
   issues: write
-
-concurrency:
-  group: smoke-${{ github.event.sha || github.sha }}
-  cancel-in-progress: false
+  statuses: read
 
 jobs:
   smoke:
     name: Smoke
+    # Only "Vercel – <project>" deploy statuses, not "Vercel Preview Comments".
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.state == 'success' &&
-       startsWith(github.event.context, 'Vercel') &&
+       startsWith(github.event.context, 'Vercel – ') &&
        contains(github.event.branches.*.name, 'main'))
+    # On the job, so status events that skip the job never queue behind (or replace) a real run.
+    concurrency:
+      group: smoke-${{ github.event.sha || github.sha }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     env:
       API_URL: ${{ inputs.api_url || vars.SMOKE_API_URL || 'https://tablekeeper-api.vercel.app' }}
       WEB_URL: ${{ inputs.web_url || vars.SMOKE_WEB_URL || 'https://tablekeeper-beryl.vercel.app' }}
@@ -47,6 +50,19 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Wait for the other Vercel deploy
+        if: github.event_name == 'status'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.sha }}
+        run: |
+          for _ in $(seq 30); do
+            pending=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/status" --jq '[.statuses[] | select((.context | startswith("Vercel – ")) and .state == "pending")] | length')
+            [ "$pending" = "0" ] && exit 0
+            echo "$pending Vercel deploy(s) still pending for $SHA; waiting."
+            sleep 30
+          done
+          echo "Still pending after 15 minutes; smoking what is live now."
       - name: Smoke
         id: smoke
         run: |

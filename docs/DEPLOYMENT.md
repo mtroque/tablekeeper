@@ -95,7 +95,7 @@ Migrations are forward-only, so apply them before (or with) the deploy that need
 
 ## Smoke test after each deploy
 
-**Automatic:** [`.github/workflows/smoke.yml`](../.github/workflows/smoke.yml) runs `pnpm smoke` against production when Vercel reports a successful deploy of a commit on `main` (a `status` event from "Vercel – tablekeeper" or "Vercel – tablekeeper-api"; Vercel reports this repo's deploys as commit statuses, not GitHub Deployments). It checks, read-only and signed out:
+**Automatic:** [`.github/workflows/smoke.yml`](../.github/workflows/smoke.yml) runs `pnpm smoke` against production when Vercel reports a successful deploy of a commit on `main` (a `status` event from "Vercel – tablekeeper" or "Vercel – tablekeeper-api"; Vercel reports this repo's deploys as commit statuses, not GitHub Deployments), after waiting until neither project's deploy of that commit is still pending. It checks, read-only and signed out:
 
 - `web`: the home page answers 200 with HTML
 - `health`: `GET /health` returns `{ ok: true }`
