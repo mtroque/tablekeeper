@@ -22,14 +22,23 @@ function displayNameFor(payload: JWTPayload, email: string | null): string {
 }
 
 /**
+ * Where Neon Auth's tokens come from: the issuer (`iss`) is the origin of `NEON_AUTH_BASE_URL`
+ * without its path, while the JWKS lives under the full base URL. The one place this is derived;
+ * `auth.test.ts` pins it to literal values so code and test helpers can't share a wrong guess.
+ */
+export function neonAuthEndpoints(baseUrl: string): { issuer: string; jwksUrl: string } {
+  const base = baseUrl.replace(/\/$/, '');
+  return { issuer: new URL(base).origin, jwksUrl: `${base}/.well-known/jwks.json` };
+}
+
+/**
  * Verifies a Neon Auth JWT when one is sent (using JWKS, or `AUTH_TEST_SECRET` in test mode),
  * ensures the user's profile row exists, and sets `req.auth` with a user-scoped database client.
  * A missing token means a guest; an invalid or expired one is a 401.
  */
 export function optionalAuth(clients: Clients): RequestHandler {
-  const baseUrl = clients.auth.baseUrl.replace(/\/$/, '');
-  const issuer = new URL(baseUrl).origin;
-  const jwks = createRemoteJWKSet(new URL(`${baseUrl}/.well-known/jwks.json`));
+  const { issuer, jwksUrl } = neonAuthEndpoints(clients.auth.baseUrl);
+  const jwks = createRemoteJWKSet(new URL(jwksUrl));
   const testKey = clients.auth.testSecret
     ? new TextEncoder().encode(clients.auth.testSecret)
     : undefined;

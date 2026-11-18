@@ -5,6 +5,7 @@ import { SignJWT } from 'jose';
 
 import { loadConfig, type Config } from '../config';
 import { createDb } from '../db/client';
+import { neonAuthEndpoints } from '../middleware/auth';
 
 /** Config for tests: local Postgres and test JWT signing (filled by vitest.config.ts). */
 export function testConfig(overrides: Record<string, string> = {}): Config {
@@ -36,7 +37,7 @@ export async function signTestToken(
   return new SignJWT({ email: user.email, name: user.name })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(user.id)
-    .setIssuer(opts.issuer ?? new URL(config.auth.baseUrl).origin)
+    .setIssuer(opts.issuer ?? neonAuthEndpoints(config.auth.baseUrl).issuer)
     .setIssuedAt()
     .setExpirationTime(opts.expiresIn ?? '1h')
     .sign(new TextEncoder().encode(secret));
