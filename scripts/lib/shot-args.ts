@@ -8,8 +8,25 @@ export type ShotOptions = {
   waitSelector: string | null;
 };
 
+export type ShotRequest = { kind: 'entry'; id: string } | ({ kind: 'route' } & ShotOptions);
+
 export const SHOT_USAGE =
-  'Usage: pnpm shot <route> [--signed-in [user]] [--offline] [--dark] [--wait <selector>]';
+  'Usage: pnpm shot <screen map entry id>, or pnpm shot <route> [--signed-in [user]] [--offline] [--dark] [--wait <selector>]';
+
+/**
+ * A lone argument naming a screen map entry (tests/e2e/screens.ts) shoots that entry;
+ * anything else is a route with flags.
+ */
+export function parseShotRequest(
+  argv: readonly string[],
+  entryIds: ReadonlySet<string>,
+): ShotRequest {
+  const [first] = argv;
+  if (argv.length === 1 && first !== undefined && entryIds.has(first)) {
+    return { kind: 'entry', id: first };
+  }
+  return { kind: 'route', ...parseShotArgs(argv) };
+}
 
 const KNOWN_USERS = new Set(Object.keys(TEST_USERS));
 
