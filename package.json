@@ -17,6 +17,7 @@
     "fix": "tsx scripts/fix.ts",
     "lint:commits": "node scripts/lint-commits.mjs",
     "check:repo": "tsx scripts/check-repo.ts",
+    "audit:prod": "pnpm audit --prod --audit-level high",
     "verify": "tsx scripts/verify.ts",
     "preflight": "node scripts/preflight.mjs",
     "test": "vitest run",

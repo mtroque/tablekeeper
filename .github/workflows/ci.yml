@@ -160,3 +160,17 @@ jobs:
       - name: CV accuracy gate
         if: steps.paths.outputs.run == 'true'
         run: pnpm eval:cv:check
+
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      # Reads the lockfile only; fails on any high or critical advisory in production dependencies.
+      # Moderate and low ones show in the weekly metrics report (W21).
+      - run: pnpm audit:prod
