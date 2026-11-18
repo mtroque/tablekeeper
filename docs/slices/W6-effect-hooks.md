@@ -1,6 +1,6 @@
 # W6: Effects only through named hooks
 
-**Status:** ⬜ · **Depends on:** W2
+**Status:** 🟨 · **Depends on:** W2
 
 **Goal:** Raw `useEffect` is easy to misuse, and agents copy whatever is already there. Replace the 8 current uses with two named hooks (or no effect at all), then make lint reject `useEffect` and `useLayoutEffect` anywhere else, so the next agent reaches for a hook whose name says what it does.
 
