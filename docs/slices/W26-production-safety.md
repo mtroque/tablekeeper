@@ -1,6 +1,6 @@
 # W26: Production safety
 
-**Status:** ⏸ (built and tested; waiting on the owner: move `smoke.yml` and `migrate.yml` from `.github/workflow-drafts/` into `.github/workflows/` (the factory's App token can't push workflows) and merge, create the `production` environment and `DATABASE_URL_PRODUCTION`, add `Audit` to the required checks, and check sign-in, a signed-in save and history in production; commands in `docs/DEPLOYMENT.md` → 6 and `docs/AUTOMATION.md` → Target flow, step 4) · **Depends on:** W7
+**Status:** ⏸ (merged in PR #24; waiting on the owner: create the `production` environment and `DATABASE_URL_PRODUCTION` (`docs/DEPLOYMENT.md` → 6), add `Audit` to the required checks (`docs/AUTOMATION.md` → Target flow, step 4), and check sign-in, a signed-in save and history in production; then one manual smoke run with a wrong `api_url`. Tracked in issue #19, labeled `needs-human`) · **Depends on:** W7
 
 **Goal:** A change that breaks production is caught by something other than the owner trying the live site, and production changes go through a reviewed, repeatable path instead of throwaway scripts. After X4 merged, every signed-in save and history request in production failed with 401 because the API checked the wrong JWT issuer. The tests passed because their tokens made the same assumption.
 
@@ -31,7 +31,7 @@
 
 ## Acceptance criteria
 - [x] The issuer test fails against the pre-PR #8 issuer logic and passes now: with the issuer set back to the full base URL, all 3 tests in `apps/api/src/middleware/auth.test.ts` fail; restored, all 3 pass (W20 branch)
-- [ ] A production deploy triggers `smoke.yml`, which passes (link the run); a smoke against a wrong URL opens a `needs-human` issue
+- [ ] A production deploy triggers `smoke.yml`, which passes (link the run); a smoke against a wrong URL opens a `needs-human` issue (deploy half done: run 44337355555 passed 5 of 5 after the PR #26 deploy; the wrong-URL run is left)
   - Before merge: `pnpm smoke` against production passes 5 of 5; against `--api https://tablekeeper-beryl.vercel.app/wrong` it fails 4 checks by name and exits 1; actionlint passes. The live run and the issue need the workflow on `main`.
 - [ ] `migrate.yml` waits for the owner's approval and, approved, reports "no pending migrations" on production (link the run)
   - Before merge: `node scripts/db.mjs migrate` on a fresh local database prints the 6 `Applied` lines and `Applied 6 of 6 migrations.`, then `No pending migrations (6 applied).` on a second run; actionlint passes. The run needs the workflow on `main` and the owner's environment setup.
