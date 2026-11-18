@@ -56,6 +56,8 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W24 | Factory go-live: dry run, Project access, current models, the live checks W11, W12 and W14 left open | - | ⬜ |
 | W25 | Finish gate: `check:repo` refuses to fold a spec with unchecked criteria | - | ✅ |
 | W26 | Production safety: issuer contract test, post-deploy smoke, approved migration workflow | W7 | ⬜ |
+| W27 | Factory first-run fixes: output to files, paused slices keep their issue, verdict follows the gate, CI preflight | W24 | 🟨 |
+| W28 | Factory transcripts and review memory: per-round sessions, reviewer transcripts, earlier rounds in review, actionlint | W27 | ⬜ |
 
 ## Next
 
