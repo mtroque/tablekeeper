@@ -166,6 +166,10 @@ function main(): void {
       },
     );
 
+    if (res.error) {
+      writeFileSync(streamPath, res.error.message);
+      throw res.error;
+    }
     const output = `${res.stdout}\n${res.stderr}`;
     writeFileSync(streamPath, output);
 
