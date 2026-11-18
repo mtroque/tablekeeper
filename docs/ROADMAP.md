@@ -61,11 +61,10 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 
 Workflow before features; direction in `docs/AUTOMATION.md`. Done so far: W1 to W9, W11, W12, W14, W15, W17, W18, W20, W21, W22, W25.
 
-1. W21 (security fixes on the sign-in path) first.
-2. W25 and W22, so later slices are gated and quieter; W23 alongside (mostly owner setup).
-3. W24: the factory's first live runs, starting with a dry run.
-4. W26, then W10 (screen map), then W13 (QA).
-5. W16 (session grading) and W19 (merge authority).
+1. W24: the factory's first live runs, starting with a dry run. W23 alongside (mostly owner setup on the machine).
+2. W26's remaining parts: post-deploy smoke, `migrate.yml`, `Audit` required on `main`, and the owner's sign-in check after W21 deploys (the issuer test and production rule are done).
+3. W10 (screen map), then W13 (QA).
+4. W16 (session grading) and W19 (merge authority).
 
 Product slices can run alongside; they get the new checks for free.
 
