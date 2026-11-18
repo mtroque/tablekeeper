@@ -33,6 +33,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
       - name: Run review and fix loop
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
