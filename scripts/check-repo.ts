@@ -144,25 +144,7 @@ function diffSinceBase(baseRef: string): {
     const lastPath = parts.at(-1) ?? firstPath;
 
     migrationEntries.push({ status, path: firstPath });
-    if (status.startsWith('D')) {
-      // A slice deletes its own spec when it finishes; its `## Owns` still applies to the branch.
-      if (SPEC_PATH.test(firstPath)) {
-        const deletedIn = git(
-          'log',
-          '-1',
-          '--format=%H',
-          '--diff-filter=D',
-          `${baseRef}..HEAD`,
-          '--',
-          firstPath,
-        );
-        if (deletedIn) {
-          specs[firstPath] = git('show', `${deletedIn}^:${firstPath}`);
-          deletedSpecs[firstPath] = specs[firstPath];
-        }
-      }
-      continue;
-    }
+    if (status.startsWith('D')) continue;
 
     changedFiles.push({
       path: lastPath,
@@ -172,6 +154,34 @@ function diffSinceBase(baseRef: string): {
     if (SPEC_PATH.test(lastPath) && existsSync(join(ROOT, lastPath))) {
       specs[lastPath] = readFileSync(join(ROOT, lastPath), 'utf8');
     }
+  }
+
+  // A slice deletes its own spec when it finishes, often after creating it on the same branch, so
+  // the net diff doesn't show it. Find deletions commit by commit; the spec's `## Owns` still
+  // applies to the branch, and its last version is what the finish gate reads.
+  const deleted = git(
+    'log',
+    '--format=',
+    '--name-only',
+    '--diff-filter=D',
+    `${baseRef}..HEAD`,
+    '--',
+    'docs/slices',
+  );
+  for (const path of new Set(deleted.split(/\r?\n/).filter((p) => SPEC_PATH.test(p)))) {
+    if (existsSync(join(ROOT, path))) continue;
+    const deletedIn = git(
+      'log',
+      '-1',
+      '--format=%H',
+      '--diff-filter=D',
+      `${baseRef}..HEAD`,
+      '--',
+      path,
+    );
+    if (!deletedIn) continue;
+    deletedSpecs[path] = git('show', `${deletedIn}^:${path}`);
+    specs[path] = deletedSpecs[path];
   }
 
   return { migrationEntries, changedFiles, specs, deletedSpecs };
