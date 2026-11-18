@@ -38,8 +38,8 @@ export type FinishGateInput = {
   /** Specs that exist at HEAD, path → content. */
   currentSpecs: Record<string, string>;
   /** `docs/ROADMAP.md` at the branch base and at HEAD (undefined on `main` or without a base). */
-  roadmapBase?: string;
-  roadmapHead?: string;
+  roadmapBase?: string | undefined;
+  roadmapHead?: string | undefined;
 };
 
 const specId = (path: string): string => /docs\/slices\/([A-Z][A-Z0-9]*\d+)-/.exec(path)?.[1] ?? '';
