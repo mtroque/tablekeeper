@@ -30,7 +30,7 @@ export function verifySteps(options: VerifyOptions): VerifyStep[] {
 
 const ANSI = /\u001b\[[0-9;?]*[A-Za-z]/g;
 const ERROR_LINE =
-  /(\berror\b|\bfail(ed|ure)?\b|✖|×|❯ .*\.(test|spec)\.|AssertionError|TS\d{4}|exited with code [1-9])/i;
+  /(\berror\b|\bfail(ed|ure)?\b|✖|×|❯ .*\.(test|spec)\.|AssertionError|TS\d{4}|exited with code [1-9]|\[WebServer\] .*(vulnerab|error|already running)|config\.webServer)/i;
 const NOISE = /^\s*(\$ |\[ELIFECYCLE\]|RUN |Start at|Duration|└─|│|⣾|⣽|⣻|⢿|⡿|⣟|⣯|⣷)/;
 
 /**

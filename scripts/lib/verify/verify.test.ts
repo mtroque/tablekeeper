@@ -54,3 +54,14 @@ describe('lintableFiles', () => {
     ).toEqual(['a.ts', 'b.tsx', 'c.mjs']);
   });
 });
+
+describe('failureTail with a web server that stopped', () => {
+  it('surfaces the server lines that explain the failure', () => {
+    const log = [
+      '[WebServer] Your version of Next.js is affected by a known security vulnerability.',
+      '[WebServer] ',
+      'Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/',
+    ].join('\n');
+    expect(failureTail(log)[0]).toContain('known security vulnerability');
+  });
+});
