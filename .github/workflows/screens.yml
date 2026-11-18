@@ -1,5 +1,3 @@
-# DRAFT (W10): the factory's App token can't push workflows. Owner: move this file to
-# .github/workflows/screens.yml and delete these two lines before merging.
 name: Screens
 
 # W10: photographs every screen map entry (tests/e2e/screens.ts) at phone size, pushes the PNGs to
