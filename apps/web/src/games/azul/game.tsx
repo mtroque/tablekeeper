@@ -16,7 +16,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { z } from 'zod';
 
 import { useAuth } from '@/components/auth-provider';
@@ -24,6 +24,7 @@ import { BreakdownList } from '@/components/breakdown-list';
 import { SignInPrompt } from '@/components/sign-in-prompt';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRedirectWhen } from '@/lib/hooks';
 import { clearPendingSave, setPendingSave } from '@/lib/session-store/pending-save';
 import { sessionKeys, useSessionStore } from '@/lib/session-store/use-session-store';
 
@@ -103,9 +104,7 @@ export function AzulGame({ sessionId }: { sessionId: string }) {
   const completed = session?.status === 'completed';
 
   // A finished, saved game lives in history.
-  useEffect(() => {
-    if (signedIn && completed) router.replace(`/games/azul/history/${sessionId}`);
-  }, [signedIn, completed, router, sessionId]);
+  useRedirectWhen(signedIn && completed, `/games/azul/history/${sessionId}`);
 
   const rounds = state?.rounds.length ?? 0;
   // The round being entered: this tab's taps, else a draft kept through a refresh, else the

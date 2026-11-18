@@ -42,6 +42,7 @@ Barrel `index.ts` files only at package roots and game-module roots.
 
 - Server components for static shells; interactive screens are client components.
 - Server data through TanStack Query and `lib/api-client.ts` (query keys like `['sessions', gameId]`); no `fetch` in components (lint).
+- Effects only through named hooks in `apps/web/src/lib/hooks/` (`useOnMount`, `useRedirectWhen`, or a new named hook when neither fits); raw `useEffect` and `useLayoutEffect` are banned elsewhere in `apps/web/src/` (lint).
 - Tailwind with the tokens from `docs/UX.md`; no raw color literals outside the token files and game modules (lint). shadcn components in `components/ui` are restyled per `docs/UX.md` → Look and voice.
 - **Copy lint:** `eslint-rules/ui-copy.js` checks string literals and JSX text in `src` (tests excluded) for em/en dashes, emoji, and the banned phrases in `docs/UX.md` → Words.
 

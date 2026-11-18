@@ -2,12 +2,13 @@
 
 import type { GameDefinition, Quad } from '@tablekeeper/core';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { CornerEditor } from '@/components/corner-editor';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { detectBoard, type CvError } from '@/lib/cv-client';
+import { useOnMount, useRedirectWhen } from '@/lib/hooks';
 import type { FlowState } from '@/lib/session-store/flow-state';
 
 import { defaultCorners, photoPixels } from './photo';
@@ -34,9 +35,8 @@ export function CaptureStep({
   const photo = flow.flow.photo;
   const [reading, setReading] = useState<Reading>({ kind: 'reading' });
   const [stage, setStage] = useState<keyof typeof STAGE_TEXT | null>(null);
-  const started = useRef(false);
   // Set when the player leaves for manual entry, so dropping the photo doesn't send them home.
-  const leaving = useRef(false);
+  const [leaving, setLeaving] = useState(false);
 
   const corners = (flow.flow.corners as Quad | null) ?? (photo ? defaultCorners(photo) : null);
 
@@ -71,18 +71,13 @@ export function CaptureStep({
 
   // Find the corners once when the photo arrives; the player adjusts them after.
   // Without a photo (a manual board), capture has nothing to show.
-  useEffect(() => {
-    if (!photo) {
-      if (!leaving.current) router.replace(base);
-      return;
-    }
-    if (started.current) return;
-    started.current = true;
-    void read();
+  useRedirectWhen(!photo && !leaving, base);
+  useOnMount(() => {
+    if (photo) void read();
   });
 
   const manual = () => {
-    leaving.current = true;
+    setLeaving(true);
     flow.setFlow(manualFlow(game));
     router.push(`${base}/review`);
   };

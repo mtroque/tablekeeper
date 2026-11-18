@@ -13,7 +13,7 @@ import {
   type PatchworkState,
   type SquareCell,
 } from '@tablekeeper/core';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { ConfidenceOutline, isLowConfidence } from '@/components/confidence-outline';
 import { Counter } from '@/components/counter';
@@ -45,17 +45,9 @@ export function Editor({ state, onChange, confidence, reread }: EditorProps<unkn
   };
   const [rereading, setRereading] = useState(false);
   const [rereadFailed, setRereadFailed] = useState(false);
-  // What the player set that a reread replaces: put back once the reread board arrives.
-  const keep = useRef<Pick<PatchworkState, 'board' | 'tokens' | 'specialTile'> | null>(null);
-
-  useEffect(() => {
-    const kept = keep.current;
-    if (!kept || kept.board !== board) return;
-    keep.current = null;
-    if (JSON.stringify([kept.tokens, kept.specialTile]) !== JSON.stringify([tokens, specialTile])) {
-      onChange({ ...current, tokens: kept.tokens, specialTile: kept.specialTile });
-    }
-  });
+  const latest = useRef({ current, onChange });
+  // eslint-disable-next-line react-hooks/refs -- keeps latest props for async switchBoard callback
+  latest.current = { current, onChange };
 
   /**
    * A board read from a photo is read again against the chosen board's references; a board
@@ -68,14 +60,26 @@ export function Editor({ state, onChange, confidence, reread }: EditorProps<unkn
       update({ board: option });
       return;
     }
-    keep.current = { board: option, tokens, specialTile };
+    const kept = { tokens, specialTile };
     setRereading(true);
     const ok = await reread({ board: option });
     setRereading(false);
     if (!ok) {
-      keep.current = null;
       setRereadFailed(true);
       update({ board: option });
+      return;
+    }
+    // Wait a tick for the parent's flow update to render before restoring kept chits and special tile.
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    const next = latest.current.current;
+    if (
+      next.board === option &&
+      JSON.stringify([kept.tokens, kept.specialTile]) !==
+        JSON.stringify([next.tokens, next.specialTile])
+    ) {
+      latest.current.onChange({ ...next, tokens: kept.tokens, specialTile: kept.specialTile });
     }
   };
   const setAll = (covered: boolean) => {

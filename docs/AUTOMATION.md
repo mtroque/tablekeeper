@@ -29,7 +29,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | No hex colors outside the token file and game modules | `eslint-rules/rules.js` (`rules/no-raw-colors`) | ✅ |
 | Shared code never branches on game id | `eslint-rules/rules.js` (`rules/no-game-id-branching`) | ✅ |
 | No disabled rule without a reason | `eslint-rules/rules.js` (`rules/require-disable-reason`) and `reportUnusedDisableDirectives` | ✅ |
-| `useEffect` only through named hooks | named hooks in `apps/web/src/lib/hooks/`, then a ban elsewhere | W6 |
+| `useEffect` only through named hooks | `eslint.config.js` (`@typescript-eslint/no-restricted-imports` and `no-restricted-properties` outside `apps/web/src/lib/hooks/`) | ✅ |
 | Every game rule id has a test, and every cited id exists | `pnpm check:repo` (`scripts/lib/check-repo/rule-ids.ts`) | ✅ |
 | Applied migrations are never edited | `pnpm check:repo` (`scripts/lib/check-repo/migrations.ts`) | ✅ |
 | Shared docs: a slice edits only its roadmap row and appends to decisions and corrections; decision ids unique and increasing | `pnpm check:repo` (`scripts/lib/check-repo/ownership.ts`, `decisions.ts`) | ✅ |

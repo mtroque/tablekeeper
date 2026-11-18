@@ -1,12 +1,12 @@
 'use client';
 
 import type { GameId } from '@tablekeeper/core';
-import { notFound, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { notFound } from 'next/navigation';
 
 import { ComingSoon } from '@/components/coming-soon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GAME_UI } from '@/games/registry';
+import { useRedirectWhen } from '@/lib/hooks';
 
 import { CaptureStep } from './capture-step';
 import { ResultStep } from './result-step';
@@ -25,7 +25,6 @@ function stepOf(slug: string[]): Step | null {
 
 /** Capture → review → result for any game with an `Editor` (docs/UX.md → Routes). */
 export function DefaultScoreFlow({ gameId, slug }: { gameId: GameId; slug: string[] }) {
-  const router = useRouter();
   const game = requireGame(gameId);
   const ui = GAME_UI[gameId];
   const flow = useFlow(gameId);
@@ -33,9 +32,7 @@ export function DefaultScoreFlow({ gameId, slug }: { gameId: GameId; slug: strin
   // Every step after home needs a board in progress; without one (a new tab), start over.
   const lost = flow.status === 'ready' && step !== 'home' && !flow.flow;
 
-  useEffect(() => {
-    if (lost) router.replace(`/games/${gameId}/score`);
-  }, [lost, gameId, router]);
+  useRedirectWhen(lost, `/games/${gameId}/score`);
 
   if (step === null) notFound();
   if (!ui.Editor) {
