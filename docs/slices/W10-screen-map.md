@@ -1,12 +1,14 @@
 # W10: Screen map and screenshots
 
-**Status:** ⬜ · **Depends on:** W7, W15
+**Status:** 🟨 · **Depends on:** W7, W15
 
 **Goal:** A typed map of every screen and state (route, state, how to reach it) that agents and humans share, and a CI job that screenshots each one at phone size and shows the images in the PR. Review becomes looking at screens, not reading JSX. It builds on W15's `pnpm shot`, which agents already use locally.
 
 ## Owns
-- `tests/e2e/screens.ts` (the map), `tests/e2e/screens.spec.ts`, `scripts/lib/check-repo/screens.ts` with tests (the route coverage check)
-- `scripts/shot.ts` (accepting map entry ids, after W15), `.github/workflows/screens.yml`
+- `tests/e2e/screens.ts` (the map), `tests/e2e/screens.spec.ts`, `scripts/lib/check-repo/screens.ts` with tests `scripts/lib/check-repo/screens.test.ts` (the route coverage check), wired in `scripts/check-repo.ts` and `scripts/lib/check-repo/index.ts`
+- `scripts/shot.ts`, `scripts/lib/shot-args.ts`, `scripts/lib/shot-args.test.ts` (accepting map entry ids, after W15)
+- `.github/workflows/screens.yml`, `scripts/screens-report.ts`, `scripts/lib/screens-report.ts`, `scripts/lib/screens-report.test.ts` (the PR comment)
+- `playwright.config.ts` (additive: the `SCREENS` env flag)
 - `docs/UX.md` (Routes and Screen states point at the map), `docs/AUTOMATION.md` (W10 row), `README.md` (Commands)
 
 ## Scope
@@ -36,6 +38,10 @@ None new; this slice photographs the existing ones.
 - Visual regression diffs. Accessibility audits (could join later as a step over the same map).
 
 ## Open questions
+None left. Resolved from the docs:
+- **Map shape:** entries are `{ id, screen, route, state, reach, dark? }`: `screen` names a row of `docs/UX.md` → Routes (or `app shell`, `not found`), `route` is the concrete URL. Several UX routes share one `page.tsx` (`/score/[[...slug]]`), so a concrete URL alone can't say which screen it shows. `SCREEN_ROUTES` lists each screen with its `page.tsx` and a reason for every shared state it skips.
+- **Which screens changed:** each PNG's hash is compared with the `main/` set on the `screens` branch, refreshed by the same workflow on pushes to `main`. With no baseline yet every screen counts as changed.
+- **Normal e2e runs:** `screens.spec.ts` runs only with `SCREENS=1` (`playwright.config.ts`), so the required `E2E` job doesn't double in length.
 
 ## Decisions
 - Screenshots go to an orphan `screens` branch, not artifacts, so the PR comment can embed them.
