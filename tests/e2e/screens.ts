@@ -500,7 +500,7 @@ export const SCREENS: readonly ScreenEntry[] = [
       await patchworkResult(ctx);
       await goOffline(ctx);
       // Mutations pause while offline, so the save waits rather than failing (docs/UX.md
-      // asks for "You're offline."); the shot shows what a player sees.
+      // asks for "You're offline.", #30); the shot shows what a player sees.
       await ctx.page.getByRole('button', { name: 'Save Game' }).click();
       await expect(ctx.page.getByRole('button', { name: 'Saving' })).toBeVisible();
     },

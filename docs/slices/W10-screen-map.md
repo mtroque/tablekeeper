@@ -50,12 +50,13 @@ None left. Resolved from the docs:
 - **Loading of server-rendered states** (header, callback): the shot holds the app's JavaScript, so it shows the server render before hydration.
 - **Separate from E2E:** `screens.spec.ts` runs only with `SCREENS=1`; additive line in `playwright.config.ts` (`testIgnore`). Wiring: `checkScreenMap` export in `scripts/lib/check-repo/index.ts` and its call in `scripts/check-repo.ts`.
 - **Workflow as a draft:** the push of `.github/workflows/screens.yml` was refused ("refusing to allow a GitHub App to create or update workflow ... without `workflows` permission"), as for W26; it waits in `.github/workflow-drafts/`. No other credential was tried.
-- **Found while mapping (not fixed here, not owned):** saving a result while offline doesn't show "You're offline." as `docs/UX.md` → Screen states asks: TanStack Query pauses the mutation, so the button stays at "Saving". The `result-offline` entry shoots that behavior. Candidate fix for the score flow (`networkMode: 'always'` on the save mutation, or an offline check before saving).
+- **Found while mapping (not fixed here, not owned):** saving a result while offline doesn't show "You're offline." as `docs/UX.md` → Screen states asks: TanStack Query pauses the mutation, so the button stays at "Saving". The `result-offline` entry shoots that behavior. Tracked in #30 (candidate fix: `networkMode: 'always'` on the save mutation, or an offline check before saving).
 
 ## Corrections
 | Date | Pattern | Where | What was wrong | Correction | Source | Status |
 |---|---|---|---|---|---|---|
 | 2026-11-18 | `workflow-push-refused` | W10, `screens.yml` | Pushing a new workflow file from the factory was refused for lack of the App's `workflows` permission (second time, after W26) | Staged under `.github/workflow-drafts/` for the owner; candidate check: `check:repo` or the factory warns before a push that touches `.github/workflows/`, or the App gets `workflows` | self | open |
 | 2026-11-18 | `ui-state-untested-assumption` | W10, `result-offline` entry | The map assumed the documented offline save message; the app pauses the save instead, so the entry failed | Entry shoots the real behavior; gap noted under Decisions | self | open |
+| 2026-11-18 | `baseline-overwritten-on-failure` | W10, PR #28, `screens.yml` draft | A push to `main` replaced the `main/` baseline with whatever the run shot, even when shooting failed partway, so later PR comments would list most screens as changed | Publish on `main` only when every entry was shot | review | open |
 
 ## Shared change requests
