@@ -8,6 +8,7 @@ import { chromium } from '@playwright/test';
 
 import { signInAs } from '../tests/e2e/helpers';
 
+import { describeRunning, runningDevServer, waitUntilStopped } from './lib/dev-lock.mjs';
 import { loadLocalEnv, ROOT } from './lib/local-env.mjs';
 import { parseShotArgs, sanitizeBranchName, shotFilename } from './lib/shot-args';
 
@@ -39,6 +40,15 @@ function currentBranch(): string {
 }
 
 async function startServers() {
+  const running = runningDevServer();
+  if (running) {
+    console.error(
+      describeRunning(running, {
+        reuseHint: `Or shoot against it: SHOT_URL=${running.appUrl ?? 'http://localhost:<port>'} pnpm shot … (signed-in shots need the test API pnpm shot starts itself).`,
+      }),
+    );
+    process.exit(1);
+  }
   const { webPort, apiPort } = await loadLocalEnv({ ports: true });
   const apiEnv = {
     ...process.env,
@@ -100,7 +110,17 @@ async function startServers() {
           }),
       ),
     );
+    // The pnpm wrappers exit before next dev and the API have let go of the ports and Next's
+    // dev lock, so a chained `pnpm shot` would otherwise race them.
+    if (!(await waitUntilStopped([webPort, apiPort]))) {
+      console.error(`Servers on ports ${webPort} and ${apiPort} didn't stop within 15s.`);
+    }
   };
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(signal, () => {
+      void stop().then(() => process.exit(130));
+    });
+  }
 
   try {
     await Promise.all([
