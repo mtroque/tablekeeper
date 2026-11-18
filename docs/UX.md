@@ -37,13 +37,15 @@ Screens, routes, states and interactions.
 
 Games with their own flow (Azul, Dorfromantik) render their `ScoreFlow` under `/score`; see `docs/ARCHITECTURE.md` → Game modules.
 
+Every route here has entries in the screen map, `tests/e2e/screens.ts` (`SCREEN_ROUTES` and `SCREENS`); `pnpm check:repo` fails when a route or a `page.tsx` has none.
+
 ## Game hub tabs
 
 Every game uses one tab bar built from `GameDefinition.features`, in this order: **Score · Campaign · Rules · History**. Tabs for unsupported features are not shown. Dorfromantik shows all four; the others show Score, Rules, History.
 
 ## Screen states
 
-Every screen implements these, plus any listed in its slice spec.
+Every screen implements these, plus any listed in its slice spec. The screen map (`tests/e2e/screens.ts`) has an entry for each state a screen has, with how to reach it, and the reason for each one it doesn't; `pnpm shot <entry id>` shows one, and every PR touching the UI gets a comment with the screens that changed (`docs/AUTOMATION.md` → Screens).
 
 | State | Treatment |
 |---|---|
