@@ -1,6 +1,6 @@
 # W21: Dependency security
 
-**Status:** ⬜ · **Depends on:** none
+**Status:** 🟨 · **Depends on:** none
 
 **Goal:** No known high or critical advisory ships in production dependencies, and CI says so on every PR instead of an agent seeing a warning and moving on. As of 2026-11-18, `pnpm audit --prod` reports 1 critical, 2 high, 2 moderate and 2 low, all on the sign-in path or the web framework.
 
