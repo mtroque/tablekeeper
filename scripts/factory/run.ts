@@ -162,6 +162,7 @@ function main(): void {
       {
         cwd: ROOT,
         encoding: 'utf8',
+        maxBuffer: 64 * 1024 * 1024,
         timeout: config.builder.timeoutMinutes * 60_000,
         env: { ...process.env, FACTORY_ISSUE_NUMBER: String(picked.number) },
       },
