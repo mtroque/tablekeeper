@@ -79,6 +79,12 @@ Set per area in `.github/factory/merge-policy.json` (W19): each path group (docs
 
 **Commands** (`/build`, `/harden`, `/parallel`, `/plan`, `/status` and any new ones) are Agent Skills with one copy each, at `.agents/skills/<name>/SKILL.md`. Antigravity reads that folder directly; `.claude/skills` is a symlink to it, so Claude Code reads the same files. To add one, create the folder there, never under `.claude/`. Keep them tool-neutral: frontmatter `name` and `description` (plus Claude's optional `argument-hint` and `disable-model-invocation: true`, which Antigravity ignores), and refer to "the ids given with this command" rather than `$ARGUMENTS`, which only Claude Code substitutes. `/parallel` and `scripts/worktrees.sh launch` still start Claude Code sessions.
 
+## Metrics
+
+`pnpm metrics [--weeks 4]` (`scripts/metrics.ts`, `scripts/lib/metrics/`) prints a weekly ISO-week table of merged PRs (total and `factory/*`), revert rate, CI first-pass rate, factory runs/finished/`needs-human` rate/review rounds, remaining `eslint-rules/baseline.json` entries, and `docs/CORRECTIONS.md` patterns (flagging open patterns at `>= 2` for `/harden`).
+
+`pnpm groom` (`scripts/groom.ts`) opens up to 3 `groomer` + `agent-ready` issues per week for any remaining lint baseline entries that don't already have an open issue. `.github/workflows/metrics.yml` runs both every Monday and updates the pinned "Factory metrics" issue.
+
 ## Accounts and setup
 
 State as of 2026-11-17. No secret values here; only names.

@@ -1,0 +1,42 @@
+name: Metrics
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  metrics:
+    name: Metrics and Groomer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Update Factory metrics issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPORT=$(pnpm --silent metrics --weeks 4)
+          ISSUE_NUM=$(gh issue list --state open --search '"Factory metrics" in:title' --json number,title --jq '.[] | select(.title == "Factory metrics") | .number' | head -n 1)
+          if [ -n "$ISSUE_NUM" ]; then
+            gh issue edit "$ISSUE_NUM" --body "$REPORT"
+          else
+            gh issue create --title "Factory metrics" --body "$REPORT"
+          fi
+      - name: Run groomer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm groom
