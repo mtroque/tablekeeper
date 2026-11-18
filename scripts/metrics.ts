@@ -1,13 +1,14 @@
 // pnpm metrics [--weeks 4]
 // Prints a deterministic weekly report of merged PRs, reverts, CI first-pass rate, factory runs,
 // lint baseline leftovers, and docs/CORRECTIONS.md patterns.
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { z } from 'zod';
 
+import { formatAuditLine, parseAuditCounts } from './lib/metrics/audit';
 import { parseBaselineEntries } from './lib/metrics/baseline';
 import { countCorrections } from './lib/metrics/corrections';
 import { formatMetricsReport } from './lib/metrics/format';
@@ -101,4 +102,8 @@ const baselineEntries = parseBaselineEntries(
 );
 const corrections = countCorrections(readFileSync(join(ROOT, 'docs/CORRECTIONS.md'), 'utf8'));
 
+// pnpm audit exits non-zero when it finds anything, so read its JSON regardless of the exit code.
+const audit = spawnSync('pnpm', ['audit', '--prod', '--json'], { cwd: ROOT, encoding: 'utf8' });
+
 console.log(formatMetricsReport({ weeks: weekMetrics, baselineEntries, corrections }));
+console.log(`\n${formatAuditLine(parseAuditCounts(audit.stdout))}`);

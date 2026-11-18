@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { formatAuditLine, parseAuditCounts } from './audit';
 import { parseBaselineEntries } from './baseline';
 import { countCorrections } from './corrections';
 import { formatMetricsReport } from './format';
@@ -121,5 +122,21 @@ describe('parseBaselineEntries & formatMetricsReport', () => {
     });
     expect(report).toContain('Lint baseline entries:** 1 (2 total violations)');
     expect(report).toContain('alpha (2)');
+  });
+});
+
+describe('audit line', () => {
+  it('counts each severity from pnpm audit JSON', () => {
+    const json = JSON.stringify({
+      advisories: {},
+      metadata: { vulnerabilities: { info: 0, low: 2, moderate: 1, high: 0, critical: 0 } },
+    });
+    expect(formatAuditLine(parseAuditCounts(json))).toBe(
+      'Production advisories (pnpm audit --prod): 0 critical, 0 high, 1 moderate, 2 low',
+    );
+  });
+
+  it('says so when the audit is unavailable', () => {
+    expect(formatAuditLine(parseAuditCounts('not json'))).toContain('audit unavailable');
   });
 });
