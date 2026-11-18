@@ -1,6 +1,6 @@
 # W14: Factory runner
 
-**Status:** ⬜ · **Depends on:** W4, W7
+**Status:** 🟨 · **Depends on:** W4, W7
 
 **Goal:** Work moves without anyone at the keyboard and without the owner's machine. Every 5 hours a GitHub Actions workflow takes the top `agent-ready` issue, builds it with Claude Code headless on its own branch, and opens a PR whose session can be resumed later (W11). Merging stays manual until W19.
 
