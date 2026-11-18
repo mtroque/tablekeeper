@@ -56,7 +56,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 ## Review policy
 
 - **Always:** CI. It is free and catches most problems.
-- **Every factory PR:** a separate reviewer session (agent, model and effort in `.github/factory/config.json`) posts findings as a PR review; findings above the threshold are resumed into the builder's session for up to two fix rounds, then `needs-human` (W11). Other PRs get a review only with the `review` label. Every run costs Pro usage.
+- **Every factory PR:** a separate reviewer session (`.github/workflows/review.yml`, `scripts/review/`, `.agents/skills/review/SKILL.md`, config in `.github/factory/config.json`) posts inline findings and a verdict; findings at or above `blockingSeverity` (`should-fix`) are resumed into the builder's session for up to `maxRounds` (`2`) fix rounds, then labeled `needs-human`. Other PRs get a review (with no fix round) when labeled `review`. Every run costs Pro usage.
 - **Antigravity and Codex:** later, through the same config, once their CLIs can sign in on a runner.
 - **What reviewers check:** only what no check covers. The review prompt lists the unchecked rows of the enforcement map plus spec fit and user-facing notes (`README.md` notes stay concise, self-contained, and free of contradictions or overstated claims); it does not restate lint.
 

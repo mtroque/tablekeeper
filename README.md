@@ -72,7 +72,9 @@ scripts/worktrees.sh status|sync|clean|launch   # parallel Claude Code sessions 
 
 ### CI
 
-Every push to `main` and every pull request runs three jobs in [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `Checks` (typecheck, lint, commits, repo checks, unit tests, build), `API` (Vitest integration suite against `postgres:16-alpine`), and `E2E` (Playwright against `postgres:16-alpine` with `LLM_PROVIDER=fake` and test JWTs).
+Every push to `main` and every pull request runs four jobs in [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `Checks` (typecheck, lint, commits, repo checks, unit tests, build), `API` (Vitest integration suite against `postgres:16-alpine`), `E2E` (Playwright against `postgres:16-alpine` with `LLM_PROVIDER=fake` and test JWTs), and `CV` (`pnpm eval:cv:check` when CV-related paths change).
+
+To request an automated model review on any PR, add the `review` label (`.github/workflows/review.yml`). `factory/*` PRs are reviewed automatically.
 
 ## Docs
 
