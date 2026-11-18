@@ -14,6 +14,12 @@ const TESTS = ['**/*.test.{ts,tsx,js}', '**/test/**', '**/tests/**'];
 
 const PURE_SCORER_MESSAGE =
   'Scorers and game definitions in packages/core must stay pure and deterministic (AGENTS.md → Hard rules).';
+const EFFECT_HOOK_MESSAGE =
+  'Do not call useEffect or useLayoutEffect directly; use useOnMount or useRedirectWhen from @/lib/hooks, or add a new named hook in apps/web/src/lib/hooks/ when neither fits (docs/CONVENTIONS.md → Web).';
+const REACT_EFFECT_PROPERTIES = [
+  { object: 'React', property: 'useEffect', message: EFFECT_HOOK_MESSAGE },
+  { object: 'React', property: 'useLayoutEffect', message: EFFECT_HOOK_MESSAGE },
+];
 
 /** Package boundaries (docs/ARCHITECTURE.md → Monorepo), by package name and by relative path. */
 function boundary(files, banned, typeOnly = [], extraPatterns = []) {
@@ -211,6 +217,21 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    ignores: ['apps/web/src/lib/hooks/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "ImportDeclaration[source.value='react'] ImportSpecifier[imported.name=/^(useEffect|useLayoutEffect)$/]",
+          message: EFFECT_HOOK_MESSAGE,
+        },
+      ],
+      'no-restricted-properties': ['error', ...REACT_EFFECT_PROPERTIES],
+    },
+  },
+  {
     files: ['apps/web/src/{components,app,games}/**/*.{ts,tsx}'],
     ignores: TESTS,
     rules: {
@@ -224,6 +245,7 @@ export default tseslint.config(
       ],
       'no-restricted-properties': [
         'error',
+        ...REACT_EFFECT_PROPERTIES,
         {
           object: 'window',
           property: 'fetch',

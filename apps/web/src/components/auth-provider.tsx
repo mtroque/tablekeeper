@@ -1,7 +1,7 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
 import {
   getAuthSession,
@@ -9,6 +9,7 @@ import {
   signOutUser,
   type AuthSession,
 } from '@/lib/auth';
+import { useOnMount } from '@/lib/hooks';
 
 /** Where to go after the OAuth round trip (sessionStorage survives the redirect). */
 export const RETURN_TO_KEY = 'tk:v1:auth-return-to';
@@ -36,17 +37,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return session;
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    void getAuthSession().then((session) => {
-      if (!cancelled) {
-        setState(session ? { status: 'signed-in', session } : { status: 'guest', session: null });
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  useOnMount(async (signal) => {
+    const session = await getAuthSession();
+    if (signal.aborted) return;
+    setState(session ? { status: 'signed-in', session } : { status: 'guest', session: null });
+  });
 
   const value = useMemo<AuthContextValue>(
     () => ({

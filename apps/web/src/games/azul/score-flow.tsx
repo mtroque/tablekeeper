@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
+import { useRedirectWhen } from '@/lib/hooks';
 import { resumePendingSave } from '@/lib/session-store/use-session-store';
 
 import type { ScoreFlowProps } from '../types';
@@ -20,9 +21,7 @@ function RetryPendingSave() {
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
-    if (auth.status === 'guest') router.replace(AZUL_SCORE);
-  }, [auth.status, router]);
+  useRedirectWhen(auth.status === 'guest', AZUL_SCORE);
 
   return (
     <section className="flex flex-col gap-3 px-4 py-5">

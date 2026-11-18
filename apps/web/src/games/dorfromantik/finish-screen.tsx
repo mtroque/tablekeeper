@@ -2,11 +2,10 @@
 
 import { dorfromantik, rankFor } from '@tablekeeper/core';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 import { LoadError, SheetSkeleton } from './states';
 import { UnlockPicker } from './unlock-picker';
@@ -14,29 +13,25 @@ import { useCampaign } from './use-campaign';
 import { useSheetFlow } from './use-sheet';
 
 const GAME = `/games/${dorfromantik.id}`;
-const HIGHLIGHT_MS = 900;
 
 /** What this game unlocked, with one short highlight (docs/UX.md → Visuals → Calm motion). */
 function UnlockedNow({ names }: { names: string[] }) {
-  const [fresh, setFresh] = useState(true);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setFresh(false);
-    }, HIGHLIGHT_MS);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, []);
   return (
-    <p
-      role="status"
-      className={cn(
-        'rounded-control border border-line px-3 py-3 transition-colors duration-200 ease-calm motion-reduce:transition-none',
-        fresh ? 'bg-accent-soft' : 'bg-surface',
-      )}
-    >
-      Unlocked: {names.join(', ')}.
-    </p>
+    <>
+      <style>{`
+        @keyframes dorfromantik-unlock-highlight {
+          0%, 82% { background-color: var(--accent-soft); }
+          100% { background-color: var(--surface); }
+        }
+      `}</style>
+      <p
+        role="status"
+        style={{ animation: 'dorfromantik-unlock-highlight 1100ms var(--ease-calm) forwards' }}
+        className="rounded-control border border-line bg-surface px-3 py-3 motion-reduce:animate-none"
+      >
+        Unlocked: {names.join(', ')}.
+      </p>
+    </>
   );
 }
 
