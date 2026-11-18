@@ -67,5 +67,7 @@
 |---|---|---|---|---|---|---|
 | 2026-11-18 | `assumed-external-behavior` | W26 spec | The spec triggered the smoke on `deployment_status`, but Vercel posts commit statuses on this repo and creates no GitHub Deployments, so the workflow would never have run (same kind of miss as X4's assumed JWT issuer) | Checked the repo's deployments and commit statuses; `smoke.yml` triggers on `status` | self | open |
 | 2026-11-18 | `deploy-race` | W26, `smoke.yml` draft | The smoke ran on the first Vercel success, possibly while the other project was still deploying | Waits until no `Vercel – ` status for the commit is pending | review | open |
+| 2026-11-18 | `alert-depends-on-setup` | W26, `smoke.yml` | The failure step relied on the `needs-human` label already existing, so a missing label would have swallowed the alert | The step creates the label if it is missing before opening the issue | review | open |
+| 2026-11-18 | `deploy-race` | W26, `smoke.yml` | When the 15-minute wait timed out, a failure from a half-deployed pair would read as a real production failure | The run still smokes, and its issue says a deploy was still pending and that the next run rechecks it | review | open |
 
 ## Shared change requests
