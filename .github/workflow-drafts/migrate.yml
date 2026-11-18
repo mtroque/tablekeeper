@@ -1,0 +1,41 @@
+# DRAFT (W26): the factory's GitHub App token cannot push to .github/workflows/. Before merging,
+# the owner moves this file there and deletes these two lines (commands in the W26 PR).
+name: Migrate production
+
+# Applies pending migrations in `db/migrations/` to the production database (W26). Manual only,
+# from `main`, in the `production` environment, which waits for the owner's approval and holds
+# `DATABASE_URL_PRODUCTION` (the unpooled Neon URL). Setup: docs/DEPLOYMENT.md → Migrations.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Migrate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL_PRODUCTION is not set in the production environment (docs/DEPLOYMENT.md → Migrations)."
+            exit 1
+          fi
+          node scripts/db.mjs migrate

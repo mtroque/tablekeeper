@@ -1,0 +1,79 @@
+# DRAFT (W26): the factory's GitHub App token cannot push to .github/workflows/. Before merging,
+# the owner moves this file there and deletes these two lines (commands in the W26 PR).
+name: Smoke
+
+# Read-only checks against production after each deploy (W26, docs/DEPLOYMENT.md → Smoke test
+# after each deploy). Vercel reports this repo's deploys as commit statuses ("Vercel – tablekeeper",
+# "Vercel – tablekeeper-api"), not GitHub Deployments, so the trigger is `status` on a commit at the
+# tip of `main` (production), not `deployment_status`. A failure opens (or comments on) one
+# `needs-human` issue. No secrets: only the public URLs.
+on:
+  status:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: API URL (default the production API)
+        required: false
+      web_url:
+        description: Web URL (default the production web app)
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: smoke-${{ github.event.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Smoke
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.state == 'success' &&
+       startsWith(github.event.context, 'Vercel') &&
+       contains(github.event.branches.*.name, 'main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      API_URL: ${{ inputs.api_url || vars.SMOKE_API_URL || 'https://tablekeeper-api.vercel.app' }}
+      WEB_URL: ${{ inputs.web_url || vars.SMOKE_WEB_URL || 'https://tablekeeper-beryl.vercel.app' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Smoke
+        id: smoke
+        run: |
+          set -o pipefail
+          pnpm -s smoke --api "$API_URL" --web "$WEB_URL" | tee smoke.txt
+      - name: Open a needs-human issue
+        if: failure() && steps.smoke.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRIGGER: ${{ github.event_name == 'status' && format('{0} on {1}', github.event.context, github.event.sha) || format('manual run by {0}', github.actor) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title='Production smoke failed'
+          {
+            echo "The post-deploy smoke failed ($TRIGGER)."
+            echo
+            echo '```'
+            cat smoke.txt
+            echo '```'
+            echo
+            echo "Run: $RUN_URL"
+            echo
+            echo 'Fix forward or roll back (docs/DEPLOYMENT.md → Rollback), then close this issue.'
+          } > body.md
+          existing=$(gh issue list --state open --label needs-human --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file body.md
+          else
+            gh issue create --title "$title" --label needs-human --body-file body.md
+          fi
