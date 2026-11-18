@@ -51,7 +51,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W19 | Merge authority: reviewer verdict plus fixed rules, shadow mode first, per-area policy file | W7, W11, W12 | ⬜ |
 | W20 | Trace pass 2: every Antigravity session read, fixes specced as W21 to W26 | - | ✅ |
 | W21 | Dependency security: patch advisories on the sign-in path and Next.js, `pnpm audit` required in CI | - | ⬜ |
-| W22 | Agent commands: `pnpm verify` with short output, `pnpm fix`, dev servers that clean up | - | ⬜ |
+| W22 | Agent commands: `pnpm verify` with short output, `pnpm fix`, dev servers that clean up | - | ✅ |
 | W23 | Antigravity environment: pnpm, git and Docker in the sandbox, a checked-in permission profile, `gh` upgrade | - | ⬜ |
 | W24 | Factory go-live: dry run, Project access, current models, the live checks W11, W12 and W14 left open | - | ⬜ |
 | W25 | Finish gate: `check:repo` refuses to fold a spec with unchecked criteria | - | ✅ |
@@ -59,7 +59,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 
 ## Next
 
-Workflow before features; direction in `docs/AUTOMATION.md`. Done so far: W1 to W9, W11, W12, W14, W15, W17, W18, W20, W25.
+Workflow before features; direction in `docs/AUTOMATION.md`. Done so far: W1 to W9, W11, W12, W14, W15, W17, W18, W20, W22, W25.
 
 1. W21 (security fixes on the sign-in path) first.
 2. W25 and W22, so later slices are gated and quieter; W23 alongside (mostly owner setup).
