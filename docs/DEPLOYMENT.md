@@ -9,6 +9,7 @@ Web and API as two Vercel projects (Hobby plan), database and sign-in on Neon (V
 3. Vercel (API)
 4. Vercel (web)
 5. Wire URLs together, smoke test
+6. Migrations and smoke workflows on GitHub
 
 ## 1. Neon (Vercel Marketplace)
 
@@ -17,10 +18,7 @@ Web and API as two Vercel projects (Hobby plan), database and sign-in on Neon (V
    vercel integration add neon --name tablekeeper-db --billing-plan free_v3 --meta region=sin1 --meta auth=true --no-env-pull
    ```
    Connecting the resource sets `DATABASE_URL` and `NEON_AUTH_BASE_URL` on `tablekeeper-api`.
-2. Push migrations from your machine:
-   ```
-   DATABASE_URL=<prod unpooled url> node scripts/db.mjs migrate
-   ```
+2. Apply migrations with the "Migrate production" workflow (see [Migrations](#migrations)).
 3. Load rulebooks into production (from your machine, with the reviewed section files):
    ```
    DATABASE_URL=<prod unpooled url> pnpm ingest <gameId> --load
@@ -68,10 +66,48 @@ Limits on Hobby: 300s per request (a rules question stops at 30s, and the functi
 - Console → Limits: set a monthly spend limit.
 - Start with the quota defaults in `.env.example` and raise them later.
 
+## 6. GitHub: production environment and smoke
+
+One-time setup, by the owner (agents never touch production; `AGENTS.md` → Hard rules):
+
+1. Create the `production` environment with the owner as required reviewer, deployable from protected branches only:
+   ```
+   gh api -X PUT repos/mtroque/tablekeeper/environments/production --input - <<'EOF'
+   {"reviewers":[{"type":"User","id":181335750}],"deployment_branch_policy":{"protected_branches":true,"custom_branch_policies":false}}
+   EOF
+   ```
+2. Add the unpooled production database URL (Neon Console → Connect, pooling off) as an environment secret:
+   ```
+   gh secret set DATABASE_URL_PRODUCTION --env production
+   ```
+3. Optional: if a production URL changes, set repo variables `SMOKE_API_URL` and `SMOKE_WEB_URL` (`gh variable set SMOKE_API_URL --body https://...`). Without them, `smoke.yml` uses `https://tablekeeper-api.vercel.app` and `https://tablekeeper-beryl.vercel.app`.
+
+## Migrations
+
+Production migrations run only through [`.github/workflows/migrate.yml`](../.github/workflows/migrate.yml) ("Migrate production"), never from a machine:
+
+1. Merge the migration to `main` (tested locally with `pnpm db:reset && pnpm db:types`).
+2. Start it: Actions → Migrate production → Run workflow on `main`, or `gh workflow run migrate.yml --ref main`.
+3. The job waits in the `production` environment until the owner approves it (Actions → the run → Review deployments).
+4. Approved, it runs `node scripts/db.mjs migrate` with `DATABASE_URL_PRODUCTION` and prints each migration it applied (`Applied <file>`), then `Applied <n> of <total> migrations.`, or `No pending migrations (<total> applied).`
+
+Migrations are forward-only, so apply them before (or with) the deploy that needs them, and keep each one safe for the code already running.
+
 ## Smoke test after each deploy
 
+**Automatic:** [`.github/workflows/smoke.yml`](../.github/workflows/smoke.yml) runs `pnpm smoke` against production when Vercel reports a successful deploy of a commit on `main` (a `status` event from "Vercel – tablekeeper" or "Vercel – tablekeeper-api"; Vercel reports this repo's deploys as commit statuses, not GitHub Deployments). It checks, read-only and signed out:
+
+- `web`: the home page answers 200 with HTML
+- `health`: `GET /health` returns `{ ok: true }`
+- `games`: `GET /v1/games` lists the games
+- `me-unauthenticated`: `GET /v1/me` without a token is 401 `UNAUTHENTICATED`, not 500
+- `cors`: a preflight from the web origin is allowed, with the `authorization` header
+
+A failure opens an issue "Production smoke failed" labeled `needs-human` with the failing checks (or comments on the open one). Run it by hand from Actions → Smoke → Run workflow (optional `api_url` and `web_url`), or locally with `pnpm smoke --api <url> --web <url>`. It doesn't sign in (no automated production account), so after any change to sign-in, saving or history, the owner still checks those by hand below.
+
+**By hand,** after a change the smoke doesn't cover:
+
 - [ ] Home loads on a phone and on desktop (QR side note visible)
-- [ ] `GET https://<api-domain>/health` returns `{ ok: true }`
 - [ ] No "Waking up the server." line on load; the home page shows no status line while online
 - [ ] Rules: ask a question for each game, citations open the official PDF
 - [ ] "Try Sample Photo" works for each photo game
@@ -80,7 +116,7 @@ Limits on Hobby: 300s per request (a rules question stops at 30s, and the functi
 
 ## Local development after deploying
 
-Nothing changes: `pnpm db:start && pnpm dev` uses `.env.local` and fills local Postgres and test-auth defaults when unset. Hosted environments (both Vercel projects) always set `DATABASE_URL`, `NEON_AUTH_BASE_URL` and `NEXT_PUBLIC_NEON_AUTH_URL` explicitly; local defaults only fill values that are missing. Production secrets never go in `.env.local`. New migrations: add under `db/migrations/`, test locally with `pnpm db:reset && pnpm db:types`, then `DATABASE_URL=<prod unpooled url> node scripts/db.mjs migrate` before (or with) the deploy that needs them.
+Nothing changes: `pnpm db:start && pnpm dev` uses `.env.local` and fills local Postgres and test-auth defaults when unset. Hosted environments (both Vercel projects) always set `DATABASE_URL`, `NEON_AUTH_BASE_URL` and `NEXT_PUBLIC_NEON_AUTH_URL` explicitly; local defaults only fill values that are missing. Production secrets never go in `.env.local`. New migrations: add under `db/migrations/`, test locally with `pnpm db:reset && pnpm db:types`, then apply them to production with the "Migrate production" workflow ([Migrations](#migrations)) before (or with) the deploy that needs them.
 
 ## Rollback
 
