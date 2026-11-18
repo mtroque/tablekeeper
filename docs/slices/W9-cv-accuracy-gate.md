@@ -1,6 +1,6 @@
 # W9: CV accuracy gate
 
-**Status:** ⬜ · **Depends on:** W1
+**Status:** 🟨 · **Depends on:** W1
 
 **Goal:** A PR can't quietly make board reading worse. CI runs the CV eval for every game with a detector and fails when a game's numbers drop below what's recorded on `main`, even when they're still under the target threshold (some games are, by design: `AGENTS.md` → Definition of done, item 4).
 
