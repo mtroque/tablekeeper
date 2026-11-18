@@ -23,8 +23,8 @@ describe('parseFactoryConfig', () => {
   it('parses valid config and applies defaults', () => {
     const cfg = parseFactoryConfig(
       JSON.stringify({
-        builder: { agent: 'claude', model: 'claude-sonnet-4-6' },
-        reviewer: { agent: 'claude', model: 'claude-sonnet-4-6' },
+        builder: { agent: 'claude', model: 'claude-opus-5-5' },
+        reviewer: { agent: 'claude', model: 'claude-sonnet-5-5' },
       }),
     );
     expect(cfg.enabled).toBe(true);

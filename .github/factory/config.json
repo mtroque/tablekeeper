@@ -3,14 +3,14 @@
   "tasksPerRun": 1,
   "builder": {
     "agent": "claude",
-    "model": "claude-sonnet-4-6",
+    "model": "claude-opus-5-5",
     "effort": "high",
     "maxTurns": 80,
     "timeoutMinutes": 45
   },
   "reviewer": {
     "agent": "claude",
-    "model": "claude-sonnet-4-6",
+    "model": "claude-sonnet-5-5",
     "effort": "medium",
     "maxTurns": 25,
     "timeoutMinutes": 15
