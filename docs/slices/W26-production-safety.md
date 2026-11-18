@@ -29,7 +29,7 @@
 - **Rule:** agents never run commands against production (migrations, env changes, data) from local scripts or `.scratch/`. They use a workflow, or write the exact command for the owner to run. This is one line in `AGENTS.md` → Hard rules.
 
 ## Acceptance criteria
-- [ ] The issuer test fails against the pre-PR #8 issuer logic and passes now (show both)
+- [x] The issuer test fails against the pre-PR #8 issuer logic and passes now: with the issuer set back to the full base URL, all 3 tests in `apps/api/src/middleware/auth.test.ts` fail; restored, all 3 pass (W20 branch)
 - [ ] A production deploy triggers `smoke.yml`, which passes (link the run); a smoke against a wrong URL opens a `needs-human` issue
 - [ ] `migrate.yml` waits for the owner's approval and, approved, reports "no pending migrations" on production (link the run)
 - [ ] `AGENTS.md` → Hard rules has the production rule, and `docs/DEPLOYMENT.md` points at `migrate.yml`
@@ -47,6 +47,8 @@
 - A signed-in smoke needs a production account the workflow can sign in as. Google OAuth can't be automated safely; enabling Neon Auth email sign-in just for a smoke user widens the login surface. Owner to decide: no signed-in smoke (default), or a smoke user with its own sign-in method.
 
 ## Decisions
+- Done early on the W20 branch: the issuer contract test and the production rule in `AGENTS.md` → Hard rules. Still open: smoke, `migrate.yml`, the `docs/DEPLOYMENT.md` change, and the two criteria from W21.
+- The issuer is derived in one exported function, `neonAuthEndpoints` (`apps/api/src/middleware/auth.ts`), which both test helpers call; `auth.test.ts` pins it to literal values in Neon Auth's documented shape. Helpers can't use fixed constants because test configs use other base URLs, so the guard is the pinned test, not separate code.
 
 ## Corrections
 
