@@ -96,8 +96,8 @@ function main(): void {
   const issues = listOpenIssues();
   const project =
     owner && repo ? readFactoryProjectOrder(owner, repo) : { projectId: null, order: [] };
-  if (project.usedFallbackToken) {
-    console.log('Read Factory Project using FACTORY_PROJECT_TOKEN fallback.');
+  if (project.usedProjectToken) {
+    console.log('Read the Factory Project with FACTORY_PROJECT_TOKEN.');
   }
   const roadmap = readFileSync(join(ROOT, 'docs/ROADMAP.md'), 'utf8');
   const explanation = explainQueue(issues, project.order, roadmap);

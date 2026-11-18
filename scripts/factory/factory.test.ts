@@ -123,16 +123,43 @@ describe('readFactoryProjectOrder', () => {
     },
   });
 
-  it('falls back to FACTORY_PROJECT_TOKEN when the primary token is refused', () => {
+  it('reads with FACTORY_PROJECT_TOKEN first when it is set, without trying the App token', () => {
+    const tried: (string | undefined)[] = [];
     const result = readFactoryProjectOrder('mtroque', 'tablekeeper', 1, {
       primaryToken: 'app-tok',
       projectToken: 'pat-tok',
       execGraphql: (_q, token) => {
-        if (token === 'app-tok') throw new Error('Resource not accessible by integration');
+        tried.push(token);
         return okPayload;
       },
     });
-    expect(result).toEqual({ projectId: 'PVT_1', order: [12, 7], usedFallbackToken: true });
+    expect(result).toEqual({ projectId: 'PVT_1', order: [12, 7], usedProjectToken: true });
+    expect(tried).toEqual(['pat-tok']);
+  });
+
+  it('falls back to the App token when FACTORY_PROJECT_TOKEN is refused', () => {
+    const result = readFactoryProjectOrder('mtroque', 'tablekeeper', 1, {
+      primaryToken: 'app-tok',
+      projectToken: 'pat-tok',
+      execGraphql: (_q, token) => {
+        if (token === 'pat-tok') throw new Error('Bad credentials');
+        return okPayload;
+      },
+    });
+    expect(result).toEqual({ projectId: 'PVT_1', order: [12, 7] });
+  });
+
+  it('uses the App token alone when FACTORY_PROJECT_TOKEN is not set', () => {
+    const tried: (string | undefined)[] = [];
+    readFactoryProjectOrder('mtroque', 'tablekeeper', 1, {
+      primaryToken: 'app-tok',
+      projectToken: '',
+      execGraphql: (_q, token) => {
+        tried.push(token);
+        return okPayload;
+      },
+    });
+    expect(tried).toEqual(['app-tok']);
   });
 
   it('throws a clear error when neither token can read the Project', () => {
