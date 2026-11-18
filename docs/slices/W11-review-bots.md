@@ -1,6 +1,6 @@
 # W11: Review loop
 
-**Status:** ⬜ · **Depends on:** W14
+**Status:** 🟨 · **Depends on:** W14
 
 **Goal:** Every factory PR gets a model review, and the findings go back to the session that built it, so the fix is made with the builder's full context instead of by a fresh agent reading the diff cold. The review's verdict is what W19 later uses to merge or escalate.
 
