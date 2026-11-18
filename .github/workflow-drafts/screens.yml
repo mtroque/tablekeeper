@@ -1,0 +1,185 @@
+# DRAFT (W10): the factory's App token can't push workflows. Owner: move this file to
+# .github/workflows/screens.yml and delete these two lines before merging.
+name: Screens
+
+# W10: photographs every screen map entry (tests/e2e/screens.ts) at phone size, pushes the PNGs to
+# the orphan `screens` branch and updates one PR comment with the screens that differ from `main`.
+# Pushes to `main` refresh the `main/` set the comparison uses; closing a PR removes its folder.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - 'apps/web/**'
+      - 'packages/core/src/games/**'
+      - 'tests/e2e/screens.ts'
+      - 'tests/e2e/screens.spec.ts'
+      - 'scripts/screens-report.ts'
+      - 'scripts/lib/screens-report.ts'
+      - '.github/workflows/screens.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'packages/core/src/games/**'
+      - 'tests/e2e/screens.ts'
+      - 'tests/e2e/screens.spec.ts'
+      - 'scripts/screens-report.ts'
+      - 'scripts/lib/screens-report.ts'
+      - '.github/workflows/screens.yml'
+
+concurrency:
+  group: screens-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  BRANCH: screens
+
+jobs:
+  shots:
+    name: Screens
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tablekeeper
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright OS dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+      - name: Reset database
+        run: pnpm db:reset
+      - name: Shoot every screen
+        id: shoot
+        continue-on-error: true
+        env:
+          SCREENS: '1'
+        run: pnpm test:e2e tests/e2e/screens.spec.ts
+      - name: Check out the screens branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$remote" "$BRANCH" > /dev/null; then
+            git clone --quiet --depth 1 --branch "$BRANCH" --single-branch "$remote" screens-branch
+          else
+            git init --quiet -b "$BRANCH" screens-branch
+            git -C screens-branch remote add origin "$remote"
+          fi
+          git -C screens-branch config user.name 'github-actions[bot]'
+          git -C screens-branch config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+      - name: Publish the shots
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -n "$PR" ]; then folder="pr-$PR/$SHA"; else folder="main"; fi
+          raw="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${BRANCH}/${folder}"
+          tree="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/${BRANCH}/${folder}"
+          mkdir -p test-results/screens
+          pnpm exec tsx scripts/screens-report.ts --dir test-results/screens \
+            --baseline screens-branch/main --raw-base "$raw" --folder-url "$tree" --sha "$SHA" \
+            --comment comment.md --index index.md
+          # Only the latest run of a PR is kept; its comment points there.
+          if [ -n "$PR" ]; then rm -rf "screens-branch/pr-$PR"; else rm -rf screens-branch/main; fi
+          mkdir -p "screens-branch/$folder"
+          cp test-results/screens/*.png "screens-branch/$folder/" 2> /dev/null || true
+          cp index.md "screens-branch/$folder/README.md"
+          cd screens-branch
+          git add -A
+          git commit --quiet -m "chore(workflow): screens for ${folder}" || exit 0
+          for attempt in 1 2 3 4 5; do
+            git push --quiet origin "HEAD:$BRANCH" && exit 0
+            sleep $((attempt * 3))
+            git pull --quiet --rebase --depth 1 origin "$BRANCH" || true
+          done
+          exit 1
+      - name: Update the PR comment
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          id=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
+            --jq '.[] | select(.body | startswith("<!-- screens -->")) | .id' | head -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${id}" -F body=@comment.md > /dev/null
+          else
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file comment.md
+          fi
+      - name: Upload the Playwright report
+        if: steps.shoot.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: screens-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+      - name: Fail when a screen wasn't reached
+        if: steps.shoot.outcome == 'failure'
+        run: |
+          echo "Some screen map entries failed to reach their state; see the Shoot every screen step."
+          exit 1
+
+  cleanup:
+    name: Remove PR screens
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete this PR's folder from the screens branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git ls-remote --exit-code --heads "$remote" "$BRANCH" > /dev/null || exit 0
+          git clone --quiet --depth 1 --branch "$BRANCH" --single-branch "$remote" screens-branch
+          cd screens-branch
+          [ -d "pr-$PR" ] || exit 0
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -r --quiet "pr-$PR"
+          git commit --quiet -m "chore(workflow): remove screens for pr-$PR"
+          for attempt in 1 2 3 4 5; do
+            git push --quiet origin "HEAD:$BRANCH" && exit 0
+            sleep $((attempt * 3))
+            git pull --quiet --rebase --depth 1 origin "$BRANCH" || true
+          done
+          exit 1
