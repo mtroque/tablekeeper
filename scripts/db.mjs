@@ -170,8 +170,8 @@ async function applyMigrations(sql) {
     .filter((name) => name.endsWith('.sql'))
     .sort();
 
-  for (const name of files) {
-    if (applied.has(name)) continue;
+  const pending = files.filter((name) => !applied.has(name));
+  for (const name of pending) {
     const content = readFileSync(join(MIGRATIONS_DIR, name), 'utf8');
     await sql.begin(async (tx) => {
       await tx.unsafe(content);
@@ -179,6 +179,7 @@ async function applyMigrations(sql) {
     });
     console.log(`Applied ${name}`);
   }
+  return { applied: pending, total: files.length };
 }
 
 async function loadReviewedRulebooks(sql) {
@@ -255,7 +256,12 @@ switch (command) {
     await loadLocalEnv();
     const sql = await connect(process.env.DATABASE_URL);
     try {
-      await applyMigrations(sql);
+      const { applied, total } = await applyMigrations(sql);
+      console.log(
+        applied.length === 0
+          ? `No pending migrations (${total} applied).`
+          : `Applied ${applied.length} of ${total} migrations.`,
+      );
     } finally {
       await sql.end();
     }
