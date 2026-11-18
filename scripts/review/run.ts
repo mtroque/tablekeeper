@@ -18,7 +18,7 @@ import {
   type PrReviewRecord,
   type ReviewFindings,
 } from './findings';
-import { buildReviewPayload, extractSessionIdFromPrBody, parseDiffLines } from './post';
+import { extractSessionIdFromPrBody, parseDiffLines, postReviewWithFallback } from './post';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -150,21 +150,26 @@ function main(): void {
     cwd: ROOT,
     encoding: 'utf8',
   });
-  const payload = buildReviewPayload(findings, parseDiffLines(diff));
   const repoFull = process.env.GITHUB_REPOSITORY ?? '';
 
-  execFileSync(
-    'gh',
-    ['api', `repos/${repoFull}/pulls/${prNumber}/reviews`, '--method', 'POST', '--input', '-'],
-    {
-      cwd: ROOT,
-      input: JSON.stringify({
-        commit_id: pr.headRefOid,
-        event: 'COMMENT',
-        body: payload.body,
-        comments: payload.comments,
-      }),
+  postReviewWithFallback(
+    (payload) => {
+      execFileSync(
+        'gh',
+        ['api', `repos/${repoFull}/pulls/${prNumber}/reviews`, '--method', 'POST', '--input', '-'],
+        {
+          cwd: ROOT,
+          input: JSON.stringify({
+            commit_id: pr.headRefOid,
+            event: 'COMMENT',
+            body: payload.body,
+            comments: payload.comments,
+          }),
+        },
+      );
     },
+    findings,
+    parseDiffLines(diff),
   );
 
   if (!hasBlockingFindings(findings.findings, reviewCfg.blockingSeverity)) {

@@ -8,7 +8,12 @@ import {
   shouldSkipReviewForCommit,
   type PrReviewRecord,
 } from './findings';
-import { buildReviewPayload, extractSessionIdFromPrBody, parseDiffLines } from './post';
+import {
+  buildReviewPayload,
+  extractSessionIdFromPrBody,
+  parseDiffLines,
+  postReviewWithFallback,
+} from './post';
 
 const VALID_RESULT = {
   findings: [
@@ -86,5 +91,23 @@ describe('buildReviewPayload & extractSessionIdFromPrBody', () => {
       'sess-123',
     );
     expect(extractSessionIdFromPrBody('- Session: `<session-id>`')).toBeNull();
+  });
+
+  it('falls back to body-only review when GitHub returns 422 on inline comments', () => {
+    const diffLines = parseDiffLines(
+      '+++ b/apps/api/src/routes/sessions.ts\n@@ -10,0 +11,3 @@\n+a\n+b',
+    );
+    const calls: number[] = [];
+    postReviewWithFallback(
+      (payload) => {
+        calls.push(payload.comments.length);
+        if (payload.comments.length > 0) {
+          throw new Error('gh: Unprocessable Entity (HTTP 422): Line could not be resolved');
+        }
+      },
+      VALID_RESULT,
+      diffLines,
+    );
+    expect(calls).toEqual([1, 0]);
   });
 });
