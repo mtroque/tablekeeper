@@ -1,6 +1,6 @@
 # W8: Property-based tests
 
-**Status:** ⬜ · **Depends on:** W1
+**Status:** 🟨 · **Depends on:** W1
 
 **Goal:** Catch scoring and contract bugs no hand-written example covers, by checking invariants over generated game states with fast-check. A wrong saved score is high-stakes (`docs/CORRECTIONS.md`), and these properties hold for every game, so they guard each new game for free.
 
