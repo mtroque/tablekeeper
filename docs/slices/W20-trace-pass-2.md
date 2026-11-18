@@ -1,6 +1,6 @@
 # W20: Trace pass 2
 
-**Status:** 🟨 · **Depends on:** none
+**Status:** ✅ · **Depends on:** none
 
 **Goal:** Turn a full read of every Antigravity session (2026-11-15 to 2026-11-18, 9 sessions, about 1,300 tool calls) into specs. The point is to fix what slowed agents down or slipped through unnoticed, in the environment, the tooling and the process, not only what the owner corrected.
 
@@ -28,9 +28,9 @@ What the pass found, with counts from the transcripts (`~/.gemini/antigravity-cl
 | The factory reads the Project with the GitHub App token, but Apps generally can't read Projects owned by a personal account | `scripts/factory/project.ts`; no factory run yet | W24 |
 
 ## Acceptance criteria
-- [ ] Each finding above has a spec that owns its fix, with dependencies that form no cycle
-- [ ] Each finding has a `trace` row in `docs/CORRECTIONS.md` (or a `user` row for the owner's correction), reusing existing tags
-- [ ] `docs/ROADMAP.md` lists W20 to W26 and orders them in Next
+- [x] Each finding above has a spec that owns its fix, with dependencies that form no cycle
+- [x] Each finding has a `trace` row in `docs/CORRECTIONS.md` (or a `user` row for the owner's correction), reusing existing tags
+- [x] `docs/ROADMAP.md` lists W20 to W26 and orders them in Next
 
 ## Out of scope
 - Building any of the fixes. Claude Code transcripts (this pass covers Antigravity; the 2026-11-16 pass covered Claude Code).
