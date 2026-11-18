@@ -10,12 +10,17 @@ await loadLocalEnv({ exitOnError: false }).catch((error: unknown) => {
 });
 
 const webSrc = fileURLToPath(new URL('./apps/web/src', import.meta.url));
+const parsedSeed = process.env.FC_SEED ? Number.parseInt(process.env.FC_SEED, 10) : NaN;
+const fcSeed = Number.isFinite(parsedSeed) ? parsedSeed : process.env.CI ? 42 : null;
 
 export default defineConfig({
   test: {
     passWithNoTests: true,
     projects: [
-      { test: { name: 'core', include: ['packages/core/src/**/*.test.ts'] } },
+      {
+        define: { 'globalThis.__FC_SEED__': JSON.stringify(fcSeed) },
+        test: { name: 'core', include: ['packages/core/src/**/*.test.ts'] },
+      },
       { test: { name: 'cv', include: ['packages/cv/src/**/*.test.ts'] } },
       {
         test: {

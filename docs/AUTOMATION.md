@@ -37,7 +37,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | Agent scratch files stay in `.scratch/<session or slice>/` | `.gitignore`, and `pnpm check:repo` rejects `zz-*` e2e specs and `scripts/_*`, `scripts/.*` (`scripts/lib/check-repo/forbidden-files.ts`) | ✅ |
 | A slice edits only what its spec owns | `pnpm check:repo` against the spec's `## Owns` (`scripts/lib/check-repo/ownership.ts`) | ✅ |
 | API integration and e2e tests pass | CI database jobs (`.github/workflows/ci.yml`: `API`, `E2E`) | ✅ |
-| Score invariants (breakdown sums to total, schema round trip, API agrees with UI) | fast-check property tests | W8 |
+| Score invariants (breakdown sums to total, schema round trip, API agrees with UI) | fast-check property tests (`packages/core/src/kit/properties.ts`, per-game `*.property.test.ts`, `contracts.property.test.ts`) | ✅ |
 | CV accuracy never drops below the recorded numbers | `pnpm eval:cv` gate in CI | W9 |
 | Every screen state renders | screen map and screenshot job | W10 |
 | Validate external input with Zod | review (no general check yet) | |
