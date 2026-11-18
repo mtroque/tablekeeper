@@ -25,6 +25,8 @@ env.RATE_LIMIT_MAX = '100000';
 
 export default defineConfig({
   testDir: 'tests/e2e',
+  // The screen map's shots run only in the Screens workflow (W10): SCREENS=1 pnpm test:e2e screens.
+  testIgnore: process.env.SCREENS === '1' ? [] : ['**/screens.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
