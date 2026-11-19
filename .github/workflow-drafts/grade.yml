@@ -1,0 +1,61 @@
+# DRAFT (W16): the factory's App token can't push workflows. Owner: move this file to
+# .github/workflows/grade.yml and delete these two lines before merging.
+name: Grade
+
+# W16: grades the factory's session transcripts for silent failures (docs/AUTOMATION.md → Grading)
+# and opens one "Grading report <week>" issue. Decrypted transcripts stay in .scratch/ on the
+# runner; nothing is uploaded as an artifact.
+on:
+  schedule:
+    - cron: '0 7 * * 2'
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'First day to grade (YYYY-MM-DD, default 6 days before until)'
+        required: false
+        type: string
+      until:
+        description: 'Last day to grade (YYYY-MM-DD, default today)'
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: grade
+  cancel-in-progress: false
+
+jobs:
+  grade:
+    name: Grade sessions
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Grade factory sessions and open the report issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          FACTORY_SESSION_KEY: ${{ secrets.FACTORY_SESSION_KEY }}
+          SINCE: ${{ inputs.since }}
+          UNTIL: ${{ inputs.until }}
+        run: |
+          ARGS=(--source factory --issue)
+          if [ -n "$SINCE" ]; then ARGS+=(--since "$SINCE"); fi
+          if [ -n "$UNTIL" ]; then ARGS+=(--until "$UNTIL"); fi
+          pnpm --silent grade "${ARGS[@]}"
+      - name: Remove decrypted transcripts
+        if: always()
+        run: rm -rf .scratch/grade
