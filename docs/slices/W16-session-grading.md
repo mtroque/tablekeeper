@@ -5,7 +5,7 @@
 **Goal:** Find what goes wrong in agent sessions even when nobody corrects it: failed and refused tool calls, workarounds for stale docs or environment gaps, wasted reruns. Findings become `trace` rows in `docs/CORRECTIONS.md`, so they reach `/harden` like any other correction, and their counts join W12's metrics so a fix shows up as a number moving.
 
 ## Owns
-- `scripts/grade-sessions.ts`, `scripts/lib/traces/` (parsers, classifier, report) with tests
+- `scripts/grade.ts`, `scripts/lib/traces/` (parsers, classifier, report) with tests
 - `.agents/skills/grade/` (`SKILL.md` and `rubrics/*.md`), `.github/workflows/grade.yml` (staged as `.github/workflow-drafts/grade.yml` until the owner moves it: the factory's App token can't push workflows)
 - `.github/factory/config.json` (a `grader` block), `scripts/lib/metrics/` and `scripts/metrics.ts` (the trace columns), `package.json` (`grade` script), `README.md`, `docs/AUTOMATION.md` (a Grading section)
 - `docs/slices/W16-session-grading.md`
@@ -64,5 +64,6 @@ None left. Resolved from the docs and the code:
 | Date | Pattern | Where | What was wrong | Correction | Source | Status |
 |---|---|---|---|---|---|---|
 | 2026-11-19 | `classifier-false-positive` | W16, `scripts/lib/traces/classify.ts` | The scratch-file detector matched paths inside a heredoc body, flagging a fixture write as `scratch-files-in-repo`; found by grading this build's own session | Shell writes are matched only before `<<` and only as a redirect, `tee`, `touch`, `cp` or `mv` target; test added | self | open |
+| 2026-11-19 | `spec-owns-stale-path` | W16, PR #33 | `## Owns` named `scripts/grade-sessions.ts`, but the entry point was built as `scripts/grade.ts`, so ownership didn't match the code | Owns updated to `scripts/grade.ts` | review | open |
 
 ## Shared change requests
