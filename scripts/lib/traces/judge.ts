@@ -78,11 +78,17 @@ export function buildJudgePrompt(
   ].join('\n');
 }
 
-/** Strips quotes and code from a judge note and caps it, so reports hold paraphrases only. */
+/**
+ * Strips quotes, code, secret-like strings and paths from a judge note and caps it, so the public
+ * report holds paraphrases only even when the model ignores the prompt.
+ */
 export function sanitizeNote(note: string): string {
   const cleaned = note
     .replaceAll(/`[^`]*`/g, '[code]')
     .replaceAll(/"[^"]*"|“[^”]*”/g, '[quote]')
+    // Secret-like runs (tokens, hashes, keys), then paths and file names.
+    .replaceAll(/[A-Za-z0-9_+=-]{24,}/g, '[redacted]')
+    .replaceAll(/\S*[/\\]\S*|\.?\b[\w-]+\.[a-z]{1,5}\b/gi, '[path]')
     .replaceAll(/\s+/g, ' ')
     .replaceAll('|', '/')
     .trim();
