@@ -254,6 +254,10 @@ function main(): void {
   }
   const range = parseRange(since, until);
   const week = isoWeek(range.until);
+  // Only the default 7-day window owns the week's issue, which `pnpm metrics` reads; a custom
+  // range gets its own dated title so it never overwrites the weekly report.
+  const customRange = flag(argv, '--since') !== null || flag(argv, '--until') !== null;
+  const title = customRange ? `Grading report ${since} to ${until}` : `Grading report ${week}`;
   const config = loadGraderConfig(join(ROOT, '.github/factory/config.json'));
   const workDir = join(ROOT, '.scratch', 'grade', `${source}-${since}_${until}`);
   rmSync(workDir, { recursive: true, force: true });
@@ -286,6 +290,7 @@ function main(): void {
 
   const report = formatReport({
     week,
+    title,
     since,
     until,
     source,
@@ -302,7 +307,7 @@ function main(): void {
     `Condensed traces: ${traceDir} (${graded.length} session(s): ${graded.map((g) => shortId(g.session.id)).join(', ') || 'none'}). Never commit them.`,
   );
 
-  if (argv.includes('--issue')) publishIssue(`Grading report ${week}`, reportFile);
+  if (argv.includes('--issue')) publishIssue(title, reportFile);
   if (source === 'factory' && existsSync(join(workDir, 'artifacts'))) {
     rmSync(join(workDir, 'artifacts'), { recursive: true, force: true });
   }

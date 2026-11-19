@@ -12,7 +12,7 @@ import { formatAuditLine, parseAuditCounts } from './lib/metrics/audit';
 import { parseBaselineEntries } from './lib/metrics/baseline';
 import { countCorrections } from './lib/metrics/corrections';
 import { formatMetricsReport } from './lib/metrics/format';
-import { parseGradeMetrics, type TraceWeek } from './lib/metrics/grading';
+import { isWeeklyReportTitle, parseGradeMetrics, type TraceWeek } from './lib/metrics/grading';
 import { bucketByWeek, extractRevertedPrs, lastNWeeks } from './lib/metrics/reverts';
 import type { GitCommit, MergedPr } from './lib/metrics/types';
 
@@ -116,7 +116,7 @@ function readTraceWeeks(): Map<string, TraceWeek> {
       .array(z.object({ title: z.string(), body: z.string() }))
       .parse(JSON.parse(raw));
     for (const issue of issues) {
-      if (!issue.title.startsWith('Grading report ')) continue;
+      if (!isWeeklyReportTitle(issue.title)) continue;
       const trace = parseGradeMetrics(issue.body);
       if (trace) traces.set(trace.week, trace);
     }
