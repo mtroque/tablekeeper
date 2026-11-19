@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { parseGradeMetrics, traceColumns } from '../metrics/grading';
+import { isWeeklyReportTitle, parseGradeMetrics, traceColumns } from '../metrics/grading';
 
 import { parseAntigravityTranscript } from './antigravity';
 import { CLASSES, classifyFailure, gradeSession } from './classify';
@@ -340,6 +340,8 @@ describe('report', () => {
     });
     expect(traceColumns(undefined)).toEqual({ perSession: '-', top: '-' });
     expect(parseGradeMetrics('no block')).toBeNull();
+    expect(isWeeklyReportTitle('Grading report 2026-W47')).toBe(true);
+    expect(isWeeklyReportTitle('Grading report 2026-11-10 to 2026-11-12')).toBe(false);
   });
 });
 
@@ -384,7 +386,12 @@ describe('judge', () => {
       tokens: 940,
     });
     expect(parseJudgeOutput('not json', ['efficiency'])).toEqual({ results: null, tokens: 0 });
-    expect(sanitizeNote('a'.repeat(200))).toHaveLength(160);
+    expect(sanitizeNote('x '.repeat(100))).toHaveLength(160);
+    expect(
+      sanitizeNote(
+        'Read docs/OLD.md and .env.local, then used ghp_abcdefghijklmnopqrstuvwxyz0123 twice.',
+      ),
+    ).toBe('Read [path] and [path], then used [redacted] twice.');
   });
 });
 
