@@ -1,13 +1,14 @@
 # W16: Session grading
 
-**Status:** ⬜ · **Depends on:** W12, W14
+**Status:** 🟨 · **Depends on:** W12, W14
 
 **Goal:** Find what goes wrong in agent sessions even when nobody corrects it: failed and refused tool calls, workarounds for stale docs or environment gaps, wasted reruns. Findings become `trace` rows in `docs/CORRECTIONS.md`, so they reach `/harden` like any other correction, and their counts join W12's metrics so a fix shows up as a number moving.
 
 ## Owns
 - `scripts/grade-sessions.ts`, `scripts/lib/traces/` (parsers, classifier, report) with tests
-- `.agents/skills/grade/` (`SKILL.md` and `rubrics/*.md`), `.github/workflows/grade.yml`
-- `.github/factory/config.json` (a `grader` block), `scripts/lib/metrics/` (the trace columns), `package.json` (`grade` script), `README.md`, `docs/AUTOMATION.md` (a Grading section)
+- `.agents/skills/grade/` (`SKILL.md` and `rubrics/*.md`), `.github/workflows/grade.yml` (staged as `.github/workflow-drafts/grade.yml` until the owner moves it: the factory's App token can't push workflows)
+- `.github/factory/config.json` (a `grader` block), `scripts/lib/metrics/` and `scripts/metrics.ts` (the trace columns), `package.json` (`grade` script), `README.md`, `docs/AUTOMATION.md` (a Grading section)
+- `docs/slices/W16-session-grading.md`
 
 ## Scope
 - **Collect:** session transcripts for this repo from every runner. Link each session to its PR through the session id in the PR body.
@@ -41,6 +42,12 @@
 - Acting on findings automatically (the owner decides; `/harden` promotes). Grading other repos.
 
 ## Open questions
+None left. Resolved from the docs and the code:
+- **Grader config:** `.github/factory/config.json` gets a `grader` block parsed by its own schema in `scripts/lib/traces/config.ts`; `scripts/factory/config.ts` (W14, not owned) strips unknown keys, so the factory and review loops are unaffected.
+- **Which failures are normal work:** a failing test, typecheck, lint or verify run, or a search that matched nothing, is how building works; they count as `check-failed` (shown in metrics, never proposed as a row). Only the fixed classes become rows; any other failed call is `unclassified` and flags its session for the judge.
+- **Privacy in the report:** rows use the class's fixed paraphrase, session ids, branches and PR numbers, never a command or output from the transcript. Judge notes are capped and stripped of quotes and code.
+- **Metrics source:** `grade.yml` runs on Actions, so `pnpm metrics` reads the counts back from the "Grading report <week>" issues (a hidden `grade-metrics` JSON comment) and adds two columns.
+- **Judge cost:** `claude -p` with no tools, no session persistence, `--effort low`, JSON output; the run stops judging once reported tokens reach `grader.tokenCap`.
 
 ## Decisions
 - The judge is Claude at the lowest effort with the model in the `grader` block. Factory sessions are graded on Actions, where `agy` can't sign in yet (W18). Local runs can point the block at another model.
