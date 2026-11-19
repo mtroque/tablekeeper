@@ -22,5 +22,16 @@
       "review": "review",
       "needsHuman": "needs-human"
     }
+  },
+  "grader": {
+    "agent": "claude",
+    "model": "claude-haiku-5-5",
+    "effort": "low",
+    "sampleRate": 0.1,
+    "flagTop": 3,
+    "maxJudged": 10,
+    "tokenCap": 200000,
+    "maxTraceChars": 12000,
+    "timeoutMinutes": 5
   }
 }

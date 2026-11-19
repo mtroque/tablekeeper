@@ -70,6 +70,7 @@ pnpm eval:cv <gameId>           # board-reading accuracy on labeled photos (--ca
 pnpm eval:cv:check              # check every detector game against its recorded baseline.json
 pnpm metrics                    # weekly PR, revert, baseline and correction metrics (--weeks 4)
 pnpm groom                      # open up to 3 agent-ready issues for lint baseline leftovers
+pnpm grade                      # grade this repo's agent sessions for silent failures (--since, --until, --no-judge)
 pnpm queue:sync                 # open unlabeled issues for planned roadmap slices
 pnpm rules:smoke <gameId> "<question>"   # one real rules-assistant call
 pnpm smoke --api <url> --web <url>       # read-only post-deploy checks against a deployed API and web app
