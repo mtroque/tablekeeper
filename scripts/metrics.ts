@@ -1,6 +1,6 @@
 // pnpm metrics [--weeks 4]
 // Prints a deterministic weekly report of merged PRs, reverts, CI first-pass rate, factory runs,
-// lint baseline leftovers, and docs/CORRECTIONS.md patterns.
+// lint baseline leftovers, docs/CORRECTIONS.md patterns, and session grading counts (W16).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -12,6 +12,7 @@ import { formatAuditLine, parseAuditCounts } from './lib/metrics/audit';
 import { parseBaselineEntries } from './lib/metrics/baseline';
 import { countCorrections } from './lib/metrics/corrections';
 import { formatMetricsReport } from './lib/metrics/format';
+import { parseGradeMetrics, type TraceWeek } from './lib/metrics/grading';
 import { bucketByWeek, extractRevertedPrs, lastNWeeks } from './lib/metrics/reverts';
 import type { GitCommit, MergedPr } from './lib/metrics/types';
 
@@ -91,6 +92,40 @@ function readMergedPrs(): MergedPr[] {
   }
 }
 
+/** Session grading counts from "Grading report <week>" issues (W16); empty when gh fails. */
+function readTraceWeeks(): Map<string, TraceWeek> {
+  const traces = new Map<string, TraceWeek>();
+  try {
+    const raw = execFileSync(
+      'gh',
+      [
+        'issue',
+        'list',
+        '--state',
+        'all',
+        '--search',
+        '"Grading report" in:title',
+        '--limit',
+        '50',
+        '--json',
+        'title,body',
+      ],
+      { cwd: ROOT, encoding: 'utf8' },
+    );
+    const issues = z
+      .array(z.object({ title: z.string(), body: z.string() }))
+      .parse(JSON.parse(raw));
+    for (const issue of issues) {
+      if (!issue.title.startsWith('Grading report ')) continue;
+      const trace = parseGradeMetrics(issue.body);
+      if (trace) traces.set(trace.week, trace);
+    }
+  } catch {
+    // No grading reports yet, or gh unavailable.
+  }
+  return traces;
+}
+
 const weeksCount = parseWeeksArg(process.argv.slice(2));
 const weeks = lastNWeeks(weeksCount);
 const commits = readGitCommits();
@@ -105,5 +140,12 @@ const corrections = countCorrections(readFileSync(join(ROOT, 'docs/CORRECTIONS.m
 // pnpm audit exits non-zero when it finds anything, so read its JSON regardless of the exit code.
 const audit = spawnSync('pnpm', ['audit', '--prod', '--json'], { cwd: ROOT, encoding: 'utf8' });
 
-console.log(formatMetricsReport({ weeks: weekMetrics, baselineEntries, corrections }));
+console.log(
+  formatMetricsReport({
+    weeks: weekMetrics,
+    baselineEntries,
+    corrections,
+    traces: readTraceWeeks(),
+  }),
+);
 console.log(`\n${formatAuditLine(parseAuditCounts(audit.stdout))}`);

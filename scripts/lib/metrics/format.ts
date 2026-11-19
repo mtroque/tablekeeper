@@ -1,3 +1,4 @@
+import { traceColumns, type TraceWeek } from './grading';
 import type { BaselineEntry, PatternCount, WeekMetrics } from './types';
 
 function fmtPct(value: number | null): string {
@@ -12,6 +13,8 @@ export function formatMetricsReport(opts: {
   weeks: readonly WeekMetrics[];
   baselineEntries: readonly BaselineEntry[];
   corrections: readonly PatternCount[];
+  /** Session grading counts per ISO week, read from "Grading report <week>" issues (W16). */
+  traces?: ReadonlyMap<string, TraceWeek>;
 }): string {
   const totalBaseline = opts.baselineEntries.reduce((sum, e) => sum + e.count, 0);
   const hardenList = opts.corrections.filter((c) => c.hardenCandidate);
@@ -19,12 +22,12 @@ export function formatMetricsReport(opts: {
   const lines = [
     '# Factory metrics',
     '',
-    '| Week | Merged (factory) | Reverts | Revert rate | CI 1st pass | Factory runs | Finished | Needs human | Review rounds |',
-    '|---|---|---|---|---|---|---|---|---|',
-    ...opts.weeks.map(
-      (w) =>
-        `| ${w.week} | ${w.merged} (${w.factoryMerged}) | ${w.reverts} | ${fmtPct(w.revertRate)} | ${fmtPct(w.ciFirstPassRate)} | ${fmtNum(w.factoryRuns)} | ${fmtNum(w.factoryFinished)} | ${fmtPct(w.needsHumanRate)} | ${fmtNum(w.avgReviewRounds, 1)} |`,
-    ),
+    '| Week | Merged (factory) | Reverts | Revert rate | CI 1st pass | Factory runs | Finished | Needs human | Review rounds | Failed calls/session | Top failures |',
+    '|---|---|---|---|---|---|---|---|---|---|---|',
+    ...opts.weeks.map((w) => {
+      const trace = traceColumns(opts.traces?.get(w.week));
+      return `| ${w.week} | ${w.merged} (${w.factoryMerged}) | ${w.reverts} | ${fmtPct(w.revertRate)} | ${fmtPct(w.ciFirstPassRate)} | ${fmtNum(w.factoryRuns)} | ${fmtNum(w.factoryFinished)} | ${fmtPct(w.needsHumanRate)} | ${fmtNum(w.avgReviewRounds, 1)} | ${trace.perSession} | ${trace.top} |`;
+    }),
     '',
     `- **Lint baseline entries:** ${opts.baselineEntries.length} (${totalBaseline} total violations)`,
     `- **/harden candidates (count >= 2, open):** ${
