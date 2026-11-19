@@ -55,7 +55,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 4. **Checks.** CI runs every deterministic check; `main` requires `Checks`, `API` and `E2E`, plus `Audit` once the owner runs the command below (W26) (plus PR required, linear history, rebase-only merge, `enforce_admins: true` so local sessions sharing the owner's GitHub credentials cannot push to `main` or merge a failing PR; emergency owner bypass is `gh api -X DELETE repos/mtroque/tablekeeper/branches/main/protection/enforce_admins` and `-X POST` to restore). Required checks are set with `gh api --method PATCH repos/mtroque/tablekeeper/branches/main/protection/required_status_checks -F strict=true -f 'contexts[]=Checks' -f 'contexts[]=API' -f 'contexts[]=E2E' -f 'contexts[]=Audit'`, and shown with `gh api repos/mtroque/tablekeeper/branches/main/protection/required_status_checks --jq .contexts`. Only the owner's credentials can change protection; the factory's App token can't read it.
 5. **Review.** By policy below (W11). Findings on a factory PR go back to the session that built it (`claude --resume`), which fixes them with its full context. Accepted review findings are logged in `docs/CORRECTIONS.md`; patterns that recur become checks (principle 2).
 6. **Merge.** The PR already carries its shared-doc updates (its finish commit sets the roadmap row, appends decisions and corrections, and removes the spec), so merging is a rebase merge in GitHub by the owner. A PR behind `main` rebases first; `pnpm check:repo` catches clashing decision ids. For factory PRs, the merge-authority policy decides merge or escalate (W19).
-7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them. Session transcripts are graded for silent failures (W16), and findings become `trace` rows in `docs/CORRECTIONS.md`.
+7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them. Session transcripts are graded for silent failures (W16, Grading below), and findings become `trace` rows in `docs/CORRECTIONS.md`.
 
 ## Review policy
 
@@ -72,8 +72,8 @@ Set per area in `.github/factory/merge-policy.json` (W19): each path group (docs
 
 | Pool | Tools | Use for |
 |---|---|---|
-| Claude Pro | Claude Code (local and cloud), Claude GitHub app via `CLAUDE_CODE_OAUTH_TOKEN` | Specs, building slices, factory builds and reviews (W14, W11) |
-| Google AI Pro | Antigravity, `agy` CLI (Gemini 4 models, and Claude Opus 5.5 as of 2026-11-15) | Second-opinion review, exploratory QA, groomer cleanups, session grading (W16, to be measured) |
+| Claude Pro | Claude Code (local and cloud), Claude GitHub app via `CLAUDE_CODE_OAUTH_TOKEN` | Specs, building slices, factory builds and reviews (W14, W11), session grading judge (W16) |
+| Google AI Pro | Antigravity, `agy` CLI (Gemini 4 models, and Claude Opus 5.5 as of 2026-11-15) | Second-opinion review, exploratory QA, groomer cleanups |
 
 - Deterministic first: anything a script can answer never goes to a model.
 - Pick the cheapest model and effort that fits: mechanical cleanups at low effort, specs and reviews higher.
@@ -93,9 +93,35 @@ The screen map, `tests/e2e/screens.ts`, lists every screen (`SCREEN_ROUTES`: the
 
 ## Metrics
 
-`pnpm metrics [--weeks 4]` (`scripts/metrics.ts`, `scripts/lib/metrics/`) prints a weekly ISO-week table of merged PRs (total and `factory/*`), revert rate, CI first-pass rate, factory runs/finished/`needs-human` rate/review rounds, remaining `eslint-rules/baseline.json` entries, and `docs/CORRECTIONS.md` patterns (flagging open patterns at `>= 2` for `/harden`).
+`pnpm metrics [--weeks 4]` (`scripts/metrics.ts`, `scripts/lib/metrics/`) prints a weekly ISO-week table of merged PRs (total and `factory/*`), revert rate, CI first-pass rate, factory runs/finished/`needs-human` rate/review rounds, remaining `eslint-rules/baseline.json` entries, `docs/CORRECTIONS.md` patterns (flagging open patterns at `>= 2` for `/harden`), and failed tool calls per session with the top failure classes, read from the week's "Grading report" issue (Grading below).
 
 `pnpm groom` (`scripts/groom.ts`) opens up to 3 `groomer` + `agent-ready` issues per week for any remaining lint baseline entries that don't already have an open issue. `.github/workflows/metrics.yml` runs both every Monday and updates the pinned "Factory metrics" issue.
+
+## Grading
+
+Session transcripts are graded for what goes wrong even when nobody corrects it (W16). `pnpm grade [--since <day>] [--until <day>] [--source local|factory] [--no-judge] [--issue]` (`scripts/grade.ts`, `scripts/lib/traces/`, `/grade` in `.agents/skills/grade/`) runs four steps:
+
+1. **Collect.** Local: Claude Code sessions in `~/.claude/projects/<repo path>*/*.jsonl` (main checkout and worktrees) and Antigravity's `~/.gemini/antigravity-cli/brain/<id>/.system_generated/logs/transcript_full.jsonl` (and the IDE's `~/.gemini/antigravity/brain/`) that mention the repo path. Factory: the `session-<id>` artifacts created in the range, downloaded and decrypted with `FACTORY_SESSION_KEY`. Sessions are filtered by start day and linked to PRs through the `Session:` line of the PR body.
+2. **Condense and classify, without a model.** Each session becomes user turns, tool calls (name and a short argument), errors and the final message, written to `.scratch/grade/<source>-<since>_<until>/traces/` (a few KB each, capped by `grader.maxTraceChars`). Each failed call gets one class; calls are also checked for behaviors. Classes with a tag become proposed rows:
+
+   | Class | Tag | Matches |
+   |---|---|---|
+   | `worktree-guard` | `worktree-command-refused` | The harness refused a command outside the working directories, or any approval refusal in a worktree |
+   | `env-file-denied` | `preflight-reads-denied-file` | A permission denial on a call naming `.env.local` |
+   | `permission-denied` | `permission-denied` | Other permission or classifier denials |
+   | `commit-msg-hook` | `commit-msg-recovery` | `git commit` rejected by commitlint |
+   | `pre-commit-hook` | `pre-commit-rejected` | `git commit` rejected by `check:repo --staged` |
+   | `missing-file` | `missing-file` | File does not exist, `ENOENT`, `No such file` (outside check commands) |
+   | `repeated-command` | `repeated-command` | The same call twice in a row |
+   | `e2e-rerun` | `e2e-rerun` | An e2e run after an earlier one failed |
+   | `scratch-outside` | `scratch-files-in-repo` | A write to `tests/e2e/zz-*`, `scripts/_*` or `scripts/.*` |
+   | `scratch-dir-deleted` | `scratch-dir-deleted` | `rm -r` of the whole `.scratch/` |
+   | `user-rejected`, `check-failed`, `unclassified` | none | A rejected call; a failing check or empty search (normal work); anything else |
+
+3. **Judge a sample.** Sessions with unclassified failures, rejections or interruptions, the `grader.flagTop` with the most tagged findings, and a seeded `grader.sampleRate` share of the rest (at most `grader.maxJudged`) go to `claude -p` with the `grader` model at `low` effort, no tools, no saved session, run outside the repo. The prompt is the rubrics in `.agents/skills/grade/rubrics/` (efficiency, unlogged corrections), the date, pattern and where of each logged correction, and the condensed trace, never raw JSONL. Judging stops at `grader.tokenCap` reported tokens.
+4. **Report.** Failures by class, proposed rows in `docs/CORRECTIONS.md` → Log format (date, tag, sessions and PRs, the class's fixed paraphrase and likely fix, `trace`, `open`; tags not yet in the log marked new), per-session metrics, the judged sample, and a hidden `grade-metrics` block that `pnpm metrics` reads. It holds counts, tags, session ids and fixed paraphrases; judge notes are capped and stripped of quotes and code.
+
+`.github/workflows/grade.yml` (staged in `.github/workflow-drafts/` until the owner moves it) runs `pnpm grade --source factory --issue` every Tuesday and on demand (`since`, `until` inputs), creating or updating the issue "Grading report <ISO week>". The owner adds `agent-ready` to have the factory append the rows, or closes it. The grader never edits skills, rules or the log, and decrypted transcripts never leave the runner's `.scratch/` (no artifacts: anyone signed in can download those on a public repo).
 
 ## Accounts and setup
 
