@@ -46,7 +46,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W13 | Exploratory QA: an agent walks the screen map in CI and files issues | W7, W10 | ⬜ |
 | W14 | Factory runner: Claude Code on Actions every 5 hours, Project-ordered issue queue | W4, W7 | ✅ |
 | W15 | Local screenshots: `pnpm shot` for agents checking screen states | - | ✅ |
-| W16 | Session grading: silent failures in transcripts become `trace` corrections and metrics | W12, W14 | ⬜ |
+| W16 | Session grading: silent failures in transcripts become `trace` corrections and metrics | W12, W14 | ⏸ |
 | W17 | Trace follow-ups: Antigravity transcript paths, per-session `.scratch/` | - | ✅ |
 | W18 | Factory plan: runner, review loop and merge authority replanned; W specs expanded; docs cleanup | - | ✅ |
 | W19 | Merge authority: reviewer verdict plus fixed rules, shadow mode first, per-area policy file | W7, W11, W12 | ⬜ |
