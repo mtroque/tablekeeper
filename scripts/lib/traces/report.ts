@@ -100,6 +100,8 @@ function fmtRate(n: number, d: number): string {
  */
 export function formatReport(opts: {
   week: string;
+  /** Defaults to `Grading report <week>`. */
+  title?: string;
   since: string;
   until: string;
   source: string;
@@ -125,7 +127,7 @@ export function formatReport(opts: {
   }
 
   const lines = [
-    `# Grading report ${opts.week}`,
+    `# ${opts.title ?? `Grading report ${opts.week}`}`,
     '',
     `Sessions from ${opts.since} to ${opts.until} (${opts.source}): ${sessions.length} (${runnerText}). Tool calls: ${metrics.toolCalls}. Failed: ${metrics.failed} (${fmtRate(metrics.failed, sessions.length)} per session).`,
     '',

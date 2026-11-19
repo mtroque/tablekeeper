@@ -10,6 +10,11 @@ const GradeMetricsSchema = z.object({
 
 export type TraceWeek = z.infer<typeof GradeMetricsSchema>;
 
+/** Weekly reports only (`Grading report 2026-W47`); custom-range runs use a dated title and are skipped. */
+export function isWeeklyReportTitle(title: string): boolean {
+  return /^Grading report \d{4}-W\d{2}$/.test(title);
+}
+
 const BLOCK_RE = /<!-- grade-metrics (\{.*?\}) -->/;
 
 /** Reads the hidden `grade-metrics` block a "Grading report <week>" issue carries (W16). */
