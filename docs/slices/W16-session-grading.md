@@ -64,6 +64,8 @@ None left. Resolved from the docs and the code:
 | Date | Pattern | Where | What was wrong | Correction | Source | Status |
 |---|---|---|---|---|---|---|
 | 2026-11-19 | `classifier-false-positive` | W16, `scripts/lib/traces/classify.ts` | The scratch-file detector matched paths inside a heredoc body, flagging a fixture write as `scratch-files-in-repo`; found by grading this build's own session | Shell writes are matched only before `<<` and only as a redirect, `tee`, `touch`, `cp` or `mv` target; test added | self | open |
+| 2026-11-19 | `report-key-collision` | W16, PR #33, `scripts/grade.ts` | The report issue was keyed by the ISO week of `--until`, so a manual run over a custom range overwrote that week's report and the metrics block `pnpm metrics` reads | Custom ranges get their own dated title; `pnpm metrics` reads only weekly titles | review | open |
+| 2026-11-19 | `unsanitized-model-output` | W16, PR #33, `scripts/lib/traces/judge.ts` | Judge notes for a public issue were only stripped of quotes and code, so a path or secret-like string could pass | Paths, file names and long token-like runs are replaced too; test added | review | open |
 | 2026-11-19 | `spec-owns-stale-path` | W16, PR #33 | `## Owns` named `scripts/grade-sessions.ts`, but the entry point was built as `scripts/grade.ts`, so ownership didn't match the code | Owns updated to `scripts/grade.ts` | review | open |
 
 ## Shared change requests
