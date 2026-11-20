@@ -82,6 +82,8 @@ export type PrFacts = {
   headSha: string;
   labels: readonly string[];
   files: readonly PrFile[];
+  /** GitHub's count of changed files; more than `files.length` means the list was cut short. */
+  changedFiles: number;
 };
 
 export type CheckState = 'pass' | 'fail' | 'pending';
@@ -97,10 +99,13 @@ export type ReviewOutcome =
       openBlocking: number;
       /** Unresolved threads with a `disputed:` reply. */
       disputed: number;
+      /** False when GitHub returned only part of the findings or threads. */
+      complete: boolean;
     } & Pick<ReviewVerdict, 'recommendation' | 'risk' | 'confidence'>);
 
 export type RuleId =
   | 'factory-branch'
+  | 'incomplete'
   | 'needs-human'
   | 'checks'
   | 'review'
@@ -208,6 +213,14 @@ function reviewReasons(review: ReviewOutcome): Reason[] {
     return [{ rule: 'review', outcome: 'wait', hard: false, detail: review.detail }];
   }
   const reasons: Reason[] = [];
+  if (!review.complete) {
+    reasons.push({
+      rule: 'incomplete',
+      outcome: 'escalate',
+      hard: true,
+      detail: 'GitHub returned only part of the review findings or threads, so some may be unseen.',
+    });
+  }
   if (review.disputed > 0) {
     reasons.push({
       rule: 'disputed',
@@ -298,6 +311,14 @@ export function decide(
       outcome: 'escalate',
       hard: true,
       detail: `\`${pr.headRef}\` is not a \`factory/*\` branch; owner PRs are the owner's to merge.`,
+    });
+  }
+  if (pr.files.length < pr.changedFiles) {
+    reasons.push({
+      rule: 'incomplete',
+      outcome: 'escalate',
+      hard: true,
+      detail: `GitHub listed ${String(pr.files.length)} of ${String(pr.changedFiles)} changed files, so the rest can't be checked against the policy.`,
     });
   }
   if (pr.labels.includes(NEEDS_HUMAN_LABEL)) {
