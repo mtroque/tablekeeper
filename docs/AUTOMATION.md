@@ -44,6 +44,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 | Score invariants (breakdown sums to total, schema round trip, API agrees with UI) | fast-check property tests (`packages/core/src/kit/properties.ts`, per-game `*.property.test.ts`, `contracts.property.test.ts`) | ✅ |
 | CV accuracy never drops below the recorded numbers | `pnpm eval:cv:check` and `CV` job in `.github/workflows/ci.yml` (`data/fixtures/*/baseline.json`) | ✅ |
 | Every screen state renders, and every route has a map entry | `pnpm check:repo` (`scripts/lib/check-repo/screens.ts` against `tests/e2e/screens.ts`) and `.github/workflows/screens.yml` (each entry must reach its state) | ✅ |
+| Factory PRs merge only inside the policy, never when a required check is red or a finding is disputed | `scripts/factory/merge-policy.ts` (`decide()`, fixed rules in code) and `.github/workflows/merge.yml`; everything in `shadow` until the record supports `auto` (W29) | ✅ |
 | Validate external input with Zod | review (no general check yet) | |
 | Every detected value is an overridable draft with confidence | types (`Draft<T>`) and review | |
 
@@ -54,7 +55,7 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 3. **PR.** The agent pushes and opens a PR whose body links the spec and lists how each acceptance criterion was verified (W4).
 4. **Checks.** CI runs every deterministic check; `main` requires `Checks`, `API` and `E2E`, plus `Audit` once the owner runs the command below (W26) (plus PR required, linear history, rebase-only merge, `enforce_admins: true` so local sessions sharing the owner's GitHub credentials cannot push to `main` or merge a failing PR; emergency owner bypass is `gh api -X DELETE repos/mtroque/tablekeeper/branches/main/protection/enforce_admins` and `-X POST` to restore). Required checks are set with `gh api --method PATCH repos/mtroque/tablekeeper/branches/main/protection/required_status_checks -F strict=true -f 'contexts[]=Checks' -f 'contexts[]=API' -f 'contexts[]=E2E' -f 'contexts[]=Audit'`, and shown with `gh api repos/mtroque/tablekeeper/branches/main/protection/required_status_checks --jq .contexts`. Only the owner's credentials can change protection; the factory's App token can't read it.
 5. **Review.** By policy below (W11). Findings on a factory PR go back to the session that built it (`claude --resume`), which fixes them with its full context. Accepted review findings are logged in `docs/CORRECTIONS.md`; patterns that recur become checks (principle 2).
-6. **Merge.** The PR already carries its shared-doc updates (its finish commit sets the roadmap row, appends decisions and corrections, and removes the spec), so merging is a rebase merge in GitHub by the owner. A PR behind `main` rebases first; `pnpm check:repo` catches clashing decision ids. For factory PRs, the merge-authority policy decides merge or escalate (W19).
+6. **Merge.** The PR already carries its shared-doc updates (its finish commit sets the roadmap row, appends decisions and corrections, and removes the spec), so merging is a rebase merge in GitHub by the owner. A PR behind `main` rebases first; `pnpm check:repo` catches clashing decision ids. For factory PRs, merge authority decides merge, wait or escalate (Auto-merge policy below); while its groups are in `shadow` it only records, and the owner merges.
 7. **Watch.** Revert rate and CI health are tracked (W12); auto-merge widens or narrows with them. Session transcripts are graded for silent failures (W16), and findings become `trace` rows in `docs/CORRECTIONS.md`.
 
 ## Review policy
@@ -64,9 +65,16 @@ Every rule from `AGENTS.md` → Hard rules and `docs/CONVENTIONS.md`, and what e
 - **Antigravity and Codex:** later, through the same config, once their CLIs can sign in on a runner.
 - **What reviewers check:** only what no check covers. The review prompt lists the unchecked rows of the enforcement map plus spec fit and user-facing notes (`README.md` notes stay concise, self-contained, and free of contradictions or overstated claims); it does not restate lint.
 
-## Auto-merge policy (target)
+## Auto-merge policy
 
-Set per area in `.github/factory/merge-policy.json` (W19): each path group (docs, game folders, shared code, scorers, LLM gateway, migrations, auth, workflow) is `shadow`, `auto` or `escalate`, with thresholds for size, reviewer confidence and risk, and W12's revert rate under 2%. Everything starts in `shadow`: the decision is recorded and the owner merges. An area moves to `auto` by changing its value once the shadow record agrees with the owner's own calls. A PR that changes the policy, the review prompt, workflows, settings or `scripts/factory/` always escalates.
+Factory PRs merge or escalate inside limits a script enforces (W19). Everything starts in `shadow`: the decision is recorded and the owner merges as usual. An area moves to `auto` by changing its value in a PR, once the shadow record agrees with the owner's own calls; that PR always escalates.
+
+- **Policy** (`.github/factory/merge-policy.json`, Zod schema in `scripts/factory/merge-policy.ts`): path groups `docs` (not `docs/games/`), `game-rules`, `game-ui-cv`, `shared-code`, `api`, `llm-gateway`, `auth`, `migrations`, `tooling` (not `scripts/factory/`) and `dependencies`, each `shadow`, `auto` or `escalate`, with optional thresholds that override the global ones: `maxChangedLines` (lockfile and fixtures not counted), `minConfidence` and `maxRisk` from the reviewer's verdict; `null` means no limit. All `null` until the shadow record sets them (W29). `revertRateCeiling` (2%) applies to W12's revert rate over the last `revertWindow` (50) merged PRs.
+- **Fixed rules** (in code, not the policy): required checks `Checks`, `API`, `E2E` and `CV` green; W11's review on the head commit, posted by the `tablekeeper-factory` bot, finished with no open blocking finding and no unresolved `disputed:` thread; GitHub returned every changed file, finding and thread (a list cut short escalates); the reviewer recommended `merge`; revert rate under the ceiling; a `factory/*` branch; no `needs-human` label. A PR touching `.github/factory/`, `.github/workflows/`, `.github/workflow-drafts/`, `.agents/skills/`, `.claude/settings.json`, `.claude/skills/`, `AGENTS.md` or `scripts/factory/` always escalates, as does a file in no group.
+- **Decision** (`decide()`): `merge`, `wait` or `escalate` with every reason. Hard escalations (red required check, disputed or open finding, a list GitHub cut short, `needs-human`, not a factory branch) win; otherwise anything pending (checks, review) waits; then path, group, threshold and revert-rate escalations; otherwise merge. A PR whose groups are all `shadow` is recorded only; one that touches an `auto` group acts, and any `shadow` group it also touches escalates it; an `escalate` group, unlisted file or always-escalate path escalates in every mode.
+- **Acting** (`scripts/factory/merge.ts`, `.github/workflows/merge.yml`, after `CI` or `Review` completes for a `factory/*` PR; it checks out `main`, so a PR can't change the policy that judges it): shadow updates one comment (`<!-- tablekeeper-merge-decision -->`) with the decision, reasons and a hidden history, and labels `shadow:merge` or `shadow:escalate`. Auto merges with `gh pr merge --rebase --match-head-commit`, first asking the builder's session to rebase (W11's resume path) when the PR is behind `main`. Escalate labels `needs-human` and mentions the owner. `wait` does nothing; the next completion runs it again.
+- **Locally:** `pnpm merge:decide --pr <n>` prints the decision and planned actions without acting. On Actions, `workflow_dispatch` with a PR number does the same (`dry_run` on by default).
+- **Agreement:** `pnpm metrics` compares each PR's first shadow decision with what happened (merged at that commit, changed, or closed): `merge` agrees with merged as is, `escalate` with changed or closed. Shown per week and per group.
 
 ## Agents and budget
 
@@ -95,6 +103,8 @@ The screen map, `tests/e2e/screens.ts`, lists every screen (`SCREEN_ROUTES`: the
 
 `pnpm metrics [--weeks 4]` (`scripts/metrics.ts`, `scripts/lib/metrics/`) prints a weekly ISO-week table of merged PRs (total and `factory/*`), revert rate, CI first-pass rate, factory runs/finished/`needs-human` rate/review rounds, remaining `eslint-rules/baseline.json` entries, and `docs/CORRECTIONS.md` patterns (flagging open patterns at `>= 2` for `/harden`).
 
+It ends with W19's shadow agreement per week and per group (`scripts/lib/metrics/agreement.ts`, Auto-merge policy above).
+
 `pnpm groom` (`scripts/groom.ts`) opens up to 3 `groomer` + `agent-ready` issues per week for any remaining lint baseline entries that don't already have an open issue. `.github/workflows/metrics.yml` runs both every Monday and updates the pinned "Factory metrics" issue.
 
 ## Accounts and setup
@@ -111,6 +121,7 @@ State as of 2026-11-17. No secret values here; only names.
 | Vercel CLI | Signed in |
 | Neon | Database `tablekeeper-db` and Neon Auth, through the Vercel Marketplace (X3, X4); setup in `docs/DEPLOYMENT.md` |
 | Factory (W14, W24) | `.github/workflows/factory.yml` (supports `dry_run`), `.github/factory/config.json`, `scripts/factory/`; owner setup: GitHub App `tablekeeper-factory` (`FACTORY_APP_ID`, `FACTORY_APP_PRIVATE_KEY`), `FACTORY_SESSION_KEY`, `FACTORY_PROJECT_TOKEN` (`read:project` fallback, required for personal-account Projects), "Factory" Project (#1), `FACTORY_ENABLED` variable |
+| Merge authority (W19) | `.github/workflows/merge.yml` (staged in `.github/workflow-drafts/merge.yml` until the owner moves it), `.github/factory/merge-policy.json`, `scripts/factory/merge*.ts`; uses the factory App token, `CLAUDE_CODE_OAUTH_TOKEN` and `FACTORY_SESSION_KEY` (rebase only); creates the `shadow:merge` and `shadow:escalate` labels on first use |
 | `FACTORY_SESSION_KEY` | Repo secret that encrypts session artifacts. Keep the owner's copy at `~/.config/tablekeeper/factory-session-key` (mode 600) and in a password manager, because GitHub never shows a secret again; to audit factory transcripts, decrypt with it (`scripts/factory/session.ts`). To rotate: `(umask 077 && openssl rand -base64 32 > ~/.config/tablekeeper/factory-session-key)`, then `gh secret set FACTORY_SESSION_KEY < ~/.config/tablekeeper/factory-session-key`; artifacts encrypted with the old key become unreadable |
 | Gemini CLI and Gemini Code Assist on GitHub | Retired for consumer accounts in 2026; don't use |
 

@@ -71,6 +71,7 @@ pnpm eval:cv:check              # check every detector game against its recorded
 pnpm metrics                    # weekly PR, revert, baseline and correction metrics (--weeks 4)
 pnpm groom                      # open up to 3 agent-ready issues for lint baseline leftovers
 pnpm queue:sync                 # open unlabeled issues for planned roadmap slices
+pnpm merge:decide --pr <n>      # merge authority's decision for a factory PR, without acting
 pnpm rules:smoke <gameId> "<question>"   # one real rules-assistant call
 pnpm smoke --api <url> --web <url>       # read-only post-deploy checks against a deployed API and web app
 scripts/worktrees.sh status|sync|clean|launch   # parallel Claude Code sessions (AGENTS.md)
