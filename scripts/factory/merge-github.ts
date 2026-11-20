@@ -44,7 +44,18 @@ export function findingSeverities(texts: readonly string[]): FindingSeverity[] {
   );
 }
 
-export type ReviewNode = { body: string; commitSha: string | null; comments: string[] };
+/** The GitHub App that posts factory reviews (`scripts/review/run.ts`), as a `Bot` author. */
+export const REVIEWER_LOGIN = 'tablekeeper-factory';
+
+export type ReviewNode = {
+  /** Login when the author is a `Bot`, else null, so a person can't pose as the reviewer. */
+  botLogin: string | null;
+  body: string;
+  commitSha: string | null;
+  comments: string[];
+  /** False when GitHub returned only part of the review's inline comments. */
+  commentsComplete: boolean;
+};
 export type ThreadNode = { isResolved: boolean; comments: string[] };
 
 /** Unresolved review threads where someone replied `disputed: <reason>` (W11's fix round). */
@@ -57,6 +68,8 @@ export function countDisputed(threads: readonly ThreadNode[]): number {
 export function reviewOutcome(opts: {
   reviews: readonly ReviewNode[];
   threads: readonly ThreadNode[];
+  /** False when GitHub returned only part of the threads or of a thread's replies. */
+  threadsComplete: boolean;
   headSha: string;
   reviewRunning: boolean;
   blockingSeverity: FindingSeverity;
@@ -65,7 +78,12 @@ export function reviewOutcome(opts: {
     return { status: 'pending', detail: 'The review workflow is still running for this branch.' };
   }
   const latest = opts.reviews
-    .filter((r) => r.body.includes(REVIEW_MARKER) && r.commitSha === opts.headSha)
+    .filter(
+      (r) =>
+        r.botLogin === REVIEWER_LOGIN &&
+        r.body.includes(REVIEW_MARKER) &&
+        r.commitSha === opts.headSha,
+    )
     .at(-1);
   if (!latest) {
     return { status: 'pending', detail: 'No factory review on the head commit yet.' };
@@ -78,7 +96,13 @@ export function reviewOutcome(opts: {
   const openBlocking = severities.filter(
     (severity) => SEVERITY_RANK[severity] >= SEVERITY_RANK[opts.blockingSeverity],
   ).length;
-  return { status: 'done', ...verdict, openBlocking, disputed: countDisputed(opts.threads) };
+  return {
+    status: 'done',
+    ...verdict,
+    openBlocking,
+    disputed: countDisputed(opts.threads),
+    complete: latest.commentsComplete && opts.threadsComplete,
+  };
 }
 
 const RollupItemSchema = z.union([
@@ -141,8 +165,8 @@ const PrViewSchema = z.object({
   headRefName: z.string(),
   headRefOid: z.string(),
   mergeStateStatus: z.string(),
+  changedFiles: z.number(),
   labels: z.array(z.object({ name: z.string() })),
-  files: z.array(z.object({ path: z.string(), additions: z.number(), deletions: z.number() })),
   statusCheckRollup: z.array(RollupItemSchema).nullable(),
 });
 
@@ -155,25 +179,46 @@ export type PrState = {
   checks: CheckResult[];
 };
 
-export function readPrState(prNumber: number, cwd: string): PrState {
+// `gh pr view --json files` stops at 100 files; the REST list pages up to GitHub's 3000.
+const PrFilePagesSchema = z.array(
+  z.array(z.object({ filename: z.string(), additions: z.number(), deletions: z.number() })),
+);
+
+export function readPrState(prNumber: number, repo: string, cwd: string): PrState {
   const raw = gh(
     [
       'pr',
       'view',
       String(prNumber),
       '--json',
-      'number,state,body,headRefName,headRefOid,mergeStateStatus,labels,files,statusCheckRollup',
+      'number,state,body,headRefName,headRefOid,mergeStateStatus,changedFiles,labels,statusCheckRollup',
     ],
     cwd,
   );
   const pr = PrViewSchema.parse(JSON.parse(raw));
+  const files = PrFilePagesSchema.parse(
+    JSON.parse(
+      gh(
+        [
+          'api',
+          '--paginate',
+          '--slurp',
+          `repos/${repo}/pulls/${String(prNumber)}/files?per_page=100`,
+        ],
+        cwd,
+      ),
+    ),
+  )
+    .flat()
+    .map((f) => ({ path: f.filename, additions: f.additions, deletions: f.deletions }));
   return {
     facts: {
       number: pr.number,
       headRef: pr.headRefName,
       headSha: pr.headRefOid,
       labels: pr.labels.map((l) => l.name),
-      files: pr.files,
+      files,
+      changedFiles: pr.changedFiles,
     },
     open: pr.state === 'OPEN',
     body: pr.body,
@@ -185,13 +230,26 @@ export function readPrState(prNumber: number, cwd: string): PrState {
 const REVIEW_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
-      reviews(last: 30) { nodes { body commit { oid } comments(first: 100) { nodes { body } } } }
-      reviewThreads(first: 100) { nodes { isResolved comments(first: 50) { nodes { body } } } }
+      reviews(last: 30) {
+        nodes {
+          author { __typename login }
+          body
+          commit { oid }
+          comments(first: 100) { totalCount nodes { body } }
+        }
+      }
+      reviewThreads(first: 100) {
+        totalCount
+        nodes { isResolved comments(first: 100) { totalCount nodes { body } } }
+      }
     }
   }
 }`;
 
-const Bodies = z.object({ nodes: z.array(z.object({ body: z.string() })) });
+const Bodies = z.object({
+  totalCount: z.number(),
+  nodes: z.array(z.object({ body: z.string() })),
+});
 const ReviewQuerySchema = z.object({
   data: z.object({
     repository: z.object({
@@ -199,6 +257,7 @@ const ReviewQuerySchema = z.object({
         reviews: z.object({
           nodes: z.array(
             z.object({
+              author: z.object({ __typename: z.string(), login: z.string() }).nullable(),
               body: z.string(),
               commit: z.object({ oid: z.string() }).nullable(),
               comments: Bodies,
@@ -206,6 +265,7 @@ const ReviewQuerySchema = z.object({
           ),
         }),
         reviewThreads: z.object({
+          totalCount: z.number(),
           nodes: z.array(z.object({ isResolved: z.boolean(), comments: Bodies })),
         }),
       }),
@@ -261,14 +321,19 @@ export function readReviewOutcome(opts: {
   );
   return reviewOutcome({
     reviews: pr.reviews.nodes.map((r) => ({
+      botLogin: r.author?.__typename === 'Bot' ? r.author.login : null,
       body: r.body,
       commitSha: r.commit?.oid ?? null,
       comments: r.comments.nodes.map((c) => c.body),
+      commentsComplete: r.comments.nodes.length >= r.comments.totalCount,
     })),
     threads: pr.reviewThreads.nodes.map((t) => ({
       isResolved: t.isResolved,
       comments: t.comments.nodes.map((c) => c.body),
     })),
+    threadsComplete:
+      pr.reviewThreads.nodes.length >= pr.reviewThreads.totalCount &&
+      pr.reviewThreads.nodes.every((t) => t.comments.nodes.length >= t.comments.totalCount),
     headSha: opts.headSha,
     reviewRunning: runs.some((run) => run.status !== 'completed'),
     blockingSeverity: opts.blockingSeverity,

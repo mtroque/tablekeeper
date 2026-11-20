@@ -244,7 +244,7 @@ function main(): void {
   const policy = loadMergePolicy(join(ROOT, '.github/factory/merge-policy.json'));
   const config = loadFactoryConfig(join(ROOT, '.github/factory/config.json'));
 
-  const state = readPrState(prNumber, ROOT);
+  const state = readPrState(prNumber, repo, ROOT);
   if (!state.open) {
     console.log(`PR #${String(prNumber)} is not open; nothing to do.`);
     return;

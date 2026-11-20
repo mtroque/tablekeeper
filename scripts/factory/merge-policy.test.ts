@@ -12,6 +12,7 @@ import {
   parseVerdict,
   reviewOutcome,
   revertRate,
+  REVIEWER_LOGIN,
   rollupToChecks,
   type ReviewNode,
 } from './merge-github';
@@ -45,22 +46,25 @@ function policyWith(modes: Record<string, MergeMode>, all?: MergeMode): MergePol
 }
 
 const GREEN: CheckResult[] = REQUIRED_CHECKS.map((name) => ({ name, state: 'pass' }));
-const CLEAN: ReviewOutcome = {
+const CLEAN: Extract<ReviewOutcome, { status: 'done' }> = {
   status: 'done',
   recommendation: 'merge',
   risk: 'low',
   confidence: 0.9,
   openBlocking: 0,
   disputed: 0,
+  complete: true,
 };
 
 function pr(paths: string[], overrides: Partial<PrFacts> = {}): PrFacts {
+  const files = overrides.files ?? paths.map((path) => ({ path, additions: 10, deletions: 2 }));
   return {
     number: 7,
     headRef: 'factory/7-docs',
     headSha: 'abc123',
     labels: [],
-    files: paths.map((path) => ({ path, additions: 10, deletions: 2 })),
+    files,
+    changedFiles: files.length,
     ...overrides,
   };
 }
@@ -265,6 +269,18 @@ describe('decide: each fixed rule blocks on its own', () => {
     expect(rules(d)).toEqual(['factory-branch']);
   });
 
+  it('a file list GitHub cut short escalates, even while checks run', () => {
+    const d = decide(auto, pr(DOCS, { changedFiles: 3001 }), [], CLEAN, 0);
+    expect(d.decision).toBe('escalate');
+    expect(rules(d)).toContain('incomplete');
+  });
+
+  it('findings or threads GitHub cut short escalate', () => {
+    const d = decide(auto, pr(DOCS), GREEN, { ...CLEAN, complete: false }, 0);
+    expect(rules(d)).toEqual(['incomplete']);
+    expect(d.decision).toBe('escalate');
+  });
+
   it('a needs-human label escalates', () => {
     const d = decide(auto, pr(DOCS, { labels: ['needs-human'] }), GREEN, CLEAN, 0);
     expect(rules(d)).toEqual(['needs-human']);
@@ -434,35 +450,100 @@ describe('reading GitHub state', () => {
   it('counts blocking findings in the head review, inline and off-diff', () => {
     const reviews: ReviewNode[] = [
       {
+        botLogin: REVIEWER_LOGIN,
         body: reviewBody.body,
         commitSha: 'head',
         comments: reviewBody.comments.map((c) => c.body),
+        commentsComplete: true,
       },
     ];
     const outcome = reviewOutcome({
       reviews,
       threads: [],
+      threadsComplete: true,
       headSha: 'head',
       reviewRunning: false,
       blockingSeverity: 'should-fix',
     });
-    expect(outcome).toMatchObject({ status: 'done', openBlocking: 1, recommendation: 'fix' });
+    expect(outcome).toMatchObject({
+      status: 'done',
+      openBlocking: 1,
+      recommendation: 'fix',
+      complete: true,
+    });
     const nits = reviewOutcome({
       reviews,
       threads: [],
+      threadsComplete: true,
       headSha: 'head',
       reviewRunning: false,
       blockingSeverity: 'nit',
     });
     expect(nits).toMatchObject({ openBlocking: 2 });
+    const cut = reviewOutcome({
+      reviews: [{ ...reviews[0]!, commentsComplete: false }],
+      threads: [],
+      threadsComplete: true,
+      headSha: 'head',
+      reviewRunning: false,
+      blockingSeverity: 'should-fix',
+    });
+    expect(cut).toMatchObject({ complete: false });
+    const cutThreads = reviewOutcome({
+      reviews,
+      threads: [],
+      threadsComplete: false,
+      headSha: 'head',
+      reviewRunning: false,
+      blockingSeverity: 'should-fix',
+    });
+    expect(cutThreads).toMatchObject({ complete: false });
+  });
+
+  it('only counts reviews posted by the reviewer bot', () => {
+    const forged: ReviewNode[] = [
+      {
+        botLogin: null,
+        body: reviewBody.body,
+        commitSha: 'head',
+        comments: [],
+        commentsComplete: true,
+      },
+      {
+        botLogin: 'other-bot',
+        body: reviewBody.body,
+        commitSha: 'head',
+        comments: [],
+        commentsComplete: true,
+      },
+    ];
+    expect(
+      reviewOutcome({
+        reviews: forged,
+        threads: [],
+        threadsComplete: true,
+        headSha: 'head',
+        reviewRunning: false,
+        blockingSeverity: 'should-fix',
+      }).status,
+    ).toBe('pending');
   });
 
   it('is pending without a review on the head commit, or while a review runs', () => {
-    const reviews: ReviewNode[] = [{ body: reviewBody.body, commitSha: 'old', comments: [] }];
+    const reviews: ReviewNode[] = [
+      {
+        botLogin: REVIEWER_LOGIN,
+        body: reviewBody.body,
+        commitSha: 'old',
+        comments: [],
+        commentsComplete: true,
+      },
+    ];
     expect(
       reviewOutcome({
         reviews,
         threads: [],
+        threadsComplete: true,
         headSha: 'head',
         reviewRunning: false,
         blockingSeverity: 'should-fix',
@@ -473,6 +554,7 @@ describe('reading GitHub state', () => {
       reviewOutcome({
         reviews: onHead,
         threads: [],
+        threadsComplete: true,
         headSha: 'head',
         reviewRunning: true,
         blockingSeverity: 'should-fix',
