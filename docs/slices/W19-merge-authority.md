@@ -44,10 +44,10 @@
 - **Widening authority:** change a group's mode in the policy file in a PR; by the rule above, that PR always escalates.
 
 ## Acceptance criteria
-- [ ] Over the first 20 factory PRs every decision is recorded in shadow mode, and the agreement rate shows in W12's table
-- [ ] With the docs group set to `auto`, a docs-only factory PR merges itself; one that also touches shared code escalates
-- [ ] A PR changing the policy file escalates even with every group set to `auto`
-- [ ] A PR with a disputed finding or a red required check never merges, in any mode
+- [ ] Over the first 20 factory PRs every decision is recorded in shadow mode, and the agreement rate shows in W12's table (moved to W29)
+- [x] With the docs group set to `auto`, a docs-only factory PR merges itself; one that also touches shared code escalates (`merge-policy.test.ts`: `decide()` gives `merge` in `auto` mode and `planActions()` plans the comment and `gh pr merge`, or a rebase first when behind `main`; adding `apps/web/src/components/counter.tsx` gives `escalate` with `group-shadow`, planned as a mention plus `needs-human`. The live run is W29's)
+- [x] A PR changing the policy file escalates even with every group set to `auto` (`merge-policy.test.ts`: the policy file alone, and one sample per always-escalate pattern, each `escalate` with every group `auto`)
+- [x] A PR with a disputed finding or a red required check never merges, in any mode (`merge-policy.test.ts`: each required check red, and one disputed finding, give `escalate` with every group `auto`, `shadow` and `escalate`, also while checks still run; `pnpm merge:decide --pr 33` on the open W16 PR read its 4 unresolved `disputed:` threads from GitHub and escalated)
 
 ## Tests
 - `merge-policy.test.ts`: strictest group wins; unlisted file escalates; each fixed rule blocks on its own; each always-escalate path; thresholds per group override global ones.
@@ -66,8 +66,18 @@ None left. Resolved from the docs:
 - **Agreement:** each decision is recorded in the PR's decision comment (hidden JSON history, one entry per head commit and decision). The first shadow `merge` or `escalate` is compared with the outcome: merged at that same commit (`merged`), merged after more commits (`changed`), or closed unmerged (`closed`). `merge` agrees with `merged`; `escalate` agrees with `changed` or `closed`.
 
 ## Decisions
-- `AGENTS.md` and skills are in the always-escalate list as well as the factory's own files: they change how every agent behaves.
+- `AGENTS.md` and skills are in the always-escalate list as well as the factory's own files: they change how every agent behaves. The list is in code (`ALWAYS_ESCALATE_PATHS`), not the policy file, and adds `.github/workflow-drafts/` and `.claude/skills/` (the symlink) to the spec's list.
+- **Mixed modes:** a PR touching an `auto` group acts live, so any `shadow` group it also touches escalates it for real (rule `group-shadow`) rather than being recorded quietly: once an area has authority, the owner must not assume the bot handles a PR it can't merge. A PR whose groups are all `shadow` is recorded only.
+- **Reading the review:** the verdict is parsed from the `### Verdict:` line `scripts/review/post.ts` writes, and findings from the `**[severity]**` tags in the head commit's review body and inline comments, so `scripts/review/` didn't need a machine-readable field.
+- **Triggers:** `workflow_run` on `CI` and `Review`, not `check_suite`, which doesn't fire for suites GitHub Actions creates. The job checks out `main`, so a PR can't change the policy that judges it.
+- **Agreement placement:** the agreement is its own section at the end of `pnpm metrics` (per week and per group, `scripts/lib/metrics/agreement.ts`), not a column inside `format.ts`'s weekly table, because W16 (PR #33, also owning `scripts/lib/metrics/`) is changing `format.ts` at the same time. `scripts/metrics.ts` gets one reader and one print line.
+- **Workflow as a draft:** `merge.yml` is staged in `.github/workflow-drafts/` for the owner to move, as W10 and W16 did; no push to `.github/workflows/` was attempted. Moving it, and the live criteria, are W29.
+- **Follow-up id:** W29, because W27 and W28 are taken by open PR #32.
 
 ## Corrections
+| Date | Pattern | Where | What was wrong | Correction | Source | Status |
+|---|---|---|---|---|---|---|
+| 2026-11-20 | `slice-id-taken-in-open-pr` | W19, follow-up spec | The next free slice id on `main` (W27) was already used, with W28, by open PR #32; only `gh pr list` showed it | Took W29 after checking open PRs; candidate check: `check:repo` or `/plan` warns when a new spec id is in an open PR's files | self | open |
+| 2026-11-20 | `ownership-overlap` | W19 and W16 (PR #33) | Both specs own `scripts/lib/metrics/`, both PRs change `scripts/metrics.ts`, and they were built at the same time, which AGENTS.md → Parallel sessions forbids | W19 kept to a new file and two additive lines in `scripts/metrics.ts`; candidate check: the factory queue skips an issue whose spec's `## Owns` overlaps an open PR's | self | open |
 
 ## Shared change requests
