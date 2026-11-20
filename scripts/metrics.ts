@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { z } from 'zod';
 
+import { formatShadowAgreement, type ShadowPr } from './lib/metrics/agreement';
 import { formatAuditLine, parseAuditCounts } from './lib/metrics/audit';
 import { parseBaselineEntries } from './lib/metrics/baseline';
 import { countCorrections } from './lib/metrics/corrections';
@@ -92,6 +93,48 @@ function readMergedPrs(): MergedPr[] {
   }
 }
 
+const ShadowPrSchema = z.object({
+  number: z.number(),
+  headRefName: z.string(),
+  state: z.enum(['OPEN', 'MERGED', 'CLOSED']),
+  headRefOid: z.string(),
+  closedAt: z.string().nullable(),
+  comments: z.array(z.object({ body: z.string() })),
+});
+
+/** Factory PRs with their comments, for W19's shadow agreement; empty when gh fails. */
+function readFactoryPrs(): ShadowPr[] {
+  try {
+    const raw = execFileSync(
+      'gh',
+      [
+        'pr',
+        'list',
+        '--state',
+        'all',
+        '--limit',
+        '200',
+        '--json',
+        'number,headRefName,state,headRefOid,closedAt,comments',
+      ],
+      { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+    );
+    return z
+      .array(ShadowPrSchema)
+      .parse(JSON.parse(raw))
+      .filter((pr) => pr.headRefName.startsWith('factory/'))
+      .map((pr) => ({
+        number: pr.number,
+        state: pr.state,
+        headSha: pr.headRefOid,
+        closedAt: pr.closedAt,
+        comments: pr.comments.map((c) => c.body),
+      }));
+  } catch {
+    return [];
+  }
+}
+
 /** Session grading counts from "Grading report <week>" issues (W16); empty when gh fails. */
 function readTraceWeeks(): Map<string, TraceWeek> {
   const traces = new Map<string, TraceWeek>();
@@ -149,3 +192,4 @@ console.log(
   }),
 );
 console.log(`\n${formatAuditLine(parseAuditCounts(audit.stdout))}`);
+console.log(`\n${formatShadowAgreement(weeks, readFactoryPrs())}`);
