@@ -1,0 +1,77 @@
+{
+  "revertRateCeiling": 0.02,
+  "revertWindow": 50,
+  "thresholds": {
+    "maxChangedLines": null,
+    "minConfidence": null,
+    "maxRisk": null
+  },
+  "groups": [
+    {
+      "id": "docs",
+      "mode": "shadow",
+      "paths": ["docs/**", "README.md"],
+      "exclude": ["docs/games/**"]
+    },
+    {
+      "id": "game-rules",
+      "mode": "shadow",
+      "paths": ["docs/games/**", "packages/core/src/games/**"]
+    },
+    {
+      "id": "game-ui-cv",
+      "mode": "shadow",
+      "paths": [
+        "apps/web/src/games/**",
+        "packages/cv/src/games/**",
+        "data/fixtures/**",
+        "apps/web/public/samples/**"
+      ]
+    },
+    {
+      "id": "shared-code",
+      "mode": "shadow",
+      "paths": [
+        "packages/core/src/{kit,contracts}/**",
+        "packages/cv/src/pipeline/**",
+        "apps/web/src/{components,lib,app}/**"
+      ]
+    },
+    {
+      "id": "api",
+      "mode": "shadow",
+      "paths": ["apps/api/src/**"],
+      "exclude": ["apps/api/src/llm/**", "apps/api/src/rules/**", "apps/api/src/middleware/auth.ts"]
+    },
+    {
+      "id": "llm-gateway",
+      "mode": "shadow",
+      "paths": ["apps/api/src/llm/**", "apps/api/src/rules/**"]
+    },
+    {
+      "id": "auth",
+      "mode": "shadow",
+      "paths": [
+        "apps/api/src/middleware/auth.ts",
+        "apps/web/src/lib/auth.ts",
+        "apps/web/src/app/auth/**"
+      ]
+    },
+    {
+      "id": "migrations",
+      "mode": "shadow",
+      "paths": ["db/**"]
+    },
+    {
+      "id": "tooling",
+      "mode": "shadow",
+      "paths": ["tests/**", "scripts/**", "eslint-rules/**"],
+      "exclude": ["scripts/factory/**"]
+    },
+    {
+      "id": "dependencies",
+      "mode": "shadow",
+      "paths": ["**/package.json", "pnpm-lock.yaml"]
+    }
+  ]
+}
