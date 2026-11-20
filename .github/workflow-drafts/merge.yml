@@ -1,0 +1,69 @@
+# DRAFT (W19): the factory's App token can't push workflows. Owner: move this file to
+# .github/workflows/merge.yml and delete these two lines before merging.
+name: Merge authority
+
+# W19: decides each factory PR's fate with .github/factory/merge-policy.json
+# (scripts/factory/merge.ts, docs/AUTOMATION.md → Auto-merge policy). Shadow mode comments and
+# labels shadow:merge or shadow:escalate; auto merges (rebasing through the builder's session
+# first when behind main); escalate labels needs-human and mentions the owner.
+# Runs after CI or Review completes for a PR (check_suite doesn't fire for suites GitHub Actions
+# creates), and on demand for one PR (dry run by default).
+on:
+  workflow_run:
+    workflows: [CI, Review]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'PR number'
+        required: true
+        type: string
+      dry_run:
+        description: 'Print the decision without commenting, labeling or merging'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: merge-${{ github.event.workflow_run.head_branch || inputs.pr }}
+  cancel-in-progress: false
+
+jobs:
+  decide:
+    name: Merge authority
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'pull_request' &&
+      startsWith(github.event.workflow_run.head_branch, 'factory/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.FACTORY_APP_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+      # The default branch, never the PR's code: a PR can't change the policy that judges it.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Configure git identity
+        run: |
+          git config user.name "tablekeeper-factory[bot]"
+          git config user.email "tablekeeper-factory[bot]@users.noreply.github.com"
+      - name: Decide and act
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          FACTORY_SESSION_KEY: ${{ secrets.FACTORY_SESSION_KEY }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          PR_NUMBER: ${{ inputs.pr }}
+          MERGE_DRY_RUN: ${{ inputs.dry_run }}
+        run: pnpm merge:decide --act
