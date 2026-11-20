@@ -34,6 +34,7 @@
     "metrics": "tsx scripts/metrics.ts",
     "groom": "tsx scripts/groom.ts",
     "queue:sync": "tsx scripts/factory/project.ts --sync",
+    "merge:decide": "tsx scripts/factory/merge.ts",
     "rules:smoke": "tsx scripts/rules-smoke.ts",
     "smoke": "tsx scripts/smoke.ts"
   },
