@@ -48,7 +48,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W16 | Session grading: silent failures in transcripts become `trace` corrections and metrics | W12, W14 | ⬜ |
 | W17 | Trace follow-ups: Antigravity transcript paths, per-session `.scratch/` | - | ✅ |
 | W18 | Factory plan: runner, review loop and merge authority replanned; W specs expanded; docs cleanup | - | ✅ |
-| W19 | Merge authority: reviewer verdict plus fixed rules, shadow mode first, per-area policy file | W7, W11, W12 | ⬜ |
+| W19 | Merge authority: reviewer verdict plus fixed rules, shadow mode first, per-area policy file | W7, W11, W12 | ✅ |
 | W20 | Trace pass 2: every Antigravity session read, fixes specced as W21 to W26 | - | ✅ |
 | W21 | Dependency security: patch advisories on the sign-in path and Next.js, `pnpm audit` required in CI | - | ✅ |
 | W22 | Agent commands: `pnpm verify` with short output, `pnpm fix`, dev servers that clean up | - | ✅ |
@@ -56,6 +56,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W24 | Factory go-live: dry run, Project access, current models, the live checks W11, W12 and W14 left open | - | ⬜ |
 | W25 | Finish gate: `check:repo` refuses to fold a spec with unchecked criteria | - | ✅ |
 | W26 | Production safety: issuer contract test, post-deploy smoke, approved migration workflow | W7 | ⬜ |
+| W29 | Merge authority live: the draft workflow moved, 20 PRs in shadow, thresholds and the first `auto` group from the record | W19 | ⬜ |
 
 ## Next
 
