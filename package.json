@@ -35,6 +35,7 @@
     "groom": "tsx scripts/groom.ts",
     "grade": "tsx scripts/grade.ts",
     "queue:sync": "tsx scripts/factory/project.ts --sync",
+    "merge:decide": "tsx scripts/factory/merge.ts",
     "rules:smoke": "tsx scripts/rules-smoke.ts",
     "smoke": "tsx scripts/smoke.ts"
   },
