@@ -1,13 +1,15 @@
 # W19: Merge authority
 
-**Status:** ⬜ · **Depends on:** W7, W11, W12
+**Status:** 🟨 · **Depends on:** W7, W11, W12
 
 **Goal:** The reviewer can merge a PR or escalate it to the owner, but only inside limits a script enforces and a policy file sets. It starts in shadow mode, recording what it would have done. Each area's authority widens by changing one value once the record shows it agrees with the owner's own calls.
 
 ## Owns
-- `.github/factory/merge-policy.json`, `scripts/factory/merge-policy.ts` (schema and decision), `scripts/factory/merge.ts` (acting on it) with tests
-- `.github/workflows/merge.yml`, `scripts/lib/metrics/` (the shadow agreement column)
-- `docs/AUTOMATION.md` → Auto-merge policy
+- `.github/factory/merge-policy.json`, `scripts/factory/merge-policy.ts` (schema and decision), `scripts/factory/merge.ts` (acting on it), `scripts/factory/merge-github.ts` (reading PR state), `scripts/factory/merge-policy.test.ts`
+- `.github/workflows/merge.yml` (staged as `.github/workflow-drafts/merge.yml` until the owner moves it: the factory's App token can't push workflows)
+- `scripts/lib/metrics/` (the shadow agreement column), `scripts/metrics.ts` (reading the decision records)
+- `docs/AUTOMATION.md` → Auto-merge policy, Metrics, Accounts and setup; `README.md` (the `merge:decide` command), `package.json` (`merge:decide` script)
+- `docs/slices/W27-merge-authority-live.md` (the follow-up holding the criteria that need live PRs)
 
 ## Scope
 - **Policy file** (`.github/factory/merge-policy.json`, Zod-validated). Path groups and their starting mode, all `shadow`:
@@ -54,7 +56,14 @@
 - Reviewing (W11). Merging owner PRs.
 
 ## Open questions
-- Starting thresholds (lines, confidence, risk): set from the shadow record after the first 20 PRs, not guessed now.
+None left. Resolved from the docs:
+- **Starting thresholds** (lines, confidence, risk): `null` (no limit) in the policy file, set from the shadow record after the first 20 PRs (W27), not guessed now. Thresholds only matter once a group is `auto`.
+- **Strictest mode:** `auto` < `shadow` < `escalate`. A PR whose groups are all `shadow` is recorded only. A PR touching an `auto` group acts live: anything else it touches that is still `shadow` escalates it (the owner must not assume the bot handles it). An `escalate` group, an unlisted file or an always-escalate path escalate live in every mode.
+- **Order of outcomes:** hard escalations (red required check, disputed or open blocking finding, `needs-human`, not a factory branch) win; otherwise anything still pending (checks, review) makes it `wait`; then the remaining escalations; otherwise `merge`. So a path or threshold escalation is only raised once checks and review are done, and the first final decision is on a reviewed, green commit.
+- **Review state:** the latest factory review (`REVIEW_MARKER`) on the head commit gives the verdict (parsed from its `### Verdict:` line) and its findings at or above `blockingSeverity`. No review on the head commit, or a Review run still in progress for the branch, is `wait`. Blocking findings on the head commit with no Review run in progress means the fix round ended without a push: escalate. An unresolved review thread with a reply starting `disputed:` is a disputed finding.
+- **Revert rate:** over the last 50 merged PRs (`revertWindow`), with W12's `extractRevertedPrs`.
+- **Triggers:** `workflow_run` on the `CI` and `Review` workflows completing. `check_suite` doesn't fire for check suites GitHub Actions creates, so CI completion comes through `workflow_run` too. Plus `workflow_dispatch` with a PR number and `dry_run`.
+- **Agreement:** each decision is recorded in the PR's decision comment (hidden JSON history, one entry per head commit and decision). The first shadow `merge` or `escalate` is compared with the outcome: merged at that same commit (`merged`), merged after more commits (`changed`), or closed unmerged (`closed`). `merge` agrees with `merged`; `escalate` agrees with `changed` or `closed`.
 
 ## Decisions
 - `AGENTS.md` and skills are in the always-escalate list as well as the factory's own files: they change how every agent behaves.
