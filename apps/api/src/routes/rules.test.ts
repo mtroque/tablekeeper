@@ -220,6 +220,22 @@ describe('POST /v1/games/:gameId/rules/ask', () => {
     expect(QuotaSchema.parse(quota.body)).toMatchObject({ enabled: false, used: 0 });
   });
 
+  it('refunds the request on a 502 provider error so GET /v1/me/quota is unchanged', async () => {
+    const { config, ip } = guest();
+    const failingProvider = {
+      name: 'failing',
+      complete: () => Promise.reject(new Error('401 invalid x-api-key')),
+    };
+    const app = createApp(config, { provider: failingProvider });
+
+    const res = await ask(app, ip);
+    expect(res.status).toBe(502);
+    expect(errorBody(res).code).toBe('INTERNAL');
+
+    const quota = await request(app).get('/v1/me/quota').set('x-forwarded-for', ip);
+    expect(QuotaSchema.parse(quota.body)).toMatchObject({ used: 0, remaining: 2, limit: 2 });
+  });
+
   it('records tokens for every model call', async () => {
     const { config, ip } = guest();
     await ask(appFor(config), ip);

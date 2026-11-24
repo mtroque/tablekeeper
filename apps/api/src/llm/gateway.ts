@@ -101,6 +101,14 @@ export function createGateway({ config, provider, quotas, logger }: GatewayDeps)
       };
       try {
         return await work(model);
+      } catch (error) {
+        // Timeouts still count against the request quota because earlier calls may have spent tokens.
+        if (!timedOutNow()) {
+          await quotas.refund(subject).catch((err: unknown) => {
+            logger.error({ err, purpose }, 'llm request refund failed');
+          });
+        }
+        throw error;
       } finally {
         clearTimeout(timer);
       }

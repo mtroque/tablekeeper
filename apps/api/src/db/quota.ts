@@ -34,6 +34,10 @@ export async function consumeRequest(
   return ConsumeResultSchema.parse(row?.result ?? null);
 }
 
+export async function refundRequest(db: Db, subject: Subject): Promise<void> {
+  await db`select public.llm_refund_request(${subject.type}, ${subject.key})`;
+}
+
 export async function recordTokens(
   db: Db,
   subject: Subject,
