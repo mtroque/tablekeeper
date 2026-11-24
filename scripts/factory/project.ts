@@ -42,7 +42,8 @@ const ProjectItemsSchema = z.object({
 export type ProjectOrderResult = {
   projectId: string | null;
   order: number[];
-  usedFallbackToken?: boolean;
+  /** Read with `FACTORY_PROJECT_TOKEN` rather than the App token. */
+  usedProjectToken?: boolean;
 };
 
 type GraphqlExecutor = (query: string, token?: string) => string;
@@ -70,6 +71,8 @@ function defaultGraphqlExecutor(
       {
         cwd: ROOT,
         encoding: 'utf8',
+        // gh's own error goes into the thrown error, not straight to the log.
+        stdio: ['ignore', 'pipe', 'pipe'],
         env: token ? { ...process.env, GH_TOKEN: token } : process.env,
       },
     );
@@ -101,9 +104,10 @@ function parseProjectOrderResponse(raw: string): { projectId: string | null; ord
 }
 
 /**
- * Reads the issue numbers in the "Factory" GitHub Project in manual drag order (`POSITION`),
- * falling back to `projectToken` (`FACTORY_PROJECT_TOKEN`) when the App token cannot read a
- * personal-account Project.
+ * Reads the issue numbers in the "Factory" GitHub Project in manual drag order (`POSITION`).
+ * With `projectToken` (`FACTORY_PROJECT_TOKEN`) set, it reads with that first: a GitHub App
+ * can't read a Project owned by a personal account, so trying the App token first only logged
+ * a misleading error on every run. The App token is the fallback.
  */
 export function readFactoryProjectOrder(
   owner: string,
@@ -144,34 +148,28 @@ export function readFactoryProjectOrder(
   const primaryToken = opts?.primaryToken ?? process.env.GH_TOKEN;
   const projectToken = opts?.projectToken ?? process.env.FACTORY_PROJECT_TOKEN;
 
-  let primaryError: unknown = null;
-  try {
-    const result = parseProjectOrderResponse(execGraphql(query, primaryToken));
-    if (result.projectId !== null) return result;
-  } catch (error) {
-    primaryError = error;
-  }
-
-  if (projectToken) {
+  const attempts: { token: string | undefined; label: string; isProjectToken: boolean }[] = [
+    ...(projectToken
+      ? [{ token: projectToken, label: 'FACTORY_PROJECT_TOKEN', isProjectToken: true }]
+      : []),
+    { token: primaryToken, label: 'the App token', isProjectToken: false },
+  ];
+  const errors: string[] = [];
+  for (const attempt of attempts) {
     try {
-      const fallback = parseProjectOrderResponse(execGraphql(query, projectToken));
-      if (fallback.projectId !== null) {
-        return { ...fallback, usedFallbackToken: true };
+      const result = parseProjectOrderResponse(execGraphql(query, attempt.token));
+      if (result.projectId !== null) {
+        return attempt.isProjectToken ? { ...result, usedProjectToken: true } : result;
       }
+      errors.push(`${attempt.label}: Project not found`);
     } catch (error) {
-      throw new Error(
-        `Failed to read Factory Project #${projectNumber} with both primary token and FACTORY_PROJECT_TOKEN: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      errors.push(`${attempt.label}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  if (primaryError) {
-    throw new Error(
-      `Failed to read Factory Project #${projectNumber} with primary token (and FACTORY_PROJECT_TOKEN is not set): ${primaryError instanceof Error ? primaryError.message : 'unknown error'}`,
-    );
-  }
-
-  return { projectId: null, order: [] };
+  const hint = projectToken ? '' : ' (FACTORY_PROJECT_TOKEN is not set)';
+  if (errors.every((e) => e.endsWith('Project not found'))) return { projectId: null, order: [] };
+  throw new Error(`Failed to read Factory Project #${projectNumber}${hint}: ${errors.join('; ')}`);
 }
 
 function findSpecPath(sliceId: string): string | null {

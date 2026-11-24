@@ -2,6 +2,7 @@ import type { Db } from '../db/client';
 import {
   consumeRequest,
   recordTokens,
+  refundRequest,
   requestsToday,
   type ConsumeResult,
   type Subject,
@@ -15,6 +16,7 @@ export type QuotaLimits = { subject: number; globalRequests: number; globalToken
 export interface QuotaStore {
   /** Counts one request unless a limit is reached; says which one stopped it. */
   consume(subject: Subject, limits: QuotaLimits): Promise<ConsumeResult>;
+  refund(subject: Subject): Promise<void>;
   recordTokens(subject: Subject, usage: Usage): Promise<void>;
   used(subject: Subject): Promise<number>;
 }
@@ -22,6 +24,7 @@ export interface QuotaStore {
 export function createDbQuotaStore(service: Db): QuotaStore {
   return {
     consume: (subject, limits) => consumeRequest(service, subject, limits),
+    refund: (subject) => refundRequest(service, subject),
     recordTokens: (subject, usage) => recordTokens(service, subject, usage),
     used: (subject) => requestsToday(service, subject),
   };

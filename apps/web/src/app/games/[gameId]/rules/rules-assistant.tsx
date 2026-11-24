@@ -96,13 +96,13 @@ export function RulesAssistant({ gameId, gameName, rulebookUrl, starters }: Prop
           );
         },
         onError: (error) => {
+          void queryClient.invalidateQueries({ queryKey: ['quota'] });
           const failure = describeAskFailure(error, auth.status === 'signed-in');
           if (failure.kind === 'blocked') {
             // The question stays in the box so it can be asked once the block lifts.
             setTurns((all) => all.filter((turn) => turn.id !== id));
             setDraft(question);
             setAskBlocker(failure.blocker);
-            void queryClient.invalidateQueries({ queryKey: ['quota'] });
             return;
           }
           setTurns((all) =>
