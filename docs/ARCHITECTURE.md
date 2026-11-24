@@ -204,8 +204,9 @@ Every model call goes through `gateway.run({ purpose, subject, limits }, (model)
 3. **Per-subject daily quota:** user id (`LLM_USER_DAILY_REQUESTS`) or salted SHA-256 of `req.ip` (`LLM_GUEST_DAILY_REQUESTS`). The check-and-increment is one SQL function (`llm_consume_request`, locking the global row first, D-034), so concurrent requests can't overshoot.
 4. **Burst limit:** `express-rate-limit` on all `/v1` routes, counted in `rate_limit_hits` (`rate_limit_hit`, one statement per hit) so every serverless instance shares one window per client; keys are salted IP hashes. `RATE_LIMIT_STORE=memory`, the default outside production, counts in the process instead (D-073).
 5. **Usage recorded** in `llm_usage` after every call, including failures (`llm_record_tokens`).
+6. **Request refund on failure:** if `work` fails on our side (provider error or pre-model error, not timeouts), `gateway.run` calls `llm_refund_request` (locking `global` first, clamping at 0) so failed asks don't spend the user's daily quota. Timeouts still count against the request quota because earlier calls in the run may have spent tokens.
 
-The SQL functions (these two, `rate_limit_hit`, `rate_limit_undo`, `search_rulebook_sections` and `replace_rulebook`) are `security definer`, executable by the service connection only.
+The SQL functions (`llm_consume_request`, `llm_refund_request`, `llm_record_tokens`, `rate_limit_hit`, `rate_limit_undo`, `search_rulebook_sections` and `replace_rulebook`) are `security definer`, executable by the service connection only.
 
 Outside the app, the Anthropic account has a monthly spend limit. Providers: `AnthropicProvider` (model from `LLM_MODEL_RULES`) and `FakeProvider` (scripted, used by all tests and selectable with `LLM_PROVIDER=fake`).
 
