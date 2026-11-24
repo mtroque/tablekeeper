@@ -6,6 +6,7 @@
 
 ## Owns
 - `db/migrations/`
+- `apps/api/src/app.ts`
 - `apps/api/src/db/types.ts`
 - `apps/api/src/db/quota.ts`
 - `apps/api/src/llm/quota-store.ts`
@@ -28,11 +29,11 @@
 No new screen states beyond `docs/UX.md` → Screen states.
 
 ## Acceptance criteria
-- [ ] `llm_refund_request` atomically decrements both `global` and subject `requests` for the current UTC day, locking `global` first and clamping at 0.
-- [ ] `gateway.run` refunds the consumed request on provider errors (502) and pre-model failures, does not refund on `QUOTA_EXCEEDED` / `LLM_DISABLED` / timeout (504), and continues recording tokens on all model calls.
-- [ ] `POST /v1/games/:gameId/rules/ask` returning 502 leaves `GET /v1/me/quota` unchanged.
-- [ ] In the web rules assistant, after a failed ask, the quota pill refetches and displays the server's count.
-- [ ] `pnpm verify --full` passes.
+- [x] `llm_refund_request` atomically decrements both `global` and subject `requests` for the current UTC day, locking `global` first and clamping at 0.
+- [x] `gateway.run` refunds the consumed request on provider errors (502) and pre-model failures, does not refund on `QUOTA_EXCEEDED` / `LLM_DISABLED` / timeout (504), and continues recording tokens on all model calls.
+- [x] `POST /v1/games/:gameId/rules/ask` returning 502 leaves `GET /v1/me/quota` unchanged.
+- [x] In the web rules assistant, after a failed ask, the quota pill refetches and displays the server's count.
+- [x] `pnpm verify --full` passes.
 
 ## Tests
 - `apps/api/src/llm/gateway.test.ts`: provider throw leaves `used` unchanged; success counts 1; `QUOTA_EXCEEDED` leaves `used` unchanged; timeout (504) still counts 1.
