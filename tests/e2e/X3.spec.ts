@@ -47,9 +47,6 @@ test('a signed-in user’s first request creates their profile, and saving a pla
   // Save a play and a campaign end to end through the Dorfromantik scoresheet.
   await page.goto('/games/dorfromantik/score');
   await expect(page.getByRole('heading', { name: 'Game 1' })).toBeVisible();
-  await page
-    .getByRole('button', { name: 'Forest: 0. Hold to type a number.', exact: true })
-    .press('Enter');
   const input = page.getByRole('textbox', { name: 'Forest', exact: true });
   await input.fill('24');
   await input.press('Enter');

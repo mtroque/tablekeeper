@@ -17,7 +17,7 @@ async function review(page: Page): Promise<void> {
 }
 
 const count = (page: Page, value: number) =>
-  page.getByRole('button', { name: new RegExp(`^Chits of ${value}: \\d+\\.`) });
+  page.getByRole('textbox', { name: `Chits of ${value}`, exact: true });
 
 test('the chits and special tile beside the box board are read into the draft', async ({
   page,
@@ -26,10 +26,10 @@ test('the chits and special tile beside the box board are read into the draft', 
   await expect(page.getByText('praline chits are touching', { exact: false })).toHaveCount(0);
   await review(page);
 
-  await expect(count(page, 1)).toHaveAccessibleName(/^Chits of 1: 6\./);
-  await expect(count(page, 5)).toHaveAccessibleName(/^Chits of 5: 0\./);
-  await expect(count(page, 10)).toHaveAccessibleName(/^Chits of 10: 2\./);
-  await expect(count(page, 20)).toHaveAccessibleName(/^Chits of 20: 0\./);
+  await expect(count(page, 1)).toHaveValue('6');
+  await expect(count(page, 5)).toHaveValue('0');
+  await expect(count(page, 10)).toHaveValue('2');
+  await expect(count(page, 20)).toHaveValue('0');
   await expect(page.getByTestId('pralines-held')).toHaveText('26 pralines');
   await expect(page.getByRole('switch', { name: /Special Tile/ })).toBeChecked();
   // 26 pralines + 7 for the special tile - 2 per empty space (one space is outlined to check).

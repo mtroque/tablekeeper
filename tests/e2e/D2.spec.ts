@@ -22,9 +22,6 @@ test.afterAll(async () => {
 });
 
 async function setCount(page: Page, label: string, value: number): Promise<void> {
-  await page
-    .getByRole('button', { name: `${label}: 0. Hold to type a number.`, exact: true })
-    .press('Enter');
   const input = page.getByRole('textbox', { name: label, exact: true });
   await input.fill(String(value));
   await input.press('Enter');

@@ -102,7 +102,5 @@ test('side switch: an empty board switches at once, a filled one offers only Cle
   await expect(page.locator('[data-cell]')).toHaveCount(23);
   await expect(page.locator('[data-cell] circle')).toHaveCount(0);
   // Cards don't depend on the side, so they stay.
-  await expect(
-    page.getByRole('button', { name: 'Animal Card 1: 1. Hold to type a number.' }),
-  ).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Animal Card 1', exact: true })).toHaveValue('1');
 });
