@@ -430,6 +430,8 @@ export const DecisionEntrySchema = z.object({
   mode: MergeModeSchema,
   groups: z.array(z.string()),
   at: z.string(),
+  /** A `merge` that asked the builder's session to rebase on `main` instead of merging. */
+  rebase: z.boolean().optional(),
 });
 export type DecisionEntry = z.infer<typeof DecisionEntrySchema>;
 
@@ -446,7 +448,10 @@ export function parseDecisionHistory(body: string): DecisionEntry[] {
   }
 }
 
-/** Appends an entry unless the latest one already has the same commit, decision and mode. */
+/** Rebase requests per PR before a PR still behind `main` escalates instead. */
+export const MAX_REBASE_REQUESTS = 2;
+
+/** Appends an entry unless the latest one already has the same commit, decision, mode and rebase. */
 export function appendDecision(
   history: readonly DecisionEntry[],
   entry: DecisionEntry,
@@ -456,7 +461,8 @@ export function appendDecision(
     last &&
     last.sha === entry.sha &&
     last.decision === entry.decision &&
-    last.mode === entry.mode
+    last.mode === entry.mode &&
+    Boolean(last.rebase) === Boolean(entry.rebase)
   ) {
     return [...history];
   }
@@ -474,6 +480,8 @@ export function formatDecisionComment(opts: {
   decision: MergeDecision;
   history: readonly DecisionEntry[];
   mention?: string | undefined;
+  /** What this run did beyond the decision, such as a rebase request. */
+  note?: string | undefined;
 }): string {
   const { decision } = opts;
   const lines = [
@@ -488,7 +496,8 @@ export function formatDecisionComment(opts: {
   } else {
     lines.push(...decision.reasons.map((r) => `- **${r.outcome}** (\`${r.rule}\`): ${r.detail}`));
   }
-  if (opts.mention && decision.mode !== 'shadow' && decision.decision === 'escalate') {
+  if (opts.note) lines.push('', opts.note);
+  if (opts.mention && decision.mode !== 'shadow') {
     lines.push('', `@${opts.mention} this PR needs your call.`);
   }
   lines.push('', `<!-- merge-record ${JSON.stringify({ history: opts.history })} -->`);

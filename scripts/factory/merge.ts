@@ -18,8 +18,10 @@ import {
   decide,
   formatDecisionComment,
   loadMergePolicy,
+  MAX_REBASE_REQUESTS,
   NEEDS_HUMAN_LABEL,
   parseDecisionHistory,
+  type DecisionEntry,
   type MergeDecision,
 } from './merge-policy';
 import { claudeProjectDir, decryptSessionDir, encryptSessionDir } from './session';
@@ -30,7 +32,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 export const SHADOW_LABELS = { merge: 'shadow:merge', escalate: 'shadow:escalate' } as const;
 
 export type MergeAction =
-  | { kind: 'comment'; mention: boolean }
+  | { kind: 'comment'; mention: boolean; note?: string; rebase?: boolean }
   | { kind: 'label'; add: string; remove: string[] }
   | { kind: 'merge' }
   | { kind: 'rebase' };
@@ -38,8 +40,13 @@ export type MergeAction =
 /**
  * What to do with a decision. `wait` does nothing (a later CI or Review completion runs this
  * again). Shadow mode records; live mode merges (rebasing first when behind `main`) or escalates.
+ * A rebase is requested once per head commit, is recorded in the decision comment, and after
+ * `MAX_REBASE_REQUESTS` the PR escalates instead of resuming the builder again.
  */
-export function planActions(decision: MergeDecision, opts: { behind: boolean }): MergeAction[] {
+export function planActions(
+  decision: MergeDecision,
+  opts: { behind: boolean; headSha?: string; history?: readonly DecisionEntry[] },
+): MergeAction[] {
   if (decision.decision === 'wait') return [];
   if (decision.mode === 'shadow') {
     const other = decision.decision === 'merge' ? SHADOW_LABELS.escalate : SHADOW_LABELS.merge;
@@ -54,7 +61,30 @@ export function planActions(decision: MergeDecision, opts: { behind: boolean }):
       { kind: 'label', add: NEEDS_HUMAN_LABEL, remove: [] },
     ];
   }
-  if (opts.behind) return [{ kind: 'rebase' }];
+  if (opts.behind) {
+    const requests = (opts.history ?? []).filter((e) => e.rebase === true);
+    // Both CI and Review completing on one commit run this twice: ask once per commit.
+    if (requests.some((e) => e.sha === opts.headSha)) return [];
+    if (requests.length >= MAX_REBASE_REQUESTS) {
+      return [
+        {
+          kind: 'comment',
+          mention: true,
+          note: `Still behind \`main\` after ${String(requests.length)} rebase requests to the builder session: rebase it by hand.`,
+        },
+        { kind: 'label', add: NEEDS_HUMAN_LABEL, remove: [] },
+      ];
+    }
+    return [
+      {
+        kind: 'comment',
+        mention: false,
+        rebase: true,
+        note: `Behind \`main\`: asked the builder session to rebase (request ${String(requests.length + 1)} of ${String(MAX_REBASE_REQUESTS)}). Its push reruns the checks, and this runs again.`,
+      },
+      { kind: 'rebase' },
+    ];
+  }
   return [{ kind: 'comment', mention: false }, { kind: 'merge' }];
 }
 
@@ -71,30 +101,39 @@ const CommentSchema = z.array(
   z.object({ id: z.number(), body: z.string(), user: z.object({ login: z.string() }).nullable() }),
 );
 
-function upsertDecisionComment(opts: {
-  repo: string;
-  prNumber: number;
-  headSha: string;
-  decision: MergeDecision;
-  mention: string | undefined;
-}): void {
+interface DecisionComment {
+  id: number;
+  history: DecisionEntry[];
+}
+
+/** The PR's decision comment and its history, or `null` before the first decision. */
+function readDecisionComment(repo: string, prNumber: number): DecisionComment | null {
   // `--slurp` wraps each page in an outer array.
   const comments = z
     .array(CommentSchema)
     .parse(
       JSON.parse(
-        gh([
-          'api',
-          '--paginate',
-          '--slurp',
-          `repos/${opts.repo}/issues/${String(opts.prNumber)}/comments`,
-        ]),
+        gh(['api', '--paginate', '--slurp', `repos/${repo}/issues/${String(prNumber)}/comments`]),
       ),
     )
     .flat();
   const existing = comments.filter((c) => c.body.includes(DECISION_MARKER)).at(-1);
+  return existing ? { id: existing.id, history: parseDecisionHistory(existing.body) } : null;
+}
+
+function upsertDecisionComment(opts: {
+  repo: string;
+  prNumber: number;
+  headSha: string;
+  decision: MergeDecision;
+  existing: DecisionComment | null;
+  mention: string | undefined;
+  note: string | undefined;
+  rebase: boolean;
+}): void {
+  const { existing } = opts;
   const final = opts.decision.decision === 'wait' ? null : opts.decision.decision;
-  const history = parseDecisionHistory(existing?.body ?? '');
+  const history = existing?.history ?? [];
   const nextHistory = final
     ? appendDecision(history, {
         sha: opts.headSha,
@@ -102,12 +141,14 @@ function upsertDecisionComment(opts: {
         mode: opts.decision.mode,
         groups: opts.decision.groups,
         at: new Date().toISOString(),
+        ...(opts.rebase ? { rebase: true } : {}),
       })
     : history;
   const body = formatDecisionComment({
     decision: opts.decision,
     history: nextHistory,
     mention: opts.mention,
+    note: opts.note,
   });
   if (existing) {
     gh([
@@ -265,7 +306,12 @@ function main(): void {
   });
   const revertRate = readRevertRate(policy.revertWindow, ROOT);
   const decision = decide(policy, state.facts, state.checks, review, revertRate);
-  const actions = planActions(decision, { behind: state.behind });
+  const existing = readDecisionComment(repo, prNumber);
+  const actions = planActions(decision, {
+    behind: state.behind,
+    headSha: state.facts.headSha,
+    history: existing?.history ?? [],
+  });
 
   console.log(
     JSON.stringify({ pr: prNumber, sha: state.facts.headSha, ...decision, actions }, null, 2),
@@ -284,7 +330,10 @@ function main(): void {
           prNumber,
           headSha: state.facts.headSha,
           decision,
+          existing,
           mention: action.mention ? owner : undefined,
+          note: action.note,
+          rebase: action.rebase === true,
         });
         break;
       case 'label':
