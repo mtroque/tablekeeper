@@ -8,7 +8,7 @@
 - `apps/web/src/components/counter.tsx` and its tests (`apps/web/src/components/counter.test.ts`)
 - `docs/UX.md` → Key interactions → Review / editor (the counter and running total lines) and → Components (`Counter`)
 - `tests/e2e/S6.spec.ts`
-- The lines in older e2e specs that reach a counter's value through the old "Hold to type a number." button: `tests/e2e/D1.spec.ts`, `tests/e2e/D2.spec.ts`, `tests/e2e/H1.spec.ts`, `tests/e2e/S1.spec.ts`, `tests/e2e/X3.spec.ts` (only those lines; nothing else in them changes)
+- The lines in older e2e specs that reach a counter's value through the old "Hold to type a number." button or its "Label: value." name: `tests/e2e/D1.spec.ts`, `tests/e2e/D2.spec.ts`, `tests/e2e/H1.spec.ts`, `tests/e2e/P3.spec.ts`, `tests/e2e/S1.spec.ts`, `tests/e2e/X3.spec.ts` (only those lines; nothing else in them changes)
 
 ## Scope
 - The value between − and + is always a visible number field (`<input type="text" inputMode="numeric">`), labeled by the counter's visible label (a `<label>`, so its accessible name is the label, e.g. "Forest"). The long press and its "Hold to type a number." button go away. Tapping the label also focuses the field.
