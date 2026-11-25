@@ -1,6 +1,6 @@
 # S6: Type a number in any counter
 
-**Status:** 🟨 · **Depends on:** S1
+**Status:** ✅ · **Depends on:** S1
 
 **Goal:** Players can type a counter's value directly as well as stepping it with − / +, so large numbers (Dorfromantik task points, Harmonies animal cards, Patchwork praline chits) take one entry instead of many taps.
 
@@ -25,13 +25,13 @@
 - Counter field: idle (value, 1px `--line` border), focused (accent border, value selected), uncertain (dashed `--warn` outline, also when focused), at `min` (− disabled), at `max` (+ disabled).
 
 ## Acceptance criteria
-- [ ] Tapping a counter's value focuses a field with the numeric keyboard (`inputMode="numeric"`) and the value selected; typing "37" then Enter, or tapping away, sets 37.
-- [ ] The running total updates as a valid number is typed (decided above).
-- [ ] − / + still step by 1 and respect `min` / `max`.
-- [ ] Clearing the field and leaving it restores the previous value; "abc" can't be entered; Escape restores the value from before editing.
-- [ ] Typing over `max` sets `max`; typing under a positive `min` and leaving sets `min`; a minus sign is only accepted when `min < 0`.
-- [ ] The `uncertain` style stays on the field, and the field's accessible name is the counter's label.
-- [ ] Works the same in every game that uses `Counter`: one unit test file for the component, one e2e on a Dorfromantik scoresheet row, and the existing D1, D2, H1, S1, X3, P1, P2, P3, H2 e2e tests pass with the new field.
+- [x] Tapping a counter's value focuses a field with the numeric keyboard (`inputMode="numeric"`) and the value selected; typing "37" then Enter, or tapping away, sets 37. (S6.spec.ts: `inputmode` attribute, selection 0 to 1 after a click, 37 by Enter, 12 by tapping another field)
+- [x] The running total updates as a valid number is typed (decided above). (S6.spec.ts: total reads 3 then 37 while typing)
+- [x] − / + still step by 1 and respect `min` / `max`. (S6.spec.ts: + disabled at 999, − to 998, + to 999, − disabled at 0; counter.test.ts disabled markup; P1, P3, D2, H2 e2e)
+- [x] Clearing the field and leaving it restores the previous value; "abc" can't be entered; Escape restores the value from before editing. (S6.spec.ts; counter.test.ts sanitize and commit cases)
+- [x] Typing over `max` sets `max`; typing under a positive `min` and leaving sets `min`; a minus sign is only accepted when `min < 0`. (S6.spec.ts: 1000 becomes 999; counter.test.ts covers under `min` and the minus sign, since no game counter has a positive or negative `min`)
+- [x] The `uncertain` style stays on the field, and the field's accessible name is the counter's label. (counter.test.ts markup; P3.spec.ts finds the outlined field by its label; `pnpm shot review-patchwork-low-confidence` shows the dashed outline)
+- [x] Works the same in every game that uses `Counter`: one unit test file for the component, one e2e on a Dorfromantik scoresheet row, and the existing D1, D2, H1, S1, X3, P1, P2, P3, H2 e2e tests pass with the new field. (`pnpm verify --full`: test and test:e2e pass)
 
 ## Tests
 - `apps/web/src/components/counter.test.ts`: the pure input rules (sanitize, live value, commit value) and the rendered markup (`renderToStaticMarkup`, as `server-status.test.ts` does).
@@ -49,5 +49,8 @@ None left (commit timing resolved under Scope).
 - Owns widened to the counter lines of the older e2e specs, since the old accessible name ("Forest: 0. Hold to type a number.") is gone; no other slice running now owns those files.
 
 ## Corrections
+| 2026-11-25 | `spec-owns-missed-dependents` | S6 stub spec | `## Owns` listed only `counter.tsx`, but six older e2e specs reach a counter's value by the long-press button's accessible name, so the change broke files the slice didn't own | Owns widened to those lines before building; no running slice owned them | self | open |
+| 2026-11-25 | `incomplete-usage-search` | S6, `tests/e2e/P3.spec.ts` | A search for the literal "Hold to type" missed P3, which builds the old name with a regex (`Chits of 1: \d+\.`); found only when P3 failed in the e2e run | Fixed P3; ran every e2e spec that touches a counter, not just the ones the search found | self | open |
+| 2026-11-25 | `commit-msg-recovery` | S6 | Commit hook rejected scope `e2e`; used the listed `web` scope for the same planned commit | Hook caught it; message kept whole | self | promoted: commitlint (`require-scope-except-merge`, `docs` scope, `header-max-length`) |
 
 ## Shared change requests
