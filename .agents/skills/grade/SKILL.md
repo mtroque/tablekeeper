@@ -4,7 +4,7 @@ description: Grade agent session transcripts for silent failures and propose tra
 argument-hint: [--since YYYY-MM-DD] [--until YYYY-MM-DD]
 disable-model-invocation: true
 ---
-Grade this repo's agent sessions for the dates given with this command (default: the last 7 days), as described in `docs/AUTOMATION.md` → Grading.
+Grade this repo's agent sessions for the dates given with this command (default: the last full ISO week, Monday to Sunday), as described in `docs/AUTOMATION.md` → Grading.
 
 1. **Run** `pnpm grade` with the dates given (`--since`, `--until`). Add `--no-judge` to skip the model and keep it to the deterministic classifier. It reads local Claude Code and Antigravity transcripts for this repo and its worktrees, writes condensed traces to `.scratch/grade/`, and prints the report.
 2. **Show the report** to the user: the failures by class, the proposed `trace` rows, and the judged sample. Point out tags marked (new) and the sessions the judge failed.

@@ -4,11 +4,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { isWeeklyReportTitle, parseGradeMetrics, traceColumns } from '../metrics/grading';
+import { isoWeek } from '../metrics/reverts';
 
 import { parseAntigravityTranscript } from './antigravity';
 import { CLASSES, classifyFailure, gradeSession } from './classify';
 import { parseClaudeTranscript } from './claude';
-import { claudeSlug, parseRange } from './collect';
+import { claudeSlug, lastFullWeek, parseRange } from './collect';
 import { condenseSession } from './condense';
 import { parseGraderConfig } from './config';
 import { buildJudgePrompt, correctionsIndex, parseJudgeOutput, sanitizeNote } from './judge';
@@ -414,5 +415,22 @@ describe('config and collect helpers', () => {
     const range = parseRange('2026-10-23', '2026-11-16');
     expect(range.until.toISOString()).toBe('2026-11-16T23:59:59.999Z');
     expect(() => parseRange('2026-11-16', '2026-10-23')).toThrow(/Invalid date range/);
+  });
+
+  it('defaults to the last full ISO week, so the weekly title names the graded week', () => {
+    // Tuesday 2026-11-24 (W48), when the scheduled run fires: grade W47.
+    const tuesday = lastFullWeek(new Date('2026-11-24T07:00:00Z'));
+    expect(tuesday).toEqual({ since: '2026-11-16', until: '2026-11-22' });
+    expect(isoWeek(tuesday.since)).toBe('2026-W47');
+    expect(isoWeek(tuesday.until)).toBe('2026-W47');
+    // On a Sunday or Monday the current week is still the one after.
+    expect(lastFullWeek(new Date('2026-11-22T23:00:00Z'))).toEqual({
+      since: '2026-11-09',
+      until: '2026-11-15',
+    });
+    expect(lastFullWeek(new Date('2026-11-23T00:30:00Z'))).toEqual({
+      since: '2026-11-16',
+      until: '2026-11-22',
+    });
   });
 });
