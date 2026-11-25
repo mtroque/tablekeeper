@@ -67,5 +67,6 @@ None left. Resolved from the docs and the code:
 | 2026-11-19 | `report-key-collision` | W16, PR #33, `scripts/grade.ts` | The report issue was keyed by the ISO week of `--until`, so a manual run over a custom range overwrote that week's report and the metrics block `pnpm metrics` reads | Custom ranges get their own dated title; `pnpm metrics` reads only weekly titles | review | open |
 | 2026-11-19 | `unsanitized-model-output` | W16, PR #33, `scripts/lib/traces/judge.ts` | Judge notes for a public issue were only stripped of quotes and code, so a path or secret-like string could pass | Paths, file names and long token-like runs are replaced too; test added | review | open |
 | 2026-11-19 | `spec-owns-stale-path` | W16, PR #33 | `## Owns` named `scripts/grade-sessions.ts`, but the entry point was built as `scripts/grade.ts`, so ownership didn't match the code | Owns updated to `scripts/grade.ts` | review | open |
+| 2026-11-25 | `report-key-collision` | W16, PR #33, `scripts/grade.ts` | The default window was the 7 days ending on the run day, so the Tuesday run graded mostly the previous week but titled the issue with the current ISO week, shifting `pnpm metrics` rows by a week | The default window is the last full ISO week (`lastFullWeek`); test added | review | open |
 
 ## Shared change requests

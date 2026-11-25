@@ -49,6 +49,19 @@ export function parseRange(since: string, until: string): DateRange {
   return { since: s, until: u };
 }
 
+/**
+ * The last full ISO week (Monday to Sunday) before `now`, as YYYY-MM-DD days. The default grading
+ * window: the weekly report is titled with this week, so its days must all fall in it.
+ */
+export function lastFullWeek(now: Date): { since: string; until: string } {
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const weekday = new Date(today).getUTCDay() || 7;
+  const sunday = today - weekday * 86_400_000;
+  const monday = sunday - 6 * 86_400_000;
+  const day = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
+  return { since: day(monday), until: day(sunday) };
+}
+
 export function inRange(session: Session, range: DateRange): boolean {
   if (session.startedAt === null) return false;
   const start = new Date(session.startedAt);

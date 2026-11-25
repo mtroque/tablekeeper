@@ -16,6 +16,7 @@ import { isoWeek } from './lib/metrics/reverts';
 import { gradeSession } from './lib/traces/classify';
 import {
   dedupe,
+  lastFullWeek,
   parseRange,
   readLocalSessions,
   readSessionDir,
@@ -243,10 +244,14 @@ function main(): void {
     console.log(USAGE);
     return;
   }
-  const until = flag(argv, '--until') ?? day(new Date());
+  // Default: the last full ISO week, so the weekly issue's title names the week it graded.
+  const lastWeek = lastFullWeek(new Date());
+  const until = flag(argv, '--until') ?? lastWeek.until;
   const since =
     flag(argv, '--since') ??
-    day(new Date(new Date(`${until}T00:00:00Z`).getTime() - 6 * 86_400_000));
+    (flag(argv, '--until') === null
+      ? lastWeek.since
+      : day(new Date(new Date(`${until}T00:00:00Z`).getTime() - 6 * 86_400_000)));
   const source = flag(argv, '--source') ?? 'local';
   if (source !== 'local' && source !== 'factory') {
     console.error(USAGE);
@@ -254,7 +259,7 @@ function main(): void {
   }
   const range = parseRange(since, until);
   const week = isoWeek(range.until);
-  // Only the default 7-day window owns the week's issue, which `pnpm metrics` reads; a custom
+  // Only the default window (last full week) owns the week's issue, which `pnpm metrics` reads; a custom
   // range gets its own dated title so it never overwrites the weekly report.
   const customRange = flag(argv, '--since') !== null || flag(argv, '--until') !== null;
   const title = customRange ? `Grading report ${since} to ${until}` : `Grading report ${week}`;

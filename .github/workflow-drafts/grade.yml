@@ -11,11 +11,11 @@ on:
   workflow_dispatch:
     inputs:
       since:
-        description: 'First day to grade (YYYY-MM-DD, default 6 days before until)'
+        description: 'First day to grade (YYYY-MM-DD, default: Monday of last week, or 6 days before until)'
         required: false
         type: string
       until:
-        description: 'Last day to grade (YYYY-MM-DD, default today)'
+        description: 'Last day to grade (YYYY-MM-DD, default: last Sunday)'
         required: false
         type: string
 
