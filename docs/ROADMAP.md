@@ -60,6 +60,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W27 | Factory first-run fixes: output to files, paused slices keep their issue, verdict follows the gate, CI preflight | W24 | ✅ |
 | W28 | Factory transcripts and review memory: per-round sessions, reviewer transcripts, earlier rounds in review, actionlint | W27 | ⬜ |
 | W29 | Merge authority live: the draft workflow moved, 20 PRs in shadow, thresholds and the first `auto` group from the record | W19 | ⬜ |
+| U1 | Who goes first: each player taps where they sit, the screen splits into a wedge per player, a roulette picks one | S0 | ⬜ |
 
 ## Next
 
@@ -74,6 +75,7 @@ Product slices can run alongside; they get the new checks for free.
 
 ## Later
 
+- **Table tools (U slices).** Utilities for any game, not tied to a game module. U1 (who goes first) is the first; later ones could be a turn timer or a dice roller.
 - Azul chocolate box and foundry line detection (A2): deferred, see `docs/slices/A2-azul-detection.md`.
 - **My Shelf.** Signed-in users pick which supported games they own, and the home page shows only those (with a way to see all supported games). Guests still see everything.
 - Ask the rules assistant about a saved score breakdown ("why didn't this building score?").
