@@ -370,7 +370,37 @@ describe('planActions', () => {
       { kind: 'comment', mention: false },
       { kind: 'merge' },
     ]);
-    expect(planActions(merge, { behind: true })).toEqual([{ kind: 'rebase' }]);
+    const rebase = planActions(merge, { behind: true, headSha: 'h1', history: [] });
+    expect(rebase).toMatchObject([
+      { kind: 'comment', mention: false, rebase: true },
+      { kind: 'rebase' },
+    ]);
+    expect(rebase[0]?.kind === 'comment' && rebase[0].note).toContain('1 of 2');
+  });
+
+  it('asks for a rebase once per commit and escalates after the cap', () => {
+    const asked = (sha: string) => ({
+      sha,
+      decision: 'merge' as const,
+      mode: 'auto' as const,
+      groups: ['docs'],
+      at: '2026-11-25T00:00:00Z',
+      rebase: true,
+    });
+    expect(planActions(merge, { behind: true, headSha: 'h1', history: [asked('h1')] })).toEqual([]);
+    expect(
+      planActions(merge, { behind: true, headSha: 'h2', history: [asked('h1')] }),
+    ).toMatchObject([{ kind: 'comment', rebase: true }, { kind: 'rebase' }]);
+    const capped = planActions(merge, {
+      behind: true,
+      headSha: 'h3',
+      history: [asked('h1'), asked('h2')],
+    });
+    expect(capped).toMatchObject([
+      { kind: 'comment', mention: true },
+      { kind: 'label', add: 'needs-human', remove: [] },
+    ]);
+    expect(capped[0]?.kind === 'comment' && capped[0].note).toContain('rebase it by hand');
   });
 
   it('only records in shadow mode', () => {
@@ -413,7 +443,17 @@ describe('decision record', () => {
     expect(appendDecision(history, { ...entry, sha: 'b2' })).toHaveLength(2);
   });
 
-  it('mentions the owner only on a live escalation', () => {
+  it('records a rebase request as its own entry and shows the note', () => {
+    const live = { ...entry, mode: 'auto' as const };
+    const history = appendDecision([live], { ...live, rebase: true });
+    expect(history).toHaveLength(2);
+    const d = decide(policyWith({ docs: 'auto' }), pr(DOCS), GREEN, CLEAN, 0);
+    const body = formatDecisionComment({ decision: d, history, note: 'Behind `main`.' });
+    expect(body).toContain('Behind `main`.');
+    expect(parseDecisionHistory(body)[1]).toMatchObject({ rebase: true });
+  });
+
+  it('mentions the owner on a live decision, never in shadow mode', () => {
     const d = decide(policyWith({}, 'auto'), pr(['AGENTS.md']), GREEN, CLEAN, 0);
     expect(formatDecisionComment({ decision: d, history: [], mention: 'owner' })).toContain(
       '@owner',
