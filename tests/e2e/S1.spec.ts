@@ -185,14 +185,12 @@ test('square and hex editors report taps as cell refs and work by keyboard', asy
 test('signed in: the campaign page saves through the account', async ({ page }) => {
   await signInWithSession(page, await signTestSession(user));
   await page.goto('/games/_example/campaign');
-  const value = page.getByRole('button', { name: /^Games Played: \d+\./ });
-  await expect(value).toBeVisible();
-  const before = Number(/: (\d+)\./.exec((await value.getAttribute('aria-label')) ?? '')?.[1]);
+  const value = page.getByRole('textbox', { name: 'Games Played', exact: true });
+  await expect(value).toHaveValue(/^\d+$/);
+  const before = Number(await value.inputValue());
   await page.getByRole('button', { name: 'Increase Games Played' }).click();
   await page.getByRole('button', { name: 'Save Campaign' }).click();
   await expect(page.getByRole('button', { name: 'Save Campaign' })).toBeDisabled();
   await page.reload();
-  await expect(
-    page.getByRole('button', { name: `Games Played: ${before + 1}. Hold to type a number.` }),
-  ).toBeVisible();
+  await expect(value).toHaveValue(String(before + 1));
 });

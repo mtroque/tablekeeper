@@ -23,11 +23,8 @@ test.afterAll(async () => {
   await deleteTestUsers([user]);
 });
 
-/** Types a number into a counter (Enter on the value switches it to typing). */
+/** Types a number into a counter's field. */
 async function setCount(page: Page, label: string, value: number): Promise<void> {
-  await page
-    .getByRole('button', { name: `${label}: 0. Hold to type a number.`, exact: true })
-    .press('Enter');
   const input = page.getByRole('textbox', { name: label, exact: true });
   await input.fill(String(value));
   await input.press('Enter');

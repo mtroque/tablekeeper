@@ -73,8 +73,8 @@ App shell states:
 ### Review / editor
 - Low-confidence values are outlined in the warning color; a banner counts them.
 - Square grid: tap toggles a cell. Hex grid (adjacency matters, so the board is always drawn as hexes, with each stack shown as its round tokens): tap opens a bottom sheet to edit the stack (bottom to top), with only valid stacks offered.
-- Counters use − / + steppers with direct numeric entry on long-press.
-- The running total updates live.
+- Counters are a number field between − and + steppers. Tapping the value opens the numeric keyboard with the value selected, so typing replaces it; Enter or tapping away commits, Escape restores. Only digits are accepted (and a leading minus where `min` is negative); an empty field restores the previous value, and a number out of range is clamped to `min` / `max`.
+- The running total updates live: on each step, tap, and each keystroke that gives a valid number (a number more digits can only push further out of range is clamped at once). Waiting for the field to lose focus would lose the value on iOS Safari, which doesn't blur the field when a button is tapped.
 - "See Score" is always enabled: low-confidence values are a prompt to check, not a blocker.
 
 ### Board side switch (Harmonies)
@@ -143,7 +143,7 @@ Built on shadcn/ui primitives (Button, Sheet, Dialog, Tabs, Toast, Skeleton) sty
 | `SquareGridEditor` | N×M grid; cell renderer and tap handler supplied by the game |
 | `HexGridEditor` | Hex layout from a game layout; same contract |
 | `ConfidenceOutline` | Shared visual for low-confidence cells |
-| `Counter` | − / + stepper |
+| `Counter` | − / + stepper around a typed number field |
 | `BreakdownList` | Categories, totals, highlight selection |
 | `BoardMiniature` | Read-only board with highlights |
 | `SignInPrompt` | Contextual sign-in card |
