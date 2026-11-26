@@ -24,7 +24,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | X2 | API on Vercel: move the Express API off Render, shared burst limit, no waking state | S0, S3, S5 | ✅ |
 | S6 | Typed counters: tap a counter's value to type a number, in every game | S1 | ⬜ |
 | S7 | Rules quota refund on failed asks, and pill sync | S3 | ✅ |
-| P4 | Patchwork piece colors: covered spaces drawn in the photo's piece colors | P2 | ⬜ |
+| P4 | Patchwork piece colors: covered spaces drawn in the photo's piece colors | P2 | ✅ |
 | H3 | Harmonies review on the board: tap hexes, highlights until answered, one option per score-equivalent stack | H2 | ⬜ |
 | H4 | Harmonies Crescendo: Whispers, and the module switches | H3 | ⬜ |
 | H5 | Harmonies Crescendo: board sides C and D (layouts need verifying) | H4 | ⬜ |
