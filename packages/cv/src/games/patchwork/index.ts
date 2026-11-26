@@ -1,4 +1,11 @@
-import type { DetectOptions, Draft, ImageInput, PatchworkState, Quad } from '@tablekeeper/core';
+import type {
+  DetectOptions,
+  Draft,
+  ImageInput,
+  PatchworkBoard,
+  PatchworkState,
+  Quad,
+} from '@tablekeeper/core';
 import { z } from 'zod';
 
 import type { BoardReading, CellReading, PipelineOptions } from '../../pipeline/board-pipeline';
@@ -19,6 +26,7 @@ import {
 import chitsJson from './chits.json';
 import { boardColor, classifySpaces } from './classify';
 import { measureBoxBoard } from './measure';
+import { spaceColors, type MeasuredColors, type SpaceColor } from './piece-colors';
 import { BOARDS, PatchworkReferencesSchema, type PatchworkReferences } from './references';
 import referencesJson from './references.json';
 
@@ -249,3 +257,13 @@ export const cvGame = createPatchworkGame(
   ChitTemplatesSchema.parse(chitsJson),
 );
 export const detector = cvGame.detector;
+
+export { measureSpaceColors, type MeasuredColors, type SpaceColor } from './piece-colors';
+
+/**
+ * Each space's piece color for drawing the read board, corrected for the photo's light and
+ * checked against `board`'s empty spaces (P4). Plain TypeScript, for the main thread.
+ */
+export function pieceColors(measured: MeasuredColors, board: PatchworkBoard): SpaceColor[] {
+  return spaceColors(measured, board, cvGame.references);
+}
