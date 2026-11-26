@@ -22,9 +22,10 @@ import { Button } from '@/components/ui/button';
 import type { EditorProps } from '../types';
 
 import { CardList } from './card-list';
-import { HeightPrompts } from './height-prompts';
 import { SPACE_FILL, StackTokens } from './pieces';
+import { answerSpace, spaceConfidence } from './review';
 import { SideSwitch } from './side-switch';
+import { topChoices } from './stack-options';
 import { StackSheet } from './stack-sheet';
 
 function asState(state: unknown): HarmoniesState {
@@ -38,14 +39,9 @@ export function spaceName({ q, r }: HexCell): string {
 }
 
 /**
- * Confidence key a photo draft gives a space whose height it couldn't see (the detector's
- * `heightKey`, kept here so the editor doesn't load the detector).
- */
-const heightKey = (key: string) => `${key}:height`;
-
-/**
- * The board side, the hex grid with a stack sheet per space, the heights a photo couldn't see,
- * and the card lists.
+ * The board side, the hex grid with a stack sheet per space, and the card lists. After a photo,
+ * spaces with an uncertain color or an unseen height stay outlined until the player picks their
+ * stack (H3).
  */
 export function Editor({ state, onChange, confidence }: EditorProps<unknown>) {
   const board = asState(state);
@@ -83,11 +79,28 @@ export function Editor({ state, onChange, confidence }: EditorProps<unknown>) {
   };
   const stackAt = (cell: HexCell): HarmoniesPiece[] => board.stacks[hexKey(cell.q, cell.r)] ?? [];
 
+  /** Sets a space's stack; in a photo review this also answers the space in the draft. */
   const setStack = (cell: HexCell, stack: HarmoniesPiece[]) => {
     const key = hexKey(cell.q, cell.r);
     const { [key]: _old, ...rest } = board.stacks;
-    onChange({ ...board, stacks: stack.length > 0 ? { ...rest, [key]: stack } : rest });
+    const next = { ...board, stacks: stack.length > 0 ? { ...rest, [key]: stack } : rest };
+    const current = flow.flow;
+    if (confidence && current?.draft) {
+      // One write, so the new board and the answered space can't overwrite each other.
+      flow.setFlow({
+        ...current,
+        state: next,
+        draft: { ...current.draft, confidence: answerSpace(current.draft.confidence, key) },
+      });
+    } else {
+      onChange(next);
+    }
   };
+  const editingStack = editing ? stackAt(editing) : [];
+  const editingKey = editing ? hexKey(editing.q, editing.r) : null;
+  // A top the photo read opens on its choices; manual entry and water or fields on the full list.
+  const choices =
+    editingKey && confidence?.[editingKey] !== undefined ? topChoices(editingStack.at(-1)) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -103,7 +116,7 @@ export function Editor({ state, onChange, confidence }: EditorProps<unknown>) {
         key={board.side}
         layout={layout}
         label={`Board, Side ${board.side}`}
-        confidence={confidence}
+        confidence={spaceConfidence(confidence)}
         cellLabel={(cell) => `${spaceName(cell)}: ${stackName(stackAt(cell)).toLowerCase()}`}
         renderCell={(cell, { cx, cy, size }) => (
           <>
@@ -126,16 +139,10 @@ export function Editor({ state, onChange, confidence }: EditorProps<unknown>) {
       >
         {showLabels ? 'Hide Labels' : 'Show Labels'}
       </Button>
-      <HeightPrompts
-        cells={layout.cells}
-        asks={(key) => confidence?.[heightKey(key)] !== undefined}
-        stackAt={stackAt}
-        spaceName={spaceName}
-        onPick={setStack}
-      />
       <StackSheet
         space={editing ? spaceName(editing) : null}
-        current={editing ? stackAt(editing) : []}
+        current={editingStack}
+        choices={choices}
         onPick={(stack) => {
           if (editing) setStack(editing, stack);
           setEditing(null);

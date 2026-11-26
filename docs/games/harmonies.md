@@ -27,7 +27,18 @@ A stack is listed bottom → top, e.g. `TTL` = tree on two trunks.
 | HAR-STACK-4 | `R` may be placed on one `M`, `T` or `R` (`MR`, `TR`, `RR`); a building is height 2. A lone `R` is valid but is not a building. |
 | HAR-STACK-5 | Any other stack is invalid; the editor never offers it. |
 
-Height prompts after photo detection follow from these rules: a top of `W` or `F` never asks; `M` asks 1/2/3; `L` asks 1/2/3; `T` asks 1/2; `R` asks "alone or on M/T/R".
+Height choices after photo detection follow from these rules and from what scores (Same-score stacks): a top of `W` or `F` never asks; `M` asks 1/2/3; `L` asks leaves only, 1 trunk or 2 trunks; `T` offers only "Trunks"; `R` asks "Lone Roof" or "Building".
+
+### Same-score stacks
+
+No scoring rule reads below the top token except tree and mountain heights: trees score by exact stack, mountains are all-gray stacks scored by height, buildings are any 2-token stack topped with `R` and scored on their neighbors' top colors, fields and water are single tokens, and side B islands only ask whether a space is water. So these always score the same, and the editor offers each group as one option (`HARMONIES_SAME_SCORE` in `packages/core/src/games/harmonies/stacks.ts`, D-107):
+
+| Option | Stacks | Stored as |
+|---|---|---|
+| Trunks | `T`, `TT` | `T` |
+| Building | `MR`, `TR`, `RR` | `MR` |
+
+A space already holding one of an option's stacks keeps it when that option is picked. Saved `TT`, `TR` and `RR` stay valid and render as they are. A lone `R` ("Lone Roof") is not a building and stays its own option.
 
 ## Scoring rules
 
@@ -137,6 +148,7 @@ The detector in `packages/cv/src/games/harmonies/` reads the side and each space
 - **Side** (`read.ts`): the median CIELAB a and b (not lightness, which varies with the room) of the board's background, inside the outline and outside every space of either side, against the same measure of the two empty references (`references/side-a.jpg`, `side-b.jpg`). The reference values are constants in `read.ts`; `fixtures.test.ts` recomputes them. The nearer wins; confidence is the margin. The eval reports it as a `side` pseudo-cell.
 - **Top color**: hex centers come from the side's layout and grid placement, never detected. At each center a disc of 0.65 hex sizes; animal cube pixels (hue 50 to 100 degrees, chroma 8 to 45) are dropped; the median L, a, b of the rest, shifted by the difference between the photo's background and the side reference's, goes to `classifyNearest` (classes `W F M T L R empty`). The light shift and the wider disc (0.38 caught too much cube) raised leave-one-out accuracy from 90% to 96.5%. "Occluded" is a rule, not a class: under 10% of the disc left after dropping the cube.
 - **Draft**: each top becomes the shortest valid stack ending in it. Confidence keys: `"q,r"` (color), `"q,r:height"` (0 for `M`, `L`, `T`, `R`, so review counts it until the player sets the height, D-066) and `side`.
+- **Review on the board** (`apps/web/src/games/harmonies/editor.tsx`, `review.ts`, D-108): a space is outlined while its color key is low-confidence or its height key is unanswered (the board gets the lower of the two). Tapping a space opens the stack sheet; in a photo review it opens on the choices its current top leaves open (Valid stacks), with "Something Else" for the full list, and on the full list for water, fields, empty spaces and manual entry. Picking any stack, even the one it has, sets the space's keys to 1 in the flow's draft, so it leaves the outline and the review banner. The banner counts values, so a space with an uncertain color and an unseen height counts 2 and clears both.
 - **Reread as the other side** runs the plain TypeScript reading (`rereadAsSide`, `geometry.ts`) on the main thread at the known corners, with no opencv (D-064).
 - cv imports only types from core, so `packages/cv/src/games/harmonies/layout.ts` repeats the layouts, grid placement, aspect and piece codes; `apps/web/src/games/harmonies/detector.test.ts` fails if they drift (D-065).
 - **Samples**: `01-a-pink-table`, `05-b-wood-table`, `03-a-dark-table` at 1200px. At that size the wood sample misreads one space, flagged as uncertain.

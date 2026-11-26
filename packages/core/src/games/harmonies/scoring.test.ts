@@ -1,14 +1,19 @@
+import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { parseState } from '../../kit/state';
 import { getGame } from '../registry';
 
+import { harmoniesStateArbitrary } from './arbitrary';
+
 import {
   harmonies,
   HARMONIES_LAYOUTS,
+  HARMONIES_SAME_SCORE,
   HARMONIES_STACKS,
   harmoniesRiverPoints,
   isValidStack,
+  sameScoreStacks,
   scoreHarmonies,
   stackPieces,
   type HarmoniesState,
@@ -260,5 +265,49 @@ describe('harmonies scoring', () => {
       spirits: 6,
     });
     expect(breakdown.total).toBe(38);
+  });
+});
+
+describe('harmonies same-score stacks (H3)', () => {
+  it('groups bare trunks and buildings, everything else stands alone', () => {
+    expect(sameScoreStacks('TT')).toEqual(['T', 'TT']);
+    expect(sameScoreStacks('RR')).toEqual(['MR', 'TR', 'RR']);
+    expect(sameScoreStacks('R')).toEqual(['R']);
+    expect(sameScoreStacks('TTL')).toEqual(['TTL']);
+    expect(HARMONIES_SAME_SCORE.flat().every((code) => HARMONIES_STACKS.includes(code))).toBe(true);
+  });
+
+  it('swapping a stack for another in its group never changes the score', () => {
+    fc.assert(
+      fc.property(harmoniesStateArbitrary, fc.nat(), (state, pick) => {
+        const before = scoreHarmonies(state);
+        const stacks = Object.fromEntries(
+          Object.entries(state.stacks).map(([key, stack]) => {
+            const group = sameScoreStacks(stack.join(''));
+            return [key, stackPieces(group[pick % group.length] ?? stack.join(''))];
+          }),
+        );
+        const after = scoreHarmonies({ ...state, stacks });
+        expect(after.total).toBe(before.total);
+        expect(after.categories.map((c) => c.points)).toEqual(
+          before.categories.map((c) => c.points),
+        );
+      }),
+    );
+  });
+
+  it('a saved board with TT, TR and RR still loads and scores as before', () => {
+    const saved = board('A', {
+      '1,0': 'TR', // building: W, L, T and R tops around it
+      '1,1': 'TT',
+      '0,0': 'TL',
+      '0,1': 'W',
+      '2,0': 'RR', // building: only T and R tops around it
+    });
+    const parsed = parseState(harmonies, JSON.parse(JSON.stringify(saved)), 1);
+    expect(parsed).toEqual({ ok: true, value: saved });
+    expect(
+      Object.fromEntries(scoreHarmonies(saved).categories.map((c) => [c.key, c.points])),
+    ).toEqual({ trees: 3, mountains: 0, fields: 0, buildings: 5, water: 0, animals: 0 });
   });
 });

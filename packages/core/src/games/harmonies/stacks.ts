@@ -67,3 +67,19 @@ export const isHarmoniesMountain = (stack: readonly HarmoniesPiece[]) =>
 
 export const isHarmoniesBuilding = (stack: readonly HarmoniesPiece[]) =>
   stack.length === 2 && stack[1] === 'R';
+
+/**
+ * Stacks that always score the same, first member the one the editor stores (H3): bare trunks
+ * score nothing at any height (`HAR-STACK-3`), and every building is height 2 with only its roof
+ * seen by neighbors (`HAR-STACK-4`, `HAR-BLD-1`). No other rule reads below the top token except
+ * tree and mountain heights, which differ in points and stay apart.
+ */
+export const HARMONIES_SAME_SCORE: ReadonlyArray<readonly HarmoniesStackCode[]> = [
+  ['T', 'TT'],
+  ['MR', 'TR', 'RR'],
+];
+
+/** The stacks that score the same as `code`, itself included, the stored one first. */
+export function sameScoreStacks(code: HarmoniesStackCode): readonly HarmoniesStackCode[] {
+  return HARMONIES_SAME_SCORE.find((group) => group.includes(code)) ?? [code];
+}
