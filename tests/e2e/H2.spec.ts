@@ -31,20 +31,16 @@ test('H2: a sample photo becomes a side A draft with top colors, then heights ar
   await expect(cell('2,-1')).toHaveAttribute('aria-label', 'Column 3, Space 1: mountain, height 1');
   await expect(cell('0,0')).toHaveAttribute('aria-label', 'Column 1, Space 1: empty');
 
-  // Heights are asked for mountains, trees, trunks and roofs, never water or fields.
-  await expect(page.getByRole('heading', { name: 'Set Heights' })).toBeVisible();
-  await expect(page.locator('[data-height-prompt="2,-1"]')).toBeVisible();
-  await expect(page.locator('[data-height-prompt="0,3"]')).toHaveCount(0);
-  await expect(page.locator('[data-height-prompt="0,4"]')).toHaveCount(0);
+  // Heights are asked on the board for mountains, trees, trunks and roofs, never water or fields
+  // (H3 covers the review in full).
+  await expect(cell('2,-1')).toHaveAttribute('data-low-confidence', 'true');
   await expect(page.getByRole('status').filter({ hasText: 'to check.' })).toBeVisible();
 
   const before = await page.getByTestId('running-total').textContent();
-  const mountain = page.locator('[data-height-prompt="2,-1"]');
-  await mountain.getByRole('button', { name: 'Column 3, Space 1: Mountain, Height 3' }).click();
-  await expect(
-    mountain.getByRole('button', { name: 'Column 3, Space 1: Mountain, Height 3' }),
-  ).toHaveAttribute('aria-pressed', 'true');
+  await cell('2,-1').click();
+  await page.getByRole('button', { name: 'Mountain, Height 3', exact: true }).click();
   await expect(cell('2,-1')).toHaveAttribute('aria-label', 'Column 3, Space 1: mountain, height 3');
+  await expect(cell('2,-1')).not.toHaveAttribute('data-low-confidence', 'true');
   await expect(page.getByTestId('running-total')).not.toHaveText(before ?? '');
 
   await page.getByRole('link', { name: 'See Score' }).click();

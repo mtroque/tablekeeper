@@ -39,11 +39,12 @@ test('signed in: a board with cards scores by category, saves, and the saved gam
   await expect(page).toHaveURL(/\/score\/review$/);
   await expect(page.locator('[data-cell]')).toHaveCount(23);
 
-  // The sheet offers Empty Space and the 14 valid stacks, nothing else.
+  // The sheet offers Empty Space and the 14 valid stacks, nothing else, with the stacks that
+  // always score the same as one option (H3: Trunks for T and TT, Building for MR, TR and RR).
   await page.getByRole('button', { name: 'Column 1, Space 1: empty' }).click();
   await expect(
     page.getByRole('dialog', { name: 'Column 1, Space 1' }).locator('[data-stack]'),
-  ).toHaveCount(15);
+  ).toHaveCount(12);
   await page.getByRole('button', { name: 'Tree on 2 Trunks', exact: true }).click();
   await expect(page.getByTestId('running-total')).toHaveText('7 Points');
 
