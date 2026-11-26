@@ -8,19 +8,25 @@ import type { PatchworkReferences } from './references';
 // The color of the chocolate piece on each space, for drawing the read board (P4). Plain
 // TypeScript at known corners, so the review screen runs it on the main thread without opencv
 // (D-064); the same layout and frame band as `measure.ts`.
+//
+// Two samples per space: the middle, as `measure.ts` takes it, which the empty references are
+// measured on (so it says whether the space looks empty); and a ring around it, which is what
+// shows the piece's own color (a printed praline fills the middle of most spaces).
 
 export type Lab = [number, number, number];
 
-/** Each space's median color and the frame's, as the photo shows them. */
+/** Each space's median colors and the frame's, as the photo shows them. */
 export type MeasuredColors = {
-  /** Median LAB of each space's middle, row by row. */
+  /** Median LAB of each space's middle (`CELL_INSET`, as `measure.ts`), row by row. */
   spaces: Lab[];
+  /** Median LAB of each space's ring (`RING`), row by row. */
+  rings: Lab[];
   /** Median LAB of the frame band, reflections left out. */
   frame: Lab;
 };
 
 export type SpaceColor = {
-  /** The space's color corrected for the photo's light. */
+  /** The piece's color (the space's ring) corrected for the photo's light. */
   lab: Lab;
   /** The same as `#rrggbb`. */
   hex: string;
@@ -35,11 +41,23 @@ export type SpaceColor = {
 
 /**
  * LAB distance from an empty reference space under which a color looks empty. On the 8 labeled
- * fixtures this marks 55 of 82 empty spaces and 10 of 566 covered ones, 8 of those under glare
- * on `06-gray-light-wood-glare` (`piece-colors.test.ts`). Color alone can't do better: white
+ * fixtures this marks 64 of 82 empty spaces and 15 of 566 covered ones, 12 of those on
+ * `06-gray-light-wood-glare` (`piece-colors.test.ts`). Color alone can't do better: white
  * chocolate under glare is as light and gray as the gray board.
  */
-export const LOOKS_EMPTY_DISTANCE = 4;
+export const LOOKS_EMPTY_DISTANCE = 5;
+
+/**
+ * The ring a piece's color is read from: between these shares of the space's size, around the
+ * printed praline and clear of the grid lines.
+ */
+export const RING = { outer: 0.85, inner: 0.55 } as const;
+
+/**
+ * The photo's brightness is corrected by the square root of the frame's gain, within these
+ * bounds: a frame in shadow (a dark board on a white table) would otherwise wash every piece out.
+ */
+const BRIGHTNESS = { min: 0.5, max: 2 } as const;
 
 /** The frame band is sampled every this many canonical pixels. */
 const FRAME_STEP = 2;
@@ -63,14 +81,36 @@ export function measureSpaceColors(image: Pixels, corners: Quad): MeasuredColors
     return byteLab(Math.round(rgb[0]), Math.round(rgb[1]), Math.round(rgb[2]), lab);
   };
 
-  const spaces = PATCHWORK_LAYOUT.cells.map(({ polygon }) => {
-    const { x0, x1, y0, y1 } = bounds(insetPolygon(polygon, CELL_INSET));
-    const samples = new LabSamples((x1 - x0) * (y1 - y0));
-    for (let y = y0; y < y1; y++) {
-      for (let x = x0; x < x1; x++) samples.push(labAt(x, y));
+  const spaces: Lab[] = [];
+  const rings: Lab[] = [];
+  for (const { polygon } of PATCHWORK_LAYOUT.cells) {
+    const middle = bounds(insetPolygon(polygon, CELL_INSET));
+    const outer = bounds(insetPolygon(polygon, 1 - RING.outer));
+    const inner = bounds(insetPolygon(polygon, 1 - RING.inner));
+    const area = (x0: number, x1: number, y0: number, y1: number) => (x1 - x0) * (y1 - y0);
+    const middleSamples = new LabSamples(area(middle.x0, middle.x1, middle.y0, middle.y1));
+    const ringSamples = new LabSamples(area(outer.x0, outer.x1, outer.y0, outer.y1));
+    const inside = (box: typeof middle, x: number, y: number) =>
+      x >= box.x0 && x < box.x1 && y >= box.y0 && y < box.y1;
+    for (let y = outer.y0; y < outer.y1; y++) {
+      for (let x = outer.x0; x < outer.x1; x++) {
+        const isMiddle = inside(middle, x, y);
+        const isRing = !inside(inner, x, y);
+        if (!isMiddle && !isRing) continue;
+        labAt(x, y);
+        if (isMiddle) middleSamples.push(lab);
+        if (isRing) ringSamples.push(lab);
+      }
     }
-    return samples.median();
-  });
+    // The middle reaches past the ring's outer edge only if CELL_INSET drops under 1 - outer.
+    for (let y = middle.y0; y < middle.y1; y++) {
+      for (let x = middle.x0; x < middle.x1; x++) {
+        if (!inside(outer, x, y)) middleSamples.push(labAt(x, y));
+      }
+    }
+    spaces.push(middleSamples.median());
+    rings.push(ringSamples.median());
+  }
 
   const bands = frameBand().map(bounds);
   const frameSamples = new LabSamples(
@@ -85,7 +125,7 @@ export function measureSpaceColors(image: Pixels, corners: Quad): MeasuredColors
       }
     }
   }
-  return { spaces, frame: frameSamples.median() };
+  return { spaces, rings, frame: frameSamples.median() };
 }
 
 /** LAB samples in typed arrays, so the medians sort natively. */
@@ -139,9 +179,13 @@ function labF(t: number): number {
 }
 
 /**
- * Each space's color corrected for the light (shifted by the board references' frame minus the
- * photo's, as `classify.ts` shifts its color features), and whether it looks like an empty space
+ * Each piece's color corrected for the light, and whether the space looks like an empty space
  * of `board`.
+ *
+ * The color is white balanced by the frame: each linear RGB channel is scaled by the board
+ * references' frame over this photo's, with the overall brightness gain softened to its square
+ * root (`BRIGHTNESS`). The looks-empty check shifts the middle's LAB by the frame difference, as
+ * `classify.ts` shifts its color features, and compares it with the references' empty spaces.
  */
 export function spaceColors(
   measured: MeasuredColors,
@@ -151,11 +195,19 @@ export function spaceColors(
   const refs = references.boards[board].references;
   const meanFrame = [0, 1, 2].map(
     (k) => refs.reduce((sum, ref) => sum + (ref.frame[k] as number), 0) / refs.length,
-  );
+  ) as Lab;
+  const target = labToLinear(meanFrame);
+  const photo = labToLinear(measured.frame);
+  const gain = target.map((v, k) => v / Math.max(1e-4, photo[k] as number)) as Lab;
+  const overall = (gain[0] + gain[1] + gain[2]) / 3;
+  const brightness = Math.min(BRIGHTNESS.max, Math.max(BRIGHTNESS.min, Math.sqrt(overall)));
+  const scale = gain.map((g) => (g / overall) * brightness);
+
   return measured.spaces.map((space, index) => {
-    const lab = space.map(
-      (v, k) => v + (meanFrame[k] as number) - (measured.frame[k] as number),
-    ) as Lab;
+    const ring = measured.rings[index] ?? space;
+    const linear = labToLinear(ring).map((v, k) => v * (scale[k] as number)) as Lab;
+    const hex = linearToHex(linear);
+    const lab = byteLab(...hexBytes(hex));
     const row = Math.floor(index / ROWS);
     const col = index % ROWS;
     let nearest = Infinity;
@@ -175,17 +227,12 @@ export function spaceColors(
         );
       }
     }
-    return {
-      lab,
-      hex: labToHex(lab),
-      looksEmpty: nearest < LOOKS_EMPTY_DISTANCE,
-      emptyDistance: nearest,
-    };
+    return { lab, hex, looksEmpty: nearest < LOOKS_EMPTY_DISTANCE, emptyDistance: nearest };
   });
 }
 
-/** sRGB `#rrggbb` for a CIELAB color (D65), clamped to the gamut. */
-export function labToHex([L, a, b]: Lab): string {
+/** Linear sRGB (D65) of a CIELAB color, not clamped. */
+export function labToLinear([L, a, b]: Lab): Lab {
   const fy = (L + 16) / 116;
   const fx = fy + a / 500;
   const fz = fy - b / 200;
@@ -193,11 +240,15 @@ export function labToHex([L, a, b]: Lab): string {
   const x = finv(fx) * 0.95047;
   const y = finv(fy);
   const z = finv(fz) * 1.08883;
-  const linear = [
+  return [
     3.2404542 * x - 1.5371385 * y - 0.4985314 * z,
     -0.969266 * x + 1.8760108 * y + 0.041556 * z,
     0.0556434 * x - 0.2040259 * y + 1.0572252 * z,
   ];
+}
+
+/** `#rrggbb` for linear sRGB, clamped to the gamut. */
+function linearToHex(linear: Lab): string {
   return `#${linear
     .map((c) => {
       const v = c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
@@ -205,6 +256,15 @@ export function labToHex([L, a, b]: Lab): string {
       return byte.toString(16).padStart(2, '0');
     })
     .join('')}`;
+}
+
+/** sRGB `#rrggbb` for a CIELAB color (D65), clamped to the gamut. */
+export function labToHex(lab: Lab): string {
+  return linearToHex(labToLinear(lab));
+}
+
+function hexBytes(hex: string): [number, number, number] {
+  return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
 }
 
 /**
