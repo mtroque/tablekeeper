@@ -23,7 +23,8 @@ import { cn } from '@/lib/utils';
 
 import type { EditorProps } from '../types';
 
-import { BOARD_COLORS, BOARD_NAMES, CHOCOLATE } from './colors';
+import { BOARD_COLORS, BOARD_NAMES, CHOCOLATE, LOOKS_EMPTY_HATCH, pieceEdge } from './colors';
+import { usePhotoColors } from './use-photo-colors';
 
 function asState(state: unknown): PatchworkState {
   const parsed = PatchworkStateSchema.safeParse(state);
@@ -43,6 +44,9 @@ export function Editor({ state, onChange, confidence, reread }: EditorProps<unkn
   const update = (patch: Partial<PatchworkState>) => {
     onChange({ ...current, ...patch });
   };
+  const photoColors = usePhotoColors(board);
+  /** The photo's color of a covered space it read as covered; null when drawn plain. */
+  const pieceColor = (i: number) => (grid[i] ? (photoColors?.[i] ?? null) : null);
   const [rereading, setRereading] = useState(false);
   const [rereadFailed, setRereadFailed] = useState(false);
   const latest = useRef({ current, onChange });
@@ -129,22 +133,45 @@ export function Editor({ state, onChange, confidence, reread }: EditorProps<unkn
             className="gap-0.5 [&>button]:min-h-0"
             confidence={confidence}
             cellLabel={(cell) =>
-              `Row ${cell.row + 1}, column ${cell.col + 1}: ${grid[index(cell)] ? 'covered' : 'empty'}`
+              `Row ${cell.row + 1}, column ${cell.col + 1}: ${
+                grid[index(cell)]
+                  ? pieceColor(index(cell))?.looksEmpty
+                    ? 'covered, looks empty in the photo'
+                    : 'covered'
+                  : 'empty'
+              }`
             }
-            renderCell={(cell) => (
-              <span
-                aria-hidden
-                className="absolute inset-0 flex items-center justify-center"
-                style={{ backgroundColor: colors.space }}
-              >
-                {grid[index(cell)] && (
-                  <span
-                    className="size-full border-2"
-                    style={{ backgroundColor: CHOCOLATE.piece, borderColor: CHOCOLATE.shine }}
-                  />
-                )}
-              </span>
-            )}
+            renderCell={(cell) => {
+              const photo = pieceColor(index(cell));
+              return (
+                <span
+                  aria-hidden
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ backgroundColor: colors.space }}
+                >
+                  {grid[index(cell)] &&
+                    (photo ? (
+                      // The piece as the photo shows it (P4): compare it with the table.
+                      <span
+                        className="size-full border-2"
+                        data-fill="photo"
+                        {...(photo.looksEmpty ? { 'data-looks-empty': '' } : {})}
+                        style={{
+                          backgroundColor: photo.hex,
+                          borderColor: pieceEdge(photo.hex),
+                          ...(photo.looksEmpty ? { backgroundImage: LOOKS_EMPTY_HATCH } : {}),
+                        }}
+                      />
+                    ) : (
+                      <span
+                        className="size-full border-2"
+                        data-fill="plain"
+                        style={{ backgroundColor: CHOCOLATE.piece, borderColor: CHOCOLATE.shine }}
+                      />
+                    ))}
+                </span>
+              );
+            }}
             onTap={(ref) => {
               if (ref.kind !== 'square') return;
               const next = [...grid];
