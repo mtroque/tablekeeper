@@ -78,7 +78,7 @@ const median = (values: number[]) =>
   values.sort((p, q) => p - q)[Math.floor(values.length / 2)] ?? 0;
 /** Median distance between two readings of the same spaces, over the given LAB channels. */
 const change = (a: Lab[], b: Lab[], channels = [0, 1, 2]) =>
-  median(a.map((lab, i) => Math.hypot(...channels.map((k) => lab[k] - (b[i]?.[k] ?? 0)))));
+  median(a.map((lab, i) => Math.hypot(...channels.map((k) => (lab[k] ?? 0) - (b[i]?.[k] ?? 0)))));
 
 /** The photo with each RGB byte scaled per channel. */
 function relit(image: ImageInput, factors: [number, number, number]): ImageInput {
