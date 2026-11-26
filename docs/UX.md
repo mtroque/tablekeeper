@@ -34,6 +34,7 @@ Screens, routes, states and interactions.
 | `/games/dorfromantik/campaign` | Campaign overview |
 | `/auth/callback` | OAuth return; resumes any pending save |
 | `/privacy` | Privacy policy, linked from the game library |
+| `/tools/first-player` | Who goes first: each player taps where they sit, a roulette picks one (no account, works offline) |
 
 Games with their own flow (Azul, Dorfromantik) render their `ScoreFlow` under `/score`; see `docs/ARCHITECTURE.md` → Game modules.
 
