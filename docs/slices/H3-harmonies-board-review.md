@@ -1,6 +1,6 @@
 # H3: Harmonies review on the board
 
-**Status:** 🟨 · **Depends on:** H2
+**Status:** ✅ · **Depends on:** H2
 
 **Goal:** The player checks and fixes a photo's reading by tapping hexes on the board itself, not in a list of prompts under it. Spaces that need an answer stay highlighted until answered, and the app asks only for choices that change the score.
 
@@ -35,13 +35,13 @@ The `harmonies` game folders (AGENTS.md → Parallel sessions), plus this spec, 
 - Every highlighted space answered: no banner.
 
 ## Acceptance criteria
-- [ ] After reading a sample photo there is no list of prompts under the board; spaces needing a height are highlighted on the board.
-- [ ] Tapping a highlighted space and picking a stack removes its highlight and lowers the banner count by 1, even if the pick equals the draft.
-- [ ] The sheet for a photo-read gray top offers 1 / 2 / 3; for red: "Lone Roof" / "Building"; for brown: "Trunks" / "Something Else"; for green: Leaves Only / 1 Trunk / 2 Trunks.
-- [ ] The full list has no separate `TT`, `TR` or `RR` options.
-- [ ] Saved games with `TT`, `TR` or `RR` still load and score as before (unit test).
-- [ ] Answering spaces leaves `detection_meta` right: same `detected`, and `corrected` lists only changed stacks (unit test).
-- [ ] e2e: sample photo, answer every highlighted space on the board, see the score.
+- [x] After reading a sample photo there is no list of prompts under the board; spaces needing a height are highlighted on the board. (`tests/e2e/H3.spec.ts`: no "Set Heights", `(2,-1)`, `(0,1)`, `(1,1)`, `(1,2)` outlined; screenshot checked)
+- [x] Tapping a highlighted space and picking a stack removes its highlight and lowers the banner count by 1, even if the pick equals the draft. (`H3.spec.ts` answers every outlined space with its current stack and checks the banner drops by that space's values, 1 for a height-only space; `review.test.ts`)
+- [x] The sheet for a photo-read gray top offers 1 / 2 / 3; for red: "Lone Roof" / "Building"; for brown: "Trunks" / "Something Else"; for green: Leaves Only / 1 Trunk / 2 Trunks. (`H3.spec.ts` on sample 1's `(2,-1)`, `(1,2)`, `(1,1)`, `(0,1)`; `stack-options.test.ts`)
+- [x] The full list has no separate `TT`, `TR` or `RR` options. (`stack-options.test.ts`; `H1.spec.ts` and `H3.spec.ts` count 12 options)
+- [x] Saved games with `TT`, `TR` or `RR` still load and score as before (unit test). (`scoring.test.ts`, plus a property test that swapping within a group never changes any category)
+- [x] Answering spaces leaves `detection_meta` right: same `detected`, and `corrected` lists only changed stacks (unit test). (`review.test.ts`)
+- [x] e2e: sample photo, answer every highlighted space on the board, see the score. (`tests/e2e/H3.spec.ts`, passing with H1 and H2)
 
 ## Tests
 - `stack-options.test.ts`: the classes, picks keeping a member stack, and that swapping any stack for another in its class never changes the score on generated boards.
@@ -56,7 +56,17 @@ The `harmonies` game folders (AGENTS.md → Parallel sessions), plus this spec, 
 - Should spaces whose color is confident but not yet looked at stay plain? Resolved: yes, only height and low-confidence keys are highlighted (Scope).
 
 ## Decisions
+| ID | Decision | Why |
+|---|---|---|
+| D-107 | Harmonies' editor offers one option per group of stacks that always score the same: "Trunks" (`T`, `TT`, stored `T`) and "Building" (`MR`, `TR`, `RR`, stored `MR`); a space already holding a member keeps it when the option is picked. The groups are `HARMONIES_SAME_SCORE` in core, with a property test that swapping within a group never changes a category | No scoring rule reads below the top except tree and mountain heights, so the extra options only asked questions that change nothing; keeping a member avoids rewriting saved boards or logging a correction for a confirm. No state change or version bump. Details: `docs/games/harmonies.md` → Same-score stacks. |
+| D-108 | Harmonies marks a reviewed space answered inside the game: picking any stack sets its `"q,r"` and `"q,r:height"` keys to 1 in the flow's `draft.confidence`, in the same `setFlow` as the new board, and the board outline uses the lower of the two keys per space | No shared change: `detection_meta` compares `draft.state` (untouched) and counts confidence keys (none added or removed). The review banner counts values, so a space with an uncertain color and an unseen height counts 2 and clears both. Details: `docs/games/harmonies.md` → Photo reading. |
+
+Additive wiring: none. H3 took over `tests/e2e/H1.spec.ts` (12 options) and `tests/e2e/H2.spec.ts` (a height set on the board), finished slices' tests that checked what H3 replaces.
 
 ## Corrections
+| Date | Pattern | Where | What was wrong | Correction | Source | Status |
+|---|---|---|---|---|---|---|
+| 2026-11-26 | `scratch-files-in-repo` | factory/38 (H3) | To screenshot the Harmonies photo review, a throwaway spec was written to `tests/e2e/zz-h3-shot.spec.ts` (deleted before committing): the screen map has no photo-review entry for Harmonies, so `pnpm shot` can't reach it, and Playwright's `testDir` doesn't run specs in `.scratch/` | Removed; a screen map entry is requested (PR's Also found). A second occurrence should give `pnpm shot` a way to run a `.scratch/` spec | self | open |
 
 ## Shared change requests
+- `tests/e2e/screens.ts`: a `review-harmonies` entry in state `low-confidence` reached through "Try Sample Photo 1" and "Read Board" (like Patchwork's), so the outlined board shows in screen diffs. Not needed for this slice to work; filed as an issue.
