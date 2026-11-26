@@ -19,3 +19,5 @@ export * from './games/patchwork';
 export * from './games/harmonies';
 export * from './games/azul';
 export * from './games/dorfromantik';
+export * from './tools/first-player/wedges';
+export * from './tools/first-player/spin';

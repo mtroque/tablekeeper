@@ -130,6 +130,15 @@ export const SCREEN_ROUTES = {
       offline: 'the sign-in redirect needs a connection before it lands here',
     },
   },
+  '/tools/first-player': {
+    page: '/tools/first-player',
+    skip: {
+      loading: 'the tool renders on the device with no data to load',
+      error: 'nothing is fetched or saved',
+      guest: 'no account is involved; it works the same signed in',
+      offline: 'works offline; the shell status line is the only change (shell-offline)',
+    },
+  },
   '/privacy': {
     page: '/privacy',
     skip: {
@@ -317,6 +326,24 @@ async function finishDorfromantikGame(ctx: ScreenContext): Promise<void> {
   await ctx.page.getByRole('button', { name: 'Finish Game' }).click();
   await expect(ctx.page.getByTestId('finish-total')).toBeVisible();
 }
+
+/** Taps the first-player table at each direction (degrees, 0 is right, 90 is down). */
+async function tapSeats(page: Page, degrees: readonly number[]): Promise<void> {
+  const table = page.getByTestId('first-player-table');
+  const box = await table.boundingBox();
+  if (!box) throw new Error('first-player table not visible');
+  for (const degree of degrees) {
+    const angle = (degree * Math.PI) / 180;
+    const radius = box.width * 0.38;
+    await page.mouse.click(
+      box.x + box.width / 2 + radius * Math.cos(angle),
+      box.y + box.height / 2 + radius * Math.sin(angle),
+    );
+  }
+  await expect(table.getByTestId('wedge')).toHaveCount(degrees.length);
+}
+
+const FIRST_PLAYER_SEATS = [90, 210, 330] as const;
 
 const MISSING_ID = '00000000-0000-4000-8000-00000000dead';
 
@@ -908,6 +935,94 @@ export const SCREENS: readonly ScreenEntry[] = [
     reach: async (ctx) => {
       await ctx.goto();
       await visible(ctx.page, "Couldn't finish signing in with Google.");
+    },
+  },
+
+  // Who goes first
+  {
+    id: 'first-player',
+    screen: '/tools/first-player',
+    route: '/tools/first-player',
+    state: 'default',
+    reach: async (ctx) => {
+      await ctx.goto();
+      await tapSeats(ctx.page, FIRST_PLAYER_SEATS);
+    },
+  },
+  {
+    id: 'first-player-empty',
+    screen: '/tools/first-player',
+    route: '/tools/first-player',
+    state: 'empty',
+    reach: async (ctx) => {
+      await ctx.goto();
+      await visible(ctx.page, 'Each player taps where they sit.');
+    },
+  },
+  {
+    id: 'first-player-one',
+    screen: '/tools/first-player',
+    route: '/tools/first-player',
+    state: 'one-player',
+    reach: async (ctx) => {
+      await ctx.goto();
+      await tapSeats(ctx.page, [90]);
+      await expect(ctx.page.getByRole('button', { name: 'Spin' })).toBeDisabled();
+    },
+  },
+  {
+    id: 'first-player-too-close',
+    screen: '/tools/first-player',
+    route: '/tools/first-player',
+    state: 'refused-tap',
+    reach: async (ctx) => {
+      await ctx.goto();
+      await tapSeats(ctx.page, [90, 270]);
+      const box = await ctx.page.getByTestId('first-player-table').boundingBox();
+      if (!box) throw new Error('first-player table not visible');
+      await ctx.page.mouse.click(box.x + box.width / 2 + 4, box.y + box.height - 12);
+      await visible(ctx.page, 'Too close to player 1.');
+    },
+  },
+  {
+    id: 'first-player-spinning',
+    screen: '/tools/first-player',
+    route: '/tools/first-player',
+    state: 'spinning',
+    reach: async (ctx) => {
+      await ctx.goto();
+      await tapSeats(ctx.page, FIRST_PLAYER_SEATS);
+      await ctx.page.getByRole('button', { name: 'Spin' }).click();
+      await expect(ctx.page.locator('[data-testid="wedge"][data-active]')).toHaveCount(1);
+    },
+  },
+  {
+    id: 'first-player-result',
+    screen: '/tools/first-player',
+    route: '/tools/first-player',
+    state: 'result',
+    reach: async (ctx) => {
+      await ctx.goto();
+      await tapSeats(ctx.page, FIRST_PLAYER_SEATS);
+      await ctx.page.getByRole('button', { name: 'Spin' }).click();
+      await expect(ctx.page.getByRole('button', { name: 'Spin Again' })).toBeVisible({
+        timeout: 10_000,
+      });
+    },
+  },
+  {
+    id: 'first-player-result-dark',
+    screen: '/tools/first-player',
+    route: '/tools/first-player',
+    state: 'result',
+    dark: true,
+    reach: async (ctx) => {
+      await ctx.goto();
+      await tapSeats(ctx.page, [45, 135, 225, 315, 0]);
+      await ctx.page.getByRole('button', { name: 'Spin' }).click();
+      await expect(ctx.page.getByRole('button', { name: 'Spin Again' })).toBeVisible({
+        timeout: 10_000,
+      });
     },
   },
 

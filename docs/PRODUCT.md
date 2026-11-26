@@ -37,6 +37,7 @@ Every scorer also works fully by hand, without a photo.
 - **Photo scoring:** the app finds the board, reads it, and shows a draft with uncertain values highlighted; the breakdown explains where every point came from. Anyone can try it with a sample photo.
 - **Azul** is tracked across a whole game: after each round you tap in the chocolate box and the foundry line, and the app scores only what changed since the last confirmed round, so the running score never needs reading from the score track.
 - **Dorfromantik** replaces the paper scoresheet and campaign sheet: the scoresheet shows only unlocked rows, and after each game the app asks what you unlocked (spoiler-safe: details stay hidden until unlocked).
+- **Table tools** work for any game, supported or not, with no account: **Who Goes First** picks a random first player, each player tapping where they sit around the phone (`docs/UX.md` → Who goes first).
 
 Rules and scoring details: `docs/games/<gameId>.md`. Screens: `docs/UX.md`.
 

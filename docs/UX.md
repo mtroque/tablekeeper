@@ -34,6 +34,7 @@ Screens, routes, states and interactions.
 | `/games/dorfromantik/campaign` | Campaign overview |
 | `/auth/callback` | OAuth return; resumes any pending save |
 | `/privacy` | Privacy policy, linked from the game library |
+| `/tools/first-player` | Who goes first: each player taps where they sit, a roulette picks one (no account, works offline) |
 
 Games with their own flow (Azul, Dorfromantik) render their `ScoreFlow` under `/score`; see `docs/ARCHITECTURE.md` → Game modules.
 
@@ -107,6 +108,15 @@ App shell states:
 - Scoresheet: base fields always, unlocked rows only, each with its hint from the paper sheet (fields in `docs/games/dorfromantik.md`).
 - "Finish Game" → total, rank title and "Cross off N circles on your campaign sheet." → "Any Unlocks?" picker listing every campaign-sheet item by name.
 - Unlocks can be removed from the campaign page if picked by mistake.
+
+### Who goes first
+- A table tool for any game, at `/tools/first-player`: linked from "Table Tools" at the foot of the game library and from a "Who Goes First" link in each game hub's header (not a tab). No account, nothing saved, works offline.
+- The phone lies in the middle of the table; each player taps the table area where they sit (2 to 8 players). A tap adds a numbered marker; tapping a marker removes it and the others renumber. An "Add Player" button, shown on keyboard focus, seats a player in the widest gap.
+- The table splits into one wedge per player around its center, boundaries halfway between neighbors, so each wedge points at its player. Wedge fills cycle `--accent-soft`, `--warn-soft`, `--surface`, `--line` (neighbors never match); the marker numbers carry the meaning without color.
+- Refused taps say why in the status line and change nothing: in the center ("Tap nearer the edge, where you sit."), within 15 degrees of another player ("Too close to player 2. Tap nearer your own seat."), or a ninth player.
+- "Spin" in the center (disabled with 1 player; absent with none, where the table reads "Each player taps where they sit."). The winner is drawn first, uniformly with `crypto.getRandomValues`; the highlight then steps clockwise for at least 24 steps, slowing from 50ms to 400ms, and lands on it. Taps do nothing while it spins.
+- Result: the winner's wedge fills with `--accent`, and the status line (a live region) reads "Player 3 goes first."; one short vibration where supported. "Spin Again" and "New Players".
+- Reduced motion: no steps; "Picking." for 600ms, then the winner.
 
 ## Design tokens
 

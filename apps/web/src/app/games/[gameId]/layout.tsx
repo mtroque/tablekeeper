@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 
 import { GameTabs } from '@/components/game-tabs';
 import { GAME_UI } from '@/games/registry';
+import { FirstPlayerHubLink } from '@/tools/first-player/entry-links';
 
 import { gameFromParams } from './game';
 
@@ -27,6 +28,7 @@ export default async function GameLayout({ children, params }: Props) {
           <h1 className="text-2xl leading-tight">{game.name}</h1>
           <p className="text-sm text-muted">{game.edition}</p>
         </div>
+        <FirstPlayerHubLink />
       </div>
       <GameTabs game={{ id: game.id, features: game.features }} />
       <div className="flex flex-1 flex-col">{children}</div>

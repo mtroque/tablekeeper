@@ -2,6 +2,7 @@ import { GAMES } from '@tablekeeper/core';
 
 import { PrivacyLink } from '@/app/privacy/privacy-link';
 import { GameCard } from '@/components/game-card';
+import { TableTools } from '@/tools/first-player/entry-links';
 
 /** Game library, from the local registry so it renders even while the API sleeps. */
 export default function LibraryPage() {
@@ -15,6 +16,7 @@ export default function LibraryPage() {
           </li>
         ))}
       </ul>
+      <TableTools />
       <PrivacyLink />
     </div>
   );
