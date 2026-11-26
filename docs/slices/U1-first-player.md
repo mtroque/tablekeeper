@@ -1,6 +1,6 @@
 # U1: Who goes first
 
-**Status:** 🟨 · **Depends on:** S0
+**Status:** ✅ · **Depends on:** S0
 
 **Goal:** Any table can pick a random first player with the phone in the middle: everyone taps once, the screen splits into a wedge facing each player, and a tap in the center spins a roulette that lands on one of them. Works for every game, and for games Tablekeeper doesn't support.
 
@@ -10,7 +10,7 @@
 - `docs/UX.md` → Routes (the new row) and → Key interactions (a new "Who goes first" section)
 - `docs/PRODUCT.md` → Games and features (a short "Table tools" note)
 - `tests/e2e/U1.spec.ts`, and the new route's entries in `tests/e2e/screens.ts` (additive)
-- Additive wiring only (one added line each, no existing line changed): `packages/core/src/index.ts` (export), `apps/web/src/app/page.tsx` (library link), `apps/web/src/app/games/[gameId]/layout.tsx` (hub header link). The last two aren't in `check:repo`'s wiring list, so they're named here.
+- Additive wiring only (an import and one element each, no existing line changed): `packages/core/src/index.ts` (export), `apps/web/src/app/page.tsx` (library link), `apps/web/src/app/games/[gameId]/layout.tsx` (hub header link). The last two aren't in `check:repo`'s wiring list, so they're named here.
 
 ## Scope
 - **Route:** `/tools/first-player`, a client screen inside the app shell. No account, no server call, nothing saved; it keeps working after the connection drops.
@@ -32,11 +32,11 @@
 - **Refused tap:** the status line says why (too close, the center, or 8 players already), and nothing else changes.
 
 ## Acceptance criteria
-- [ ] Three taps on different sides of the screen give three wedges, each containing its tap (unit test on the core, and e2e: three markers and three wedges).
-- [ ] The spin lands on a wedge and announces it, visibly and in an `aria-live` region (e2e); over many draws in a unit test each player wins about equally often.
-- [ ] Spin is disabled with fewer than 2 players (e2e).
-- [ ] Reduced motion shows the winner without the animation (e2e with `reducedMotion: 'reduce'`: no spinning steps are seen, and the winner shows).
-- [ ] Reachable from the game library and from inside a game, and works offline (e2e: both links, then a spin with the browser context offline).
+- [x] Three taps on different sides of the screen give three wedges, each containing its tap (unit test on the core, and e2e: three markers and three wedges, `elementsFromPoint` under each tap finds that player's wedge).
+- [x] The spin lands on a wedge and announces it, visibly and in an `aria-live` region (e2e: `role="status"` reads "Player N goes first." and the `data-winner` wedge is N); over many draws in a unit test each player wins about equally often (10,000 draws per player for 2, 3, 5 and 8 players, each within 4% and chi-square under 24.3).
+- [x] Spin is disabled with fewer than 2 players (e2e: no button with none, disabled with 1).
+- [x] Reduced motion shows the winner without the animation (e2e with `reducedMotion: 'reduce'`: "Picking.", then the winner, and a MutationObserver never sees a highlighted step).
+- [x] Reachable from the game library and from inside a game, and works offline (e2e: the library link, the Azul hub link, then two spins with the browser context offline).
 
 ## Tests
 - Core unit tests: wedge ordering and containment (three sides, nearly the same angle, all taps along one side, one player), refusals (too close, center, ninth player), the widest-gap seat, `pickIndex` uniformity (chi-square over 80,000 draws with a seeded source) and rejection of biased values, spin steps ending on the winner, delays easing out.
@@ -52,12 +52,16 @@
 None left; the stub's questions are answered under Scope and Out of scope.
 
 ## Decisions
-- Route `/tools/first-player`, linked from the library foot and each hub header rather than a tab.
-- Taps one at a time; at most 8 players; a 15 degree minimum between players' directions.
-- Randomness: core takes a `nextUint32` source so it stays free of DOM and Node APIs; the web passes `crypto.getRandomValues`.
-- The game's own first-player rule is not shown in U1.
+- Route `/tools/first-player`, linked from "Table Tools" at the library foot and a header link in each game hub rather than a tab (tabs come from `GameDefinition.features`).
+- Taps one at a time; at most 8 players; taps within 15 degrees of another player's direction, or in the center circle, are refused with a reason, so every wedge stays visible and tappable.
+- Randomness: core's `pickIndex(count, nextUint32)` rejection-samples 32-bit values, so it stays free of DOM and Node APIs and has no modulo bias; the web passes `crypto.getRandomValues`.
+- The spin always takes at least 24 steps (whole turns, then on to the winner) with cubic ease-out delays from 50ms to 400ms, so it feels the same with 2 or 8 players.
+- The table area has its own 100 by 120 coordinate space (fixed aspect ratio), so taps, wedges and markers share one geometry without measuring the element.
+- The game's own first-player rule is not shown in U1 (no shared field for it; `kit/types.ts` is frozen).
+- Additive wiring: `export * from './tools/first-player/wedges'` and `'./tools/first-player/spin'` in `packages/core/src/index.ts`; `<TableTools />` in `apps/web/src/app/page.tsx`; `<FirstPlayerHubLink />` in `apps/web/src/app/games/[gameId]/layout.tsx`; the `/tools/first-player` screen and its entries in `tests/e2e/screens.ts`.
 
 ## Corrections
+None.
 
 ## Shared change requests
 - Links to the tool from the game library and the game hub: applied as additive wiring (one line each), listed under Owns.
