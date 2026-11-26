@@ -60,7 +60,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked. Each sli
 | W27 | Factory first-run fixes: output to files, paused slices keep their issue, verdict follows the gate, CI preflight | W24 | ✅ |
 | W28 | Factory transcripts and review memory: per-round sessions, reviewer transcripts, earlier rounds in review, actionlint | W27 | ⬜ |
 | W29 | Merge authority live: the draft workflow moved, 20 PRs in shadow, thresholds and the first `auto` group from the record | W19 | ⬜ |
-| U1 | Who goes first: each player taps where they sit, the screen splits into a wedge per player, a roulette picks one | S0 | ⬜ |
+| U1 | Who goes first: each player taps where they sit, the screen splits into a wedge per player, a roulette picks one | S0 | ✅ |
 
 ## Next
 
