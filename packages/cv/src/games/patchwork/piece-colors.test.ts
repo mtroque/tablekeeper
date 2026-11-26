@@ -182,7 +182,7 @@ describe('looksEmpty', () => {
         }
       });
     }
-    // Measured at LOOKS_EMPTY_DISTANCE 5: 64 of 82 empty, 15 of 566 covered (12 of them on the
+    // Measured at LOOKS_EMPTY_DISTANCE 5: 65 of 82 empty, 14 of 566 covered (11 of them on the
     // glare photo, 06).
     expect(LOOKS_EMPTY_DISTANCE).toBe(5);
     expect(emptyFlagged / empty).toBeGreaterThan(0.75);

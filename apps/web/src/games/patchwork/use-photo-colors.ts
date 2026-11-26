@@ -8,6 +8,9 @@ import { photoPixels } from '@/components/score-flow/photo';
 import { useFlow } from '@/components/score-flow/use-flow';
 import { useOnMount } from '@/lib/hooks';
 
+/** The `performance` entry timing the color reading. */
+export const PIECE_COLORS_MEASURE = 'patchwork:piece-colors';
+
 type PieceColors = (measured: MeasuredColors, board: PatchworkBoard) => SpaceColor[];
 
 /**
@@ -30,10 +33,12 @@ export function usePhotoColors(board: PatchworkBoard): Array<SpaceColor | null> 
         import('@tablekeeper/cv/games/patchwork'),
       ]);
       if (signal.aborted) return;
-      setRead({
-        measured: cv.measureSpaceColors(pixels, corners as Quad),
-        colorsFor: cv.pieceColors,
-      });
+      const start = performance.now();
+      const measured = cv.measureSpaceColors(pixels, corners as Quad);
+      cv.pieceColors(measured, board);
+      // Recorded for the P4 timing check (under 100ms on a 1200px photo).
+      performance.measure(PIECE_COLORS_MEASURE, { start, end: performance.now() });
+      setRead({ measured, colorsFor: cv.pieceColors });
     } catch (error) {
       // The board is still right without colors; it is drawn plain.
       console.error('Reading the piece colors failed', error);

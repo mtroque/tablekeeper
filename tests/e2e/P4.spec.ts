@@ -25,6 +25,7 @@ async function shoot(page: Page, testInfo: TestInfo, name: string): Promise<void
 }
 
 test('each sample draws its covered spaces in the photo colors', async ({ page }, testInfo) => {
+  const timings: number[] = [];
   for (const name of ['Try Sample Photo 1', 'Try Sample Photo 2', 'Try Sample Photo 3']) {
     await readSample(page, name);
     // The reading itself is P2's to test; every space it read as covered gets a photo color.
@@ -37,10 +38,20 @@ test('each sample draws its covered spaces in the photo colors', async ({ page }
       spans.map((span) => getComputedStyle(span).backgroundColor),
     );
     expect(new Set(fills).size).toBeGreaterThan(20);
+    // How long reading the colors took, after the photo was decoded.
+    const durations = await page.evaluate(() =>
+      performance.getEntriesByName('patchwork:piece-colors').map((entry) => entry.duration),
+    );
+    expect(durations).toHaveLength(1);
+    timings.push(durations[0] ?? Infinity);
     await shoot(page, testInfo, name.replaceAll(' ', '-').toLowerCase());
     await page.getByRole('button', { name: 'Start Over' }).click();
     await expect(page).toHaveURL(new RegExp(`${SCORE}$`));
   }
+  // Under 100ms on these 1200px photos once the code is warm (locally 77, 47 and 28ms: the first
+  // read in a fresh page runs colder); the unit test times the reader itself.
+  testInfo.annotations.push({ type: 'piece colors', description: `${timings.join(', ')}ms` });
+  expect([...timings].sort((a, b) => a - b)[1]).toBeLessThan(100);
 });
 
 test('tapping covers with the plain fill and uncovers to the board', async ({ page }) => {

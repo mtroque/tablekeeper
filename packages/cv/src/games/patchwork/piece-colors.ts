@@ -41,7 +41,7 @@ export type SpaceColor = {
 
 /**
  * LAB distance from an empty reference space under which a color looks empty. On the 8 labeled
- * fixtures this marks 64 of 82 empty spaces and 15 of 566 covered ones, 12 of those on
+ * fixtures this marks 65 of 82 empty spaces and 14 of 566 covered ones, 11 of those on
  * `06-gray-light-wood-glare` (`piece-colors.test.ts`). Color alone can't do better: white
  * chocolate under glare is as light and gray as the gray board.
  */
@@ -59,8 +59,11 @@ export const RING = { outer: 0.85, inner: 0.55 } as const;
  */
 const BRIGHTNESS = { min: 0.5, max: 2 } as const;
 
-/** The frame band is sampled every this many canonical pixels. */
-const FRAME_STEP = 2;
+/**
+ * Spaces and the frame are sampled every this many canonical pixels each way: a quarter of the
+ * pixels give the same medians, and keep the reading well under 100ms on the main thread.
+ */
+const STEP = 2;
 /** Frame pixels this light and unsaturated are reflections on its bevel (as in `measure.ts`). */
 const FRAME_GLARE_L = 80;
 const FRAME_GLARE_CHROMA = 12;
@@ -92,8 +95,8 @@ export function measureSpaceColors(image: Pixels, corners: Quad): MeasuredColors
     const ringSamples = new LabSamples(area(outer.x0, outer.x1, outer.y0, outer.y1));
     const inside = (box: typeof middle, x: number, y: number) =>
       x >= box.x0 && x < box.x1 && y >= box.y0 && y < box.y1;
-    for (let y = outer.y0; y < outer.y1; y++) {
-      for (let x = outer.x0; x < outer.x1; x++) {
+    for (let y = outer.y0; y < outer.y1; y += STEP) {
+      for (let x = outer.x0; x < outer.x1; x += STEP) {
         const isMiddle = inside(middle, x, y);
         const isRing = !inside(inner, x, y);
         if (!isMiddle && !isRing) continue;
@@ -103,8 +106,8 @@ export function measureSpaceColors(image: Pixels, corners: Quad): MeasuredColors
       }
     }
     // The middle reaches past the ring's outer edge only if CELL_INSET drops under 1 - outer.
-    for (let y = middle.y0; y < middle.y1; y++) {
-      for (let x = middle.x0; x < middle.x1; x++) {
+    for (let y = middle.y0; y < middle.y1; y += STEP) {
+      for (let x = middle.x0; x < middle.x1; x += STEP) {
         if (!inside(outer, x, y)) middleSamples.push(labAt(x, y));
       }
     }
@@ -117,8 +120,8 @@ export function measureSpaceColors(image: Pixels, corners: Quad): MeasuredColors
     bands.reduce((sum, { x0, x1, y0, y1 }) => sum + (x1 - x0) * (y1 - y0), 0),
   );
   for (const { x0, x1, y0, y1 } of bands) {
-    for (let y = y0; y < y1; y += FRAME_STEP) {
-      for (let x = x0; x < x1; x += FRAME_STEP) {
+    for (let y = y0; y < y1; y += STEP) {
+      for (let x = x0; x < x1; x += STEP) {
         const [L, a, b] = labAt(x, y);
         if (L > FRAME_GLARE_L && Math.hypot(a, b) < FRAME_GLARE_CHROMA) continue;
         frameSamples.push(lab);
